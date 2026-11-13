@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Maatify\Product\Tests\Integration\Runtime;
 
+use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
 use Maatify\Product\Content\Management\Command\CreateOptionContentCommand;
 use Maatify\Product\Content\Management\Command\CreateOptionValueContentCommand;
 use Maatify\Product\Content\Management\Command\CreateProductContentCommand;
@@ -15,6 +16,7 @@ use Maatify\Product\Product\Management\Command\CreateProductCommand;
 use Maatify\Product\Variant\Exception\VariantCompositionConflictException;
 use Maatify\Product\Variant\Management\Command\UpdateVariantIdentifiersCommand;
 use Maatify\Product\Variant\ValueObject\VariantIdentifierChange;
+use PDO;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 /** Exercises owner discovery after the Host has established an older InnoDB read view. */
@@ -140,6 +142,44 @@ final class OwnerLookupSnapshotTest extends RuntimeTestCase
         $this->assertThrows(VariantCompositionConflictException::class, fn() => $service->reconfigure($command));
         self::assertTrue($host->inTransaction());
         $host->rollBack();
+    }
+
+    public function testHostFactoryRetriesAfterAnInvalidLookupConnection(): void
+    {
+        $host = self::$pdo;
+        $lookup = self::connect(self::$database);
+        $clock = self::clock();
+        $product = $this->namedProduct('LOOKUP-RETRY')->productId;
+        $otherOptions = ProductFactory::createOptionManagementService($lookup, $clock);
+        $calls = 0;
+        $options = ProductFactory::forHost($host, $clock, static function () use ($host, $lookup, &$calls): PDO {
+            ++$calls;
+
+            return $calls === 1 ? $host : $lookup;
+        })->options();
+
+        $host->exec('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+        $host->beginTransaction();
+        self::assertSame(0, self::rowCount('maa_product_options'));
+        $lateOption = $otherOptions->create(new CreateOptionCommand($product, 'late'))->optionId;
+        $localOption = $options->create(new CreateOptionCommand($product, 'local'))->optionId;
+        self::assertSame(0, $calls, 'The lookup is still unopened before the first identity miss.');
+
+        $this->assertThrows(ProductInvalidArgumentException::class, fn() => $options->softDelete($lateOption));
+        self::assertSame(1, $calls);
+        self::assertTrue($host->inTransaction());
+        self::assertNull($options->getByIdForManagement($localOption)->deletedAt);
+        self::assertNull($otherOptions->getByIdForManagement($lateOption)->deletedAt);
+
+        $options->softDelete($lateOption);
+        self::assertSame(2, $calls, 'The invalid connection was not cached.');
+        self::assertTrue($host->inTransaction());
+        self::assertSame(1, self::rowCount('maa_product_options', 'deleted_at IS NOT NULL'));
+        self::assertNull($otherOptions->getByIdForManagement($lateOption)->deletedAt);
+
+        $host->rollBack();
+        self::assertSame(1, self::rowCount('maa_product_options'));
+        self::assertNull($otherOptions->getByIdForManagement($lateOption)->deletedAt);
     }
 
     public function testLookupKeepsUncommittedHostIdentitiesVisible(): void
