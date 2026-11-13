@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Maatify\Product\Variant\Repository\Pdo;
 
 use DateTimeImmutable;
-use Maatify\Persistence\Pdo\Ordering\ScopedOrderingConfig;
-use Maatify\Persistence\Pdo\Ordering\ScopedOrderingManager;
+use Maatify\PhpPersistence\Ordering\Config\ScopedOrderingConfig;
+use Maatify\PhpPersistence\Ordering\Repository\ScopedOrderingManager;
 use Maatify\Product\Common\Exception\ProductStorageFailureFactory;
 use Maatify\Product\Common\Repository\Pdo\DigitString;
 use Maatify\Product\Common\Repository\Pdo\DuplicateKey;
@@ -46,6 +46,8 @@ final readonly class PdoVariantCommandRepository implements VariantCommandReposi
     {
         $this->lockProduct($productId);
 
+        // Only Product creation calls this method. Its newly inserted Product has no
+        // visible competing writers or prior Variants. Avoid locking a shared empty gap.
         $displayOrder = $this->orderingManager->getNextPosition(
             $this->pdo,
             self::orderingConfig(),
@@ -157,7 +159,7 @@ final readonly class PdoVariantCommandRepository implements VariantCommandReposi
             . '`id` = :id AND `deleted_at` IS NOT NULL',
         );
         $statement->execute([
-            'display_order' => $this->orderingManager->getNextPosition($this->pdo, self::orderingConfig(), $productId),
+            'display_order' => $this->orderingManager->getNextPositionForUpdate($this->pdo, self::orderingConfig(), $productId),
             'updated_at' => $occurredAt->format('Y-m-d H:i:s'),
             'id' => $variantId,
         ]);

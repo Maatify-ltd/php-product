@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Maatify\Product\Variant\Management\Service;
 
-use Maatify\Persistence\Pdo\Pagination\PageRequest;
-use Maatify\Persistence\Pdo\Pagination\PageResult;
-use Maatify\Persistence\Pdo\Transaction\SavepointTransactionRunnerInterface;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
+use Maatify\PhpPersistence\Transaction\Repository\SavepointTransactionRunnerInterface;
 use Maatify\Product\Common\Enum\ProductDeletedStateEnum;
 use Maatify\Product\Common\Exception\ProductBusinessRuleException;
 use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
@@ -75,7 +75,7 @@ final readonly class VariantManagementService implements VariantManagementServic
         return new VariantCollectionDTO($this->reader->listForManagement($productId, $criteria));
     }
 
-    public function paginateByProductIdForManagement(int $productId, VariantListCriteriaDTO $criteria, PageRequest $request): PageResult
+    public function paginateByProductIdForManagement(int $productId, VariantListCriteriaDTO $criteria, PageRequest $request): PageResultDTO
     {
         self::requirePositive($productId, 'productId');
 
@@ -148,7 +148,7 @@ final readonly class VariantManagementService implements VariantManagementServic
             [$snapshot, $variant] = $this->lockedVariant($variantId);
             $this->assertMutable($snapshot, $variant);
             if (!$this->variants->updateDisplayOrder($variantId, $snapshot->productId, $command->displayOrder, $occurredAt)) {
-                throw VariantNotFoundException::withId($variantId);
+                throw ProductStorageFailureFactory::lockedRowVanished('Variant', $variantId);
             }
         });
     }

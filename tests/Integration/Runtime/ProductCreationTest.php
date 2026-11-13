@@ -6,8 +6,8 @@ namespace Maatify\Product\Tests\Integration\Runtime;
 
 use DateTimeImmutable;
 use DateTimeZone;
-use Maatify\Persistence\Pdo\Ordering\ScopedOrderingManager;
-use Maatify\Persistence\Pdo\Transaction\PdoSavepointTransactionRunner;
+use Maatify\PhpPersistence\Ordering\Repository\ScopedOrderingManager;
+use Maatify\PhpPersistence\Transaction\Repository\PdoSavepointTransactionRunner;
 use Maatify\Product\Common\Enum\ProductDeletedStateEnum;
 use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
 use Maatify\Product\Factory\ProductFactory;

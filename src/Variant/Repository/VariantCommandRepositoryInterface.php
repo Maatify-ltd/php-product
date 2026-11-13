@@ -21,12 +21,12 @@ use Maatify\Product\Variant\Exception\VariantSkuAlreadyExistsException;
 interface VariantCommandRepositoryInterface
 {
     /**
-     * Creates the active empty-composition Variant of an existing Product.
+     * Creates the initial active empty-composition Variant of a Product just inserted in this transaction.
      *
      * The Product row is locked first so concurrent writers to the same Product
      * serialize, and the display order is allocated through the shared Ordering API.
      *
-     * @param positive-int $productId Existing Product identity.
+     * @param positive-int $productId Newly inserted Product identity.
      * @param DateTimeImmutable $occurredAt Host Clock instant stored as created and updated time.
      *
      * @return positive-int The new Variant identity.
@@ -67,7 +67,7 @@ interface VariantCommandRepositoryInterface
      * Moves a non-deleted row within its ordering scope through the shared Ordering API
      * (`moveWithinScope()`), which locks the scope, clamps a position above the maximum to it, leaves
      * a row already at the position unchanged, and stamps the moved row's `updated_at`. Returns false
-     * when the row is not a live member of that scope.
+     * when the row is not a live member of that scope or the target write affected no rows.
      */
     public function updateDisplayOrder(int $variantId, int $productId, int $displayOrder, DateTimeImmutable $occurredAt): bool;
 }

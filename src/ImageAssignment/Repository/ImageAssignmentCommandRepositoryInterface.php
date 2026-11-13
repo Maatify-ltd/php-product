@@ -26,6 +26,8 @@ interface ImageAssignmentCommandRepositoryInterface
      * @return positive-int
      *
      * @throws ImageAssignmentAlreadyExistsException When the identity is already taken, including by a soft-deleted assignment.
+     *
+     * The caller must hold the Product lock in an active transaction.
      */
     public function create(CreateImageAssignmentCommand $command, ImageAssignmentScope $scope, DateTimeImmutable $occurredAt): int;
 
@@ -55,7 +57,7 @@ interface ImageAssignmentCommandRepositoryInterface
 
     /**
      * Restores the assignment as non-default, at the end of its exact scope's live order (the next
-     * position of the shared Ordering API), in the same write.
+     * position of the shared Ordering API), in the same write. The caller must hold the Product lock in an active transaction.
      */
     public function restore(int $assignmentId, string $scope, DateTimeImmutable $occurredAt): bool;
 
@@ -72,6 +74,8 @@ interface ImageAssignmentCommandRepositoryInterface
      * row. The database unique key on the default scope is the final guard.
      *
      * @throws ImageAssignmentDefaultConflictException When that key reports a live default in the scope.
+     *
+     * The caller must hold the Product lock in an active transaction.
      */
     public function restoreAsDefault(int $assignmentId, int $productId, string $scope, DateTimeImmutable $occurredAt): bool;
 
@@ -79,7 +83,7 @@ interface ImageAssignmentCommandRepositoryInterface
      * Moves a non-deleted assignment within its exact scope through the shared Ordering API
      * (`moveWithinScope()`), which locks the scope, clamps a position above the maximum to it, leaves
      * a row already at the position unchanged, and stamps the moved row's `updated_at`. Returns false
-     * when the assignment is not a live member of that scope.
+     * when the assignment is not a live member of that scope or the target write affected no rows.
      */
     public function updateDisplayOrder(int $assignmentId, string $scope, int $displayOrder, DateTimeImmutable $occurredAt): bool;
 }

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Maatify\Product\OptionValue\Repository;
 
-use Maatify\Persistence\Pdo\Pagination\PageRequest;
-use Maatify\Persistence\Pdo\Pagination\PageResult;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
 use Maatify\Product\OptionValue\DTO\OptionValueDTO;
 use Maatify\Product\OptionValue\Management\Criteria\OptionValueListCriteriaDTO;
 
@@ -32,9 +32,9 @@ interface OptionValueQueryReaderInterface
     /**
      * One page of the Option Values of a Option for management through the shared paginator; the counts use the same filter.
      *
-     * @return PageResult<OptionValueDTO>
+     * @return PageResultDTO<OptionValueDTO>
      */
-    public function paginateForManagement(int $optionId, OptionValueListCriteriaDTO $criteria, PageRequest $request): PageResult;
+    public function paginateForManagement(int $optionId, OptionValueListCriteriaDTO $criteria, PageRequest $request): PageResultDTO;
 
     /**
      * The consumer-visible Values of an Option: active, not deleted, and labelled, under an active,

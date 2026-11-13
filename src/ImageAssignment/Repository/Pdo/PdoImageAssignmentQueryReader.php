@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Maatify\Product\ImageAssignment\Repository\Pdo;
 
-use Maatify\Persistence\Pdo\Pagination\PageRequest;
-use Maatify\Persistence\Pdo\Pagination\PageResult;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
 use Maatify\Product\Common\Repository\Pdo\ManagementListQuery;
 use Maatify\Product\Common\Repository\Pdo\RowHydrator;
 use Maatify\Product\ImageAssignment\Consumer\Criteria\ImageAssignmentExactScopeCriteriaDTO;
@@ -65,7 +65,7 @@ final readonly class PdoImageAssignmentQueryReader implements ImageAssignmentQue
         ));
     }
 
-    public function paginateForManagement(ImageAssignmentListCriteriaDTO $criteria, PageRequest $request): PageResult
+    public function paginateForManagement(ImageAssignmentListCriteriaDTO $criteria, PageRequest $request): PageResultDTO
     {
         [$where, $params] = self::filter($criteria);
         $from = ' FROM `' . self::TABLE . '` WHERE ' . $where;

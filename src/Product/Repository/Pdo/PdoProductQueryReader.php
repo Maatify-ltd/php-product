@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Maatify\Product\Product\Repository\Pdo;
 
-use Maatify\Persistence\Pdo\Pagination\PageRequest;
-use Maatify\Persistence\Pdo\Pagination\PageResult;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
 use Maatify\Product\Common\Exception\ProductStorageFailureFactory;
 use Maatify\Product\Common\Repository\Pdo\ManagementListQuery;
 use Maatify\Product\Common\Repository\Pdo\RowHydrator;
@@ -64,7 +64,7 @@ final readonly class PdoProductQueryReader implements ProductQueryReaderInterfac
         ));
     }
 
-    public function paginateForManagement(ProductListCriteriaDTO $criteria, PageRequest $request): PageResult
+    public function paginateForManagement(ProductListCriteriaDTO $criteria, PageRequest $request): PageResultDTO
     {
         [$where, $params] = self::filter($criteria);
         [$search, $searchParams] = self::search($criteria);

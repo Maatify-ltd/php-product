@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Maatify\Product\ImageRole\Management\Service;
 
-use Maatify\Persistence\Pdo\Pagination\PageRequest;
-use Maatify\Persistence\Pdo\Pagination\PageResult;
-use Maatify\Persistence\Pdo\Transaction\SavepointTransactionRunnerInterface;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
+use Maatify\PhpPersistence\Transaction\Repository\SavepointTransactionRunnerInterface;
 use Maatify\Product\Common\Enum\ProductDeletedStateEnum;
 use Maatify\Product\Common\Exception\ProductBusinessRuleException;
 use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
@@ -139,7 +139,7 @@ final readonly class ImageRoleManagementService implements ImageRoleManagementSe
         return new ImageRoleCollectionDTO($this->reader->listForManagement($criteria));
     }
 
-    public function paginateForManagement(ImageRoleListCriteriaDTO $criteria, PageRequest $request): PageResult
+    public function paginateForManagement(ImageRoleListCriteriaDTO $criteria, PageRequest $request): PageResultDTO
     {
         return $this->reader->paginateForManagement($criteria, $request);
     }

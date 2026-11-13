@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Maatify\Product\Content\Service;
 
-use Maatify\Persistence\Pdo\Pagination\PageRequest;
-use Maatify\Persistence\Pdo\Pagination\PageResult;
-use Maatify\Persistence\Pdo\Transaction\SavepointTransactionRunnerInterface;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
+use Maatify\PhpPersistence\Transaction\Repository\SavepointTransactionRunnerInterface;
 use Maatify\Product\Common\Enum\ProductDeletedStateEnum;
 use Maatify\Product\Common\Exception\ProductBusinessRuleException;
 use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
@@ -153,7 +153,7 @@ final readonly class ContentLifecycle
      *
      * @param callable(ContentRecordDTO): T $mapper
      *
-     * @return PageResult<T>
+     * @return PageResultDTO<T>
      */
     public function paginateForManagement(
         int $ownerId,
@@ -161,7 +161,7 @@ final readonly class ContentLifecycle
         ProductDeletedStateEnum $deletedState,
         PageRequest $request,
         callable $mapper,
-    ): PageResult {
+    ): PageResultDTO {
         return $this->reader->paginateForManagement($ownerId, $language, $deletedState, $request, $mapper);
     }
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Maatify\Product\Tests\Integration\Runtime;
 
 use Maatify\Product\Common\Exception\ProductBusinessRuleException;
+use Maatify\Product\Factory\ProductFactory;
 use Maatify\Product\ImageAssignment\Exception\ImageAssignmentNotFoundException;
 use Maatify\Product\ImageAssignment\Management\Command\CreateImageAssignmentCommand;
 use Maatify\Product\ImageAssignment\Management\Command\UpdateImageAssignmentDisplayOrderCommand;
@@ -149,6 +150,32 @@ final class OrderingCommandTest extends RuntimeTestCase
         $service->updateDisplayOrder(new UpdateOptionDisplayOrderCommand($o1, 3));
         self::$pdo->commit();
         self::assertSame([$o2 => 1, $o3 => 2, $o1 => 3], $this->positions('maa_product_options', 'product_id', $p->productId));
+    }
+
+    public function testAllocatingAnOptionUsesCurrentOrderingInsideAnOlderHostSnapshot(): void
+    {
+        $product = $this->namedProduct('P');
+        [$first] = $this->options($product->productId, ['first']);
+        $writer = ProductFactory::createOptionManagementService(self::connect(self::$database), self::clock());
+
+        self::$pdo->exec('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+        self::$pdo->beginTransaction();
+        try {
+            self::assertSame([$first => 1], $this->positions('maa_product_options', 'product_id', $product->productId));
+            $second = $writer->create(new CreateOptionCommand($product->productId, 'second'))->optionId;
+            $third = $this->optionManagementService()->create(new CreateOptionCommand($product->productId, 'third'))->optionId;
+            self::assertTrue(self::$pdo->inTransaction());
+            self::$pdo->commit();
+        } finally {
+            if (self::$pdo->inTransaction()) {
+                self::$pdo->rollBack();
+            }
+        }
+
+        self::assertSame(
+            [$first => 1, $second => 2, $third => 3],
+            $this->positions('maa_product_options', 'product_id', $product->productId),
+        );
     }
 
     public function testARestoredRowTakesTheEndOfItsLiveScope(): void

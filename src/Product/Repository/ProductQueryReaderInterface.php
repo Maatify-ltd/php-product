@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Maatify\Product\Product\Repository;
 
-use Maatify\Persistence\Pdo\Pagination\PageRequest;
-use Maatify\Persistence\Pdo\Pagination\PageResult;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
 use Maatify\Product\Product\DTO\ProductDTO;
 use Maatify\Product\Product\Management\Criteria\ProductListCriteriaDTO;
 
@@ -43,7 +43,7 @@ interface ProductQueryReaderInterface
      * One page of Products for management through the shared paginator: `total` counts the status and
      * deleted-state filter, `filtered` and the page apply the search too.
      *
-     * @return PageResult<ProductDTO>
+     * @return PageResultDTO<ProductDTO>
      */
-    public function paginateForManagement(ProductListCriteriaDTO $criteria, PageRequest $request): PageResult;
+    public function paginateForManagement(ProductListCriteriaDTO $criteria, PageRequest $request): PageResultDTO;
 }

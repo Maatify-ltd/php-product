@@ -6,9 +6,9 @@ namespace Maatify\Product\Tests\Unit\Variant\Service;
 
 use DateTimeImmutable;
 use DateTimeZone;
-use Maatify\Persistence\Pdo\Pagination\PageRequest;
-use Maatify\Persistence\Pdo\Pagination\PageResult;
-use Maatify\Persistence\Pdo\Transaction\SavepointTransactionRunnerInterface;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
+use Maatify\PhpPersistence\Transaction\Repository\SavepointTransactionRunnerInterface;
 use Maatify\Product\Common\Enum\ProductDeletedStateEnum;
 use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
 use Maatify\Product\Tests\Support\UnusedProductConfigurationRepository;
@@ -128,7 +128,7 @@ final class VariantServiceTest extends TestCase
                 return $this->list;
             }
 
-            public function paginateForManagement(int $productId, VariantListCriteriaDTO $criteria, PageRequest $request): PageResult
+            public function paginateForManagement(int $productId, VariantListCriteriaDTO $criteria, PageRequest $request): PageResultDTO
             {
                 throw new \LogicException('paginateForManagement is not expected in this test.');
             }

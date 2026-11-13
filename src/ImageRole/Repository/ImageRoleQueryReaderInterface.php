@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Maatify\Product\ImageRole\Repository;
 
-use Maatify\Persistence\Pdo\Pagination\PageRequest;
-use Maatify\Persistence\Pdo\Pagination\PageResult;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
 use Maatify\Product\ImageRole\DTO\ImageRoleDTO;
 use Maatify\Product\ImageRole\Management\Criteria\ImageRoleListCriteriaDTO;
 
@@ -37,7 +37,7 @@ interface ImageRoleQueryReaderInterface
     /**
      * One page of Roles for management through the shared paginator; the counts use the same filter.
      *
-     * @return PageResult<ImageRoleDTO>
+     * @return PageResultDTO<ImageRoleDTO>
      */
-    public function paginateForManagement(ImageRoleListCriteriaDTO $criteria, PageRequest $request): PageResult;
+    public function paginateForManagement(ImageRoleListCriteriaDTO $criteria, PageRequest $request): PageResultDTO;
 }

@@ -6,7 +6,7 @@ namespace Maatify\Product\Tests\Integration\Runtime;
 
 use DateTimeImmutable;
 use DateTimeZone;
-use Maatify\Persistence\Pdo\Ordering\ScopedOrderingManager;
+use Maatify\PhpPersistence\Ordering\Repository\ScopedOrderingManager;
 use Maatify\Product\Common\Enum\ProductDeletedStateEnum;
 use Maatify\Product\Common\Exception\ProductBusinessRuleException;
 use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
@@ -168,7 +168,16 @@ final class RestoreAsDefaultTest extends RuntimeTestCase
 
         // The service rejects this case before writing; the repository alone proves the final guard.
         $this->assertNoWrite(self::TABLE, function () use ($repository, $deleted, $live, $scope, $at, $p): void {
-            $conflict = $this->assertThrows(ImageAssignmentDefaultConflictException::class, fn() => $repository->restoreAsDefault($deleted, $p->productId, $scope, $at));
+            self::$pdo->beginTransaction();
+            try {
+                self::scalar('SELECT id FROM maa_product_products WHERE id = :id FOR UPDATE', ['id' => $p->productId]);
+                $conflict = $this->assertThrows(
+                    ImageAssignmentDefaultConflictException::class,
+                    fn() => $repository->restoreAsDefault($deleted, $p->productId, $scope, $at),
+                );
+            } finally {
+                self::$pdo->rollBack();
+            }
             $previous = $conflict->getPrevious();
             self::assertInstanceOf(PDOException::class, $previous);
             self::assertSame(1062, $previous->errorInfo[1] ?? null);

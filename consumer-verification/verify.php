@@ -17,6 +17,8 @@
 declare(strict_types=1);
 
 use Composer\InstalledVersions;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
 use Maatify\Product\Common\Exception\ProductBusinessRuleException;
 use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
 use Maatify\Product\Content\Exception\ProductContentAlreadyExistsException;
@@ -37,6 +39,7 @@ use Maatify\Product\Product\Management\Command\CreateProductCommand;
 use Maatify\Product\Product\Management\Command\ReconfigureOptionTarget;
 use Maatify\Product\Product\Management\Command\ReconfigureProductCommand;
 use Maatify\Product\Product\Management\Command\ReconfigureVariantTarget;
+use Maatify\Product\Product\Management\Criteria\ProductListCriteriaDTO;
 use Maatify\Product\Product\Management\Service\ProductManagementServiceInterface;
 use Maatify\Product\Variant\Consumer\Criteria\VariantCompositionCriteriaDTO;
 use Maatify\Product\Variant\Exception\VariantCompositionConflictException;
@@ -49,8 +52,7 @@ require __DIR__ . '/vendor/autoload.php';
 function check(bool $condition, string $message): void
 {
     if (!$condition) {
-        fwrite(STDERR, "FAIL: {$message}\n");
-        exit(1);
+        throw new RuntimeException("FAIL: {$message}");
     }
     echo "ok: {$message}\n";
 }
@@ -59,8 +61,7 @@ function env(string $name): string
 {
     $value = getenv($name);
     if (!is_string($value) || $value === '') {
-        fwrite(STDERR, "FAIL: missing environment variable {$name}\n");
-        exit(1);
+        throw new RuntimeException("FAIL: missing environment variable {$name}");
     }
 
     return $value;
@@ -114,8 +115,7 @@ function raceCreates(string $database, array $codes): array
     foreach ($workers as $worker) {
         $line = fgets($worker['pipes'][1]);
         if ($line !== "ready\n") {
-            fwrite(STDERR, 'FAIL: a race worker did not become ready: ' . stream_get_contents($worker['pipes'][2]) . "\n");
-            exit(1);
+            throw new RuntimeException('FAIL: a race worker did not become ready: ' . stream_get_contents($worker['pipes'][2]));
         }
     }
     foreach ($workers as $worker) {
@@ -136,6 +136,10 @@ function raceCreates(string $database, array $codes): array
 }
 
 check(InstalledVersions::isInstalled('maatify/php-product'), 'package is installed through Composer');
+check(InstalledVersions::isInstalled('maatify/php-persistence'), 'successor Persistence is installed');
+check(InstalledVersions::getPrettyVersion('maatify/php-persistence') === 'v1.0.0-rc.1', 'Persistence resolves to the exact trial RC');
+check(InstalledVersions::getReference('maatify/php-persistence') === '34c3b874525d36ae064c162cdd553bc75d18772b', 'Persistence matches the verified published revision');
+check(!InstalledVersions::isInstalled('maatify/persistence'), 'legacy Persistence is absent');
 $installPath = InstalledVersions::getInstallPath('maatify/php-product');
 check(is_string($installPath) && is_dir($installPath), 'installed package path exists');
 check(!is_link((string) $installPath), 'package was copied, not symlinked from the repository');
@@ -192,6 +196,15 @@ try {
     check($product->code === 'SIMPLE-1', 'the stored Product is readable through the public API');
     check($product->status === ProductStatusEnum::INACTIVE, 'a new Product is inactive');
     check($product->deletedAt === null, 'a new Product is not soft deleted');
+
+    $page = $service->paginateForManagement(new ProductListCriteriaDTO(search: 'SIMPLE-1'), new PageRequest(1, 1));
+    check($page instanceof PageResultDTO && $page->data[0]->id === $created->productId, 'public management pagination uses the successor types');
+    $serializedPage = $page->jsonSerialize();
+    check(
+        $serializedPage['pagination']['page'] === 1 && $serializedPage['pagination']['per_page'] === 1
+        && $serializedPage['pagination']['filtered'] === 1 && $serializedPage['pagination']['has_next'] === false,
+        'pagination preserves the consumer response shape',
+    );
 
     $variants = $pdo->prepare('SELECT status, display_order FROM maa_product_variants WHERE product_id = ?');
     $variants->execute([$created->productId]);

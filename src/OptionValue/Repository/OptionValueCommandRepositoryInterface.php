@@ -22,6 +22,8 @@ interface OptionValueCommandRepositoryInterface
      * @return positive-int
      *
      * @throws OptionValueCodeAlreadyExistsException When the code is already reserved in the Option, including by a soft-deleted Value.
+     *
+     * The caller must hold the Product lock in an active transaction.
      */
     public function create(CreateOptionValueCommand $command, DateTimeImmutable $occurredAt): int;
 
@@ -39,7 +41,7 @@ interface OptionValueCommandRepositoryInterface
 
     /**
      * Restores a soft-deleted Option Value at the end of its Option's live order (the next position of
-     * the shared Ordering API), in the same write. Returns whether a row was changed.
+     * the shared Ordering API), in the same write. The caller must hold the Product lock in an active transaction. Returns whether a row was changed.
      */
     public function restore(int $optionValueId, int $optionId, DateTimeImmutable $occurredAt): bool;
 
@@ -47,7 +49,7 @@ interface OptionValueCommandRepositoryInterface
      * Moves a non-deleted row within its ordering scope through the shared Ordering API
      * (`moveWithinScope()`), which locks the scope, clamps a position above the maximum to it, leaves
      * a row already at the position unchanged, and stamps the moved row's `updated_at`. Returns false
-     * when the row is not a live member of that scope.
+     * when the row is not a live member of that scope or the target write affected no rows.
      */
     public function updateDisplayOrder(int $optionValueId, int $optionId, int $displayOrder, DateTimeImmutable $occurredAt): bool;
 }

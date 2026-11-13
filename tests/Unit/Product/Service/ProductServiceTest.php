@@ -6,7 +6,7 @@ namespace Maatify\Product\Tests\Unit\Product\Service;
 
 use DateTimeImmutable;
 use DateTimeZone;
-use Maatify\Persistence\Pdo\Transaction\SavepointTransactionRunnerInterface;
+use Maatify\PhpPersistence\Transaction\Repository\SavepointTransactionRunnerInterface;
 use Maatify\Product\Common\Enum\ProductDeletedStateEnum;
 use Maatify\Product\Product\Consumer\Service\ProductConsumerService;
 use Maatify\Product\Product\DTO\ProductDTO;

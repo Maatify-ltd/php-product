@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Maatify\Product\Tests\Integration\Runtime;
 
-use Maatify\Persistence\Pdo\Pagination\PageRequest;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
 use Maatify\Product\Common\Enum\ProductDeletedStateEnum;
 use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
 use Maatify\Product\ImageAssignment\Management\Command\CreateImageAssignmentCommand;

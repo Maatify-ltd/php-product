@@ -9,7 +9,7 @@
 </picture>
 
 [![Status](https://img.shields.io/badge/Status-Development-blue)](README.md)
-[![PHP](https://img.shields.io/badge/PHP-%5E8.4-8892BF)](composer.json)
+[![PHP](https://img.shields.io/badge/PHP-8.4.27%2B%20%7C%208.5.12%2B-8892BF)](composer.json)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 [![Maatify Ecosystem](https://img.shields.io/badge/Maatify-Ecosystem-blueviolet)](https://github.com/Maatify)
 
@@ -40,9 +40,9 @@ The package is in development and no version is released. Every capability of th
 
 ## Requirements
 
-- PHP `^8.4` with `ext-pdo`, `ext-pdo_mysql`, and `ext-mbstring`
+- PHP `>=8.4.27 <8.5.0 || >=8.5.12 <8.6.0` with `ext-pdo`, `ext-pdo_mysql`, and `ext-mbstring`
 - MySQL `8.0.16` or later (verified on `8.0.16` and `8.0.46`)
-- `maatify/exceptions` `^1.0`, `maatify/persistence` `^1.4`, `maatify/shared-common` `^1.0`
+- `maatify/exceptions` `^1.0`, `maatify/php-persistence` `1.0.0-rc.1`, `maatify/shared-common` `^1.0`
 
 ## Installation
 
@@ -57,11 +57,16 @@ No version of this package is published to a Composer distribution source yet, s
             "options": { "symlink": false }
         }
     ],
-    "require": { "maatify/php-product": "*" },
-    "minimum-stability": "dev",
+    "require": {
+        "maatify/php-product": "*@dev",
+        "maatify/php-persistence": ">=1.0.0-rc.1 <=1.0.0-rc.1"
+    },
+    "minimum-stability": "stable",
     "prefer-stable": true
 }
 ```
+
+This is a trial installation. The consumer root explicitly permits the Product development package and the exact Persistence release candidate.
 
 Then install the schema once into your database:
 

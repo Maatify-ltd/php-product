@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Maatify\Product\Content\Repository\Pdo;
 
-use Maatify\Persistence\Pdo\Pagination\PageRequest;
-use Maatify\Persistence\Pdo\Pagination\PageResult;
-use Maatify\Persistence\Pdo\Pagination\PaginationConfig;
-use Maatify\Persistence\Pdo\Pagination\PdoPaginationQueryDescriptor;
-use Maatify\Persistence\Pdo\Pagination\PdoPaginator;
-use Maatify\Persistence\Pdo\Pagination\SortDirectionEnum;
-use Maatify\Persistence\Pdo\Pagination\SortWhitelist;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
+use Maatify\PhpPersistence\Pagination\Config\PaginationConfig;
+use Maatify\PhpPersistence\Pagination\Criteria\PdoPaginationQueryDescriptor;
+use Maatify\PhpPersistence\Pagination\Repository\PdoPaginator;
+use Maatify\PhpPersistence\Pagination\Enum\SortDirectionEnum;
+use Maatify\PhpPersistence\Pagination\ValueObject\SortWhitelist;
 use Maatify\Product\Common\Enum\ProductDeletedStateEnum;
 use Maatify\Product\Common\Repository\Pdo\ManagementListQuery;
 use Maatify\Product\Common\Repository\Pdo\RowHydrator;
@@ -28,7 +28,7 @@ use PDO;
  *
  * Language matching is exact: an exact language compares `language_code = :language_code` under
  * the column collation, the unlocalized selector is `language_code IS NULL`, and nothing falls
- * back. Pagination mechanics are delegated to `maatify/persistence` (`PdoPaginator`): 20 records
+ * back. Pagination mechanics are delegated to `maatify/php-persistence` (`PdoPaginator`): 20 records
  * per page by default, 1 to 100, sortable by `language_code` (default, ascending), `id`,
  * `created_at`, or `updated_at`, with `id ASC` as the tie-breaker.
  *
@@ -95,7 +95,7 @@ final readonly class PdoContentQueryReader implements ContentQueryReaderInterfac
         ProductDeletedStateEnum $deletedState,
         PageRequest $request,
         callable $mapper,
-    ): PageResult {
+    ): PageResultDTO {
         [$where, $params] = $this->managementFilter($ownerId, $language, $deletedState);
         $from = ' FROM `' . $this->owner->table() . '` WHERE ' . $where;
         $count = 'SELECT COUNT(*)' . $from;

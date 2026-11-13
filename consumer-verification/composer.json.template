@@ -16,16 +16,17 @@
         "ext-mbstring": "*",
         "ext-pdo": "*",
         "ext-pdo_mysql": "*",
-        "maatify/php-product": "*",
+        "maatify/php-persistence": ">=1.0.0-rc.1 <=1.0.0-rc.1",
+        "maatify/php-product": "*@dev",
         "maatify/shared-common": "^1.0"
     },
     "config": {
         "allow-plugins": false,
         "platform": {
-            "php": "8.4.0"
+            "php": "8.4.27"
         },
         "sort-packages": true
     },
-    "minimum-stability": "dev",
+    "minimum-stability": "stable",
     "prefer-stable": true
 }

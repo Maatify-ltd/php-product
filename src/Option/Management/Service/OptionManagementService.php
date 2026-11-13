@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Maatify\Product\Option\Management\Service;
 
-use Maatify\Persistence\Pdo\Pagination\PageRequest;
-use Maatify\Persistence\Pdo\Pagination\PageResult;
-use Maatify\Persistence\Pdo\Transaction\SavepointTransactionRunnerInterface;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
+use Maatify\PhpPersistence\Transaction\Repository\SavepointTransactionRunnerInterface;
 use Maatify\Product\Common\Enum\ProductDeletedStateEnum;
 use Maatify\Product\Common\Exception\ProductBusinessRuleException;
 use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
@@ -124,7 +124,7 @@ final readonly class OptionManagementService implements OptionManagementServiceI
                 throw ProductBusinessRuleException::softDeleted('Option', $optionId);
             }
             if (!$this->options->updateDisplayOrder($optionId, $snapshot->productId, $command->displayOrder, $occurredAt)) {
-                throw OptionNotFoundException::withId($optionId);
+                throw ProductStorageFailureFactory::lockedRowVanished('Option', $optionId);
             }
         });
     }
@@ -176,7 +176,7 @@ final readonly class OptionManagementService implements OptionManagementServiceI
         return new OptionCollectionDTO($this->reader->listForManagement($productId, $criteria));
     }
 
-    public function paginateByProductIdForManagement(int $productId, OptionListCriteriaDTO $criteria, PageRequest $request): PageResult
+    public function paginateByProductIdForManagement(int $productId, OptionListCriteriaDTO $criteria, PageRequest $request): PageResultDTO
     {
         if ($productId < 1) {
             throw ProductInvalidArgumentException::nonPositiveId('productId');

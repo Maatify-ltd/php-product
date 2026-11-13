@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Maatify\Product\ImageAssignment\Management\Service;
 
-use Maatify\Persistence\Pdo\Pagination\PageRequest;
-use Maatify\Persistence\Pdo\Pagination\PageResult;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
 use Maatify\Product\Common\Enum\ProductDeletedStateEnum;
 use Maatify\Product\Common\Exception\ProductBusinessRuleException;
 use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
@@ -141,12 +141,12 @@ interface ImageAssignmentManagementServiceInterface
     public function listForManagement(ImageAssignmentListCriteriaDTO $criteria): ImageAssignmentCollectionDTO;
 
     /**
-     * One page of the assignments of a Product for management under the same criteria, through the shared `maatify/persistence` paginator: 20 per page by default, 1 to 100 (a larger request is
+     * One page of the assignments of a Product for management under the same criteria, through the shared `maatify/php-persistence` paginator: 20 per page by default, 1 to 100 (a larger request is
      * clamped), ties broken by `id` ascending, and an unknown sort key falls back to the default. The criteria's
      * `maxResults` does not apply. Sort keys:
      * `business_order` (default: exact scope, display order, then identity), `id`, `created_at`, `updated_at`.
      *
-     * @return PageResult<ImageAssignmentDTO>
+     * @return PageResultDTO<ImageAssignmentDTO>
      */
-    public function paginateForManagement(ImageAssignmentListCriteriaDTO $criteria, PageRequest $request): PageResult;
+    public function paginateForManagement(ImageAssignmentListCriteriaDTO $criteria, PageRequest $request): PageResultDTO;
 }

@@ -51,12 +51,14 @@ interface ProductConfigurationRepositoryInterface
     /**
      * Restores a soft-deleted Variant and activates it in one write, at the end of its Product's live
      * order (the next position of the shared Ordering API). Returns whether a row was changed.
+     *
+     * The caller must hold the Product lock in an active transaction.
      */
     public function restoreVariantAsActive(int $variantId, int $productId, DateTimeImmutable $occurredAt): bool;
 
     /**
      * Inserts an active Variant with an immutable composition, allocating its position through the
-     * shared Ordering API, and returns its identity.
+     * shared Ordering API, and returns its identity. The caller must hold the Product lock in an active transaction.
      *
      * @param list<OptionValueSelection> $composition
      *

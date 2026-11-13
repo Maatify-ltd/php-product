@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Maatify\Product\Content\Management\Service;
 
-use Maatify\Persistence\Pdo\Pagination\PageRequest;
-use Maatify\Persistence\Pdo\Pagination\PageResult;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
 use Maatify\Product\Common\Enum\ProductDeletedStateEnum;
 use Maatify\Product\Content\DTO\ContentFieldsDTO;
 use Maatify\Product\Content\DTO\CreatedProductContentDTO;
@@ -65,7 +65,7 @@ final readonly class ProductContentManagementService implements ProductContentMa
         ));
     }
 
-    public function paginateForManagement(ProductContentListCriteriaDTO $criteria, PageRequest $request): PageResult
+    public function paginateForManagement(ProductContentListCriteriaDTO $criteria, PageRequest $request): PageResultDTO
     {
         return $this->content->paginateForManagement($criteria->productId, $criteria->language, $criteria->deletedState, $request, ContentRecordMapper::toProductContent(...));
     }

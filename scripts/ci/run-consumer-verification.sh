@@ -23,18 +23,19 @@ for run in 1 2; do
     echo "=== Consumer Verification Harness clean run #${run} (${consumer_root}) ==="
     status=0
     (
-        set -euo pipefail
-        cp -R "$ROOT/consumer-verification/." "$consumer_root/"
-        sed "s|__PACKAGE_ROOT__|$ROOT|g" "$consumer_root/composer.json.template" > "$consumer_root/composer.json"
-        cd "$consumer_root"
-        # The fixture accepts the development ref of its path repository.
-        composer validate --strict --no-check-all
+        # The parent captures this subshell status for cleanup. Explicit checks preserve fail-fast behavior.
+        set -uo pipefail
+        cp -R "$ROOT/consumer-verification/." "$consumer_root/" || exit $?
+        sed "s|__PACKAGE_ROOT__|$ROOT|g" "$consumer_root/composer.json.template" > "$consumer_root/composer.json" || exit $?
+        cd "$consumer_root" || exit $?
+        # The fixture permits the Product path package and the exact Persistence RC individually.
+        composer validate --strict --no-check-all || exit $?
         COMPOSER_HOME="$consumer_root/.composer-home" COMPOSER_CACHE_DIR="$consumer_root/.composer-cache" \
-            composer update --no-interaction --prefer-dist --no-progress
-        composer dump-autoload --optimize --strict-psr
-        composer check-platform-reqs
-        composer show maatify/php-product
-        php verify.php
+            composer update --no-interaction --prefer-dist --no-progress || exit $?
+        composer dump-autoload --optimize --strict-psr || exit $?
+        composer check-platform-reqs || exit $?
+        composer show maatify/php-product || exit $?
+        php verify.php || exit $?
         # Standalone example smoke execution against the same MySQL service, through the
         # consumer root's production autoloader (installed package, no repository source).
         PRODUCT_EXAMPLE_AUTOLOAD="$consumer_root/vendor/autoload.php" php "$ROOT/scripts/ci/smoke-examples.php" "$ROOT"

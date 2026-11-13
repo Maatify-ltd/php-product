@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Maatify\Product\OptionValue\Management\Service;
 
-use Maatify\Persistence\Pdo\Pagination\PageRequest;
-use Maatify\Persistence\Pdo\Pagination\PageResult;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
 use Maatify\Product\Common\Enum\ProductDeletedStateEnum;
 use Maatify\Product\Common\Exception\ProductBusinessRuleException;
 use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
@@ -107,14 +107,14 @@ interface OptionValueManagementServiceInterface
     public function listByOptionIdForManagement(int $optionId, OptionValueListCriteriaDTO $criteria = new OptionValueListCriteriaDTO()): OptionValueCollectionDTO;
 
     /**
-     * One page of the Option Values of an Option for management under the same criteria, through the shared `maatify/persistence` paginator: 20 per page by default, 1 to 100 (a larger request is
+     * One page of the Option Values of an Option for management under the same criteria, through the shared `maatify/php-persistence` paginator: 20 per page by default, 1 to 100 (a larger request is
      * clamped), ties broken by `id` ascending, and an unknown sort key falls back to the default. The criteria's
      * `maxResults` does not apply.
      * Sort keys: `display_order` (default, ascending), `id`, `created_at`, `updated_at`.
      *
-     * @return PageResult<OptionValueDTO>
+     * @return PageResultDTO<OptionValueDTO>
      *
      * @throws ProductInvalidArgumentException When the Option identity is not a positive integer.
      */
-    public function paginateByOptionIdForManagement(int $optionId, OptionValueListCriteriaDTO $criteria, PageRequest $request): PageResult;
+    public function paginateByOptionIdForManagement(int $optionId, OptionValueListCriteriaDTO $criteria, PageRequest $request): PageResultDTO;
 }

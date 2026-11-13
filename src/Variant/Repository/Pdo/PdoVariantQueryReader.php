@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Maatify\Product\Variant\Repository\Pdo;
 
-use Maatify\Persistence\Pdo\Pagination\PageRequest;
-use Maatify\Persistence\Pdo\Pagination\PageResult;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
 use Maatify\Product\Common\Exception\ProductStorageFailureFactory;
 use Maatify\Product\Common\Repository\Pdo\ManagementListQuery;
 use Maatify\Product\Common\Repository\Pdo\RowHydrator;
@@ -78,7 +78,7 @@ final readonly class PdoVariantQueryReader implements VariantQueryReaderInterfac
         ));
     }
 
-    public function paginateForManagement(int $productId, VariantListCriteriaDTO $criteria, PageRequest $request): PageResult
+    public function paginateForManagement(int $productId, VariantListCriteriaDTO $criteria, PageRequest $request): PageResultDTO
     {
         [$where, $params] = self::managementFilter($productId, $criteria);
         $count = 'SELECT COUNT(*) FROM `maa_product_variants` v WHERE ' . $where;
@@ -98,7 +98,7 @@ final readonly class PdoVariantQueryReader implements VariantQueryReaderInterfac
         );
 
         // The rows are hydrated together so the composition pairs of the page load in one query.
-        return new PageResult(
+        return new PageResultDTO(
             $this->hydrate($page->data),
             $page->page,
             $page->perPage,

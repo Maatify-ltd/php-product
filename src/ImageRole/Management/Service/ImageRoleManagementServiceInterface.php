@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Maatify\Product\ImageRole\Management\Service;
 
-use Maatify\Persistence\Pdo\Pagination\PageRequest;
-use Maatify\Persistence\Pdo\Pagination\PageResult;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
 use Maatify\Product\Common\Enum\ProductDeletedStateEnum;
 use Maatify\Product\Common\Exception\ProductBusinessRuleException;
 use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
@@ -96,12 +96,12 @@ interface ImageRoleManagementServiceInterface
     public function listForManagement(ImageRoleListCriteriaDTO $criteria = new ImageRoleListCriteriaDTO()): ImageRoleCollectionDTO;
 
     /**
-     * One page of Roles for management under the same criteria, through the shared `maatify/persistence` paginator: 20 per page by default, 1 to 100 (a larger request is
+     * One page of Roles for management under the same criteria, through the shared `maatify/php-persistence` paginator: 20 per page by default, 1 to 100 (a larger request is
      * clamped), ties broken by `id` ascending, and an unknown sort key falls back to the default. The criteria's
      * `maxResults` does not apply. Sort keys: `role_key` (default,
      * ascending by binary value), `id`, `created_at`, `updated_at`.
      *
-     * @return PageResult<ImageRoleDTO>
+     * @return PageResultDTO<ImageRoleDTO>
      */
-    public function paginateForManagement(ImageRoleListCriteriaDTO $criteria, PageRequest $request): PageResult;
+    public function paginateForManagement(ImageRoleListCriteriaDTO $criteria, PageRequest $request): PageResultDTO;
 }

@@ -7,9 +7,9 @@ namespace Maatify\Product\Tests\Unit\ImageAssignment\Service;
 use DateTimeImmutable;
 use DateTimeZone;
 use LogicException;
-use Maatify\Persistence\Pdo\Pagination\PageRequest;
-use Maatify\Persistence\Pdo\Pagination\PageResult;
-use Maatify\Persistence\Pdo\Transaction\SavepointTransactionRunnerInterface;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
+use Maatify\PhpPersistence\Transaction\Repository\SavepointTransactionRunnerInterface;
 use Maatify\Product\Common\Exception\ProductBusinessRuleException;
 use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
 use Maatify\Product\ImageAssignment\Consumer\Criteria\ImageAssignmentExactScopeCriteriaDTO;
@@ -390,7 +390,7 @@ final class ImageAssignmentServiceTest extends TestCase
                 throw new LogicException('listForManagement is not expected in this test.');
             }
 
-            public function paginateForManagement(ImageAssignmentListCriteriaDTO $criteria, PageRequest $request): PageResult
+            public function paginateForManagement(ImageAssignmentListCriteriaDTO $criteria, PageRequest $request): PageResultDTO
             {
                 throw new LogicException('paginateForManagement is not expected in this test.');
             }

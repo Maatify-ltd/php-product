@@ -33,8 +33,12 @@ jobs:
         with:
           php-version: '8.4'
           coverage: none
+      - name: Verify Installed PHP Patch Floor
+        run: php scripts/ci/check-php-patch-floor.php "8.4"
       - name: Composer Validate
         run: composer validate --strict
+      - name: Verify PHP Constraint Boundaries
+        run: bash scripts/ci/check-php-constraint.sh
 
   php-syntax:
     name: PHP Syntax Check
@@ -48,6 +52,8 @@ jobs:
         with:
           php-version: '8.4'
           coverage: none
+      - name: Verify Installed PHP Patch Floor
+        run: php scripts/ci/check-php-patch-floor.php "8.4"
       - name: Check Syntax
         run: bash scripts/ci/check-php-syntax.sh
 
@@ -64,6 +70,8 @@ jobs:
           php-version: '8.4'
           coverage: none
           extensions: pdo_mysql
+      - name: Verify Installed PHP Patch Floor
+        run: php scripts/ci/check-php-patch-floor.php "8.4"
       - name: Install Dependencies
         run: composer update --no-interaction --prefer-dist --no-progress
       - name: Verify Autoload and Platform
@@ -87,6 +95,8 @@ jobs:
           php-version: '8.5'
           coverage: none
           extensions: mbstring
+      - name: Verify Installed PHP Patch Floor
+        run: php scripts/ci/check-php-patch-floor.php "8.5"
       - name: Install Dependencies
         run: composer update --no-interaction --prefer-dist --no-progress
       - name: Verify Platform
@@ -111,6 +121,8 @@ jobs:
           php-version: ${{ matrix.php }}
           coverage: none
           extensions: pdo_mysql
+      - name: Verify Installed PHP Patch Floor
+        run: php scripts/ci/check-php-patch-floor.php "${{ matrix.php }}"
       - name: Install Dependencies
         run: composer update --no-interaction --prefer-dist --no-progress
       - name: Verify Autoload and Platform
@@ -139,6 +151,8 @@ jobs:
           php-version: ${{ matrix.php }}
           coverage: none
           extensions: pdo_mysql
+      - name: Verify Installed PHP Patch Floor
+        run: php scripts/ci/check-php-patch-floor.php "${{ matrix.php }}"
       - name: Install Dependencies
         run: composer update --no-interaction --prefer-dist --no-progress
       - name: Verify Autoload and Platform
@@ -164,6 +178,8 @@ jobs:
           php-version: '8.4'
           coverage: none
           extensions: pdo_mysql
+      - name: Verify Installed PHP Patch Floor
+        run: php scripts/ci/check-php-patch-floor.php "8.4"
       - name: Install Lowest Dependencies
         run: composer update --prefer-lowest --prefer-stable --no-interaction --prefer-dist --no-progress
       - name: Verify Autoload and Platform
@@ -190,6 +206,8 @@ jobs:
           php-version: '8.4'
           coverage: none
           tools: composer:2.10.3
+      - name: Verify Installed PHP Patch Floor
+        run: php scripts/ci/check-php-patch-floor.php "8.4"
       - name: Install Dependencies
         run: composer update --no-interaction --prefer-dist --no-progress
       - name: Verify Platform and Audit
@@ -211,6 +229,8 @@ jobs:
           php-version: '8.4'
           coverage: none
           extensions: pdo_mysql
+      - name: Verify Installed PHP Patch Floor
+        run: php scripts/ci/check-php-patch-floor.php "8.4"
       - name: Run Consumer Verification Harness
         run: composer verify:consumer
 

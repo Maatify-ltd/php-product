@@ -4,20 +4,20 @@ declare(strict_types=1);
 
 namespace Maatify\Product\Common\Repository\Pdo;
 
-use Maatify\Persistence\Pdo\Pagination\PageRequest;
-use Maatify\Persistence\Pdo\Pagination\PageResult;
-use Maatify\Persistence\Pdo\Pagination\PaginationConfig;
-use Maatify\Persistence\Pdo\Pagination\PdoPaginationQueryDescriptor;
-use Maatify\Persistence\Pdo\Pagination\PdoPaginator;
-use Maatify\Persistence\Pdo\Pagination\SortDirectionEnum;
-use Maatify\Persistence\Pdo\Pagination\SortWhitelist;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
+use Maatify\PhpPersistence\Pagination\Config\PaginationConfig;
+use Maatify\PhpPersistence\Pagination\Criteria\PdoPaginationQueryDescriptor;
+use Maatify\PhpPersistence\Pagination\Repository\PdoPaginator;
+use Maatify\PhpPersistence\Pagination\Enum\SortDirectionEnum;
+use Maatify\PhpPersistence\Pagination\ValueObject\SortWhitelist;
 use Maatify\Product\Common\Enum\ProductDeletedStateEnum;
 use PDO;
 
 /**
  * Shared mechanics of the management list reads: the bounded unpaginated fetch with its limit bound
  * as an integer parameter, the soft-deletion filter, and delegation of paginated reads to the shared
- * `maatify/persistence` paginator (20 per page by default, 1 to 100, `id` ascending as the
+ * `maatify/php-persistence` paginator (20 per page by default, 1 to 100, `id` ascending as the
  * tie-breaker). The callers own the filters, the selected columns, and the row mapping.
  *
  * @internal Not part of the Public Runtime API.
@@ -97,7 +97,7 @@ final class ManagementListQuery
      * @param array<string, string|int|bool|null> $filteredParams
      * @param callable(array<string, mixed>): T $mapper
      *
-     * @return PageResult<T>
+     * @return PageResultDTO<T>
      */
     public static function paginate(
         PDO $pdo,
@@ -109,7 +109,7 @@ final class ManagementListQuery
         PageRequest $request,
         PaginationConfig $config,
         callable $mapper,
-    ): PageResult {
+    ): PageResultDTO {
         return (new PdoPaginator())->paginate(
             $pdo,
             new PdoPaginationQueryDescriptor($totalSql, $totalParams, $filteredSql, $filteredParams, $dataSql, $filteredParams),

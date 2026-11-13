@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Maatify\Product\Product\Management\Service;
 
-use Maatify\Persistence\Pdo\Pagination\PageRequest;
-use Maatify\Persistence\Pdo\Pagination\PageResult;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
 use Maatify\Product\Common\Enum\ProductDeletedStateEnum;
 use Maatify\Product\Common\Exception\ProductBusinessRuleException;
 use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
@@ -134,13 +134,13 @@ interface ProductManagementServiceInterface
     public function listForManagement(ProductListCriteriaDTO $criteria = new ProductListCriteriaDTO()): ProductCollectionDTO;
 
     /**
-     * One page of Products for management under the same criteria, through the shared `maatify/persistence` paginator: 20 per page by default, 1 to 100 (a larger request is
+     * One page of Products for management under the same criteria, through the shared `maatify/php-persistence` paginator: 20 per page by default, 1 to 100 (a larger request is
      * clamped), ties broken by `id` ascending, and an unknown sort key falls back to the default. The criteria's
      * `maxResults` does not apply. Sort keys: `id` (default,
      * ascending), `code`, `created_at`, `updated_at`. `total` counts the status and deleted-state filter
      * without the search; `filtered` and the page apply the search too.
      *
-     * @return PageResult<ProductDTO>
+     * @return PageResultDTO<ProductDTO>
      */
-    public function paginateForManagement(ProductListCriteriaDTO $criteria, PageRequest $request): PageResult;
+    public function paginateForManagement(ProductListCriteriaDTO $criteria, PageRequest $request): PageResultDTO;
 }

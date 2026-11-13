@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Maatify\Product\Content\Repository;
 
-use Maatify\Persistence\Pdo\Pagination\PageRequest;
-use Maatify\Persistence\Pdo\Pagination\PageResult;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
 use Maatify\Product\Common\Enum\ProductDeletedStateEnum;
 use Maatify\Product\Content\DTO\ContentRecordDTO;
 use Maatify\Product\Content\ValueObject\ContentLanguageFilter;
@@ -38,13 +38,13 @@ interface ContentQueryReaderInterface
 
     /**
      * One page of the owner's records matching the language selector and deleted state, through the
-     * shared `maatify/persistence` paginator; the total and filtered counts use the same filter.
+     * shared `maatify/php-persistence` paginator; the total and filtered counts use the same filter.
      *
      * @template T of object
      *
      * @param callable(ContentRecordDTO): T $mapper
      *
-     * @return PageResult<T>
+     * @return PageResultDTO<T>
      */
     public function paginateForManagement(
         int $ownerId,
@@ -52,7 +52,7 @@ interface ContentQueryReaderInterface
         ProductDeletedStateEnum $deletedState,
         PageRequest $request,
         callable $mapper,
-    ): PageResult;
+    ): PageResultDTO;
 
     /**
      * The consumer-visible record of the exact language selector: not deleted, with an active,

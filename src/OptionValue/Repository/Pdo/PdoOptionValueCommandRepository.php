@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Maatify\Product\OptionValue\Repository\Pdo;
 
 use DateTimeImmutable;
-use Maatify\Persistence\Pdo\Ordering\ScopedOrderingConfig;
-use Maatify\Persistence\Pdo\Ordering\ScopedOrderingManager;
+use Maatify\PhpPersistence\Ordering\Config\ScopedOrderingConfig;
+use Maatify\PhpPersistence\Ordering\Repository\ScopedOrderingManager;
 use Maatify\Product\Common\Exception\ProductStorageFailureFactory;
 use Maatify\Product\Common\Repository\Pdo\DigitString;
 use Maatify\Product\Common\Repository\Pdo\DuplicateKey;
@@ -38,7 +38,7 @@ final readonly class PdoOptionValueCommandRepository implements OptionValueComma
 
     public function create(CreateOptionValueCommand $command, DateTimeImmutable $occurredAt): int
     {
-        $displayOrder = $this->orderingManager->getNextPosition(
+        $displayOrder = $this->orderingManager->getNextPositionForUpdate(
             $this->pdo,
             self::orderingConfig(),
             $command->optionId,
@@ -118,7 +118,7 @@ final readonly class PdoOptionValueCommandRepository implements OptionValueComma
             . 'WHERE `id` = :id AND `deleted_at` IS NOT NULL',
         );
         $statement->execute([
-            'display_order' => $this->orderingManager->getNextPosition($this->pdo, self::orderingConfig(), $optionId),
+            'display_order' => $this->orderingManager->getNextPositionForUpdate($this->pdo, self::orderingConfig(), $optionId),
             'updated_at' => $occurredAt->format('Y-m-d H:i:s'),
             'id' => $optionValueId,
         ]);

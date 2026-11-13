@@ -13,7 +13,7 @@
  *              OptionValueManagementServiceInterface::create(), listByOptionIdForManagement(),
  *              paginateByOptionIdForManagement().
  *  - Result:   ProductCollectionDTO, ProductContentCollectionDTO, and OptionCollectionDTO lists bounded by
- *              `maxResults`, and maatify/persistence PageResult pages of ProductDTO, ProductContentDTO, and
+ *              `maxResults`, and maatify/php-persistence PageResultDTO pages of ProductDTO, ProductContentDTO, and
  *              OptionDTO with their metadata.
  *  - Boundary: lists filter by status (`null` means any) and deleted state (non-deleted by default) and
  *              are truncated at `maxResults` without a "more" flag; pages hold 1 to 100 rows with a sort
@@ -27,8 +27,8 @@
 
 declare(strict_types=1);
 
-use Maatify\Persistence\Pdo\Pagination\PageRequest;
-use Maatify\Persistence\Pdo\Pagination\SortDirectionEnum;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
+use Maatify\PhpPersistence\Pagination\Enum\SortDirectionEnum;
 use Maatify\Product\Common\Enum\ProductDeletedStateEnum;
 use Maatify\Product\Content\DTO\ProductContentDTO;
 use Maatify\Product\Content\Management\Command\CreateProductContentCommand;

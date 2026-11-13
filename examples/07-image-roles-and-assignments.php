@@ -25,7 +25,7 @@
 
 declare(strict_types=1);
 
-use Maatify\Persistence\Pdo\Pagination\PageRequest;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
 use Maatify\Product\Common\Enum\ProductDeletedStateEnum;
 use Maatify\Product\Content\Management\Command\CreateProductContentCommand;
 use Maatify\Product\Factory\ProductFactory;

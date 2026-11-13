@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Maatify\Product\Factory;
 
-use Maatify\Persistence\Pdo\Ordering\ScopedOrderingManager;
-use Maatify\Persistence\Pdo\Transaction\PdoSavepointTransactionRunner;
+use Maatify\PhpPersistence\Ordering\Repository\ScopedOrderingManager;
+use Maatify\PhpPersistence\Transaction\Repository\PdoSavepointTransactionRunner;
 use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
 use Maatify\Product\Content\Consumer\Service\OptionContentConsumerService;
 use Maatify\Product\Content\Consumer\Service\OptionContentConsumerServiceInterface;

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Maatify\Product\Content\Management\Service;
 
-use Maatify\Persistence\Pdo\Pagination\PageRequest;
-use Maatify\Persistence\Pdo\Pagination\PageResult;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
 use Maatify\Product\Common\Enum\ProductDeletedStateEnum;
 use Maatify\Product\Common\Exception\ProductBusinessRuleException;
 use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
@@ -93,11 +93,11 @@ interface OptionValueContentManagementServiceInterface
 
     /**
      * One page of the owner's records for management under the criteria's language selector and deleted
-     * state, through the shared `maatify/persistence` paginator: 20 per page by default, 1 to 100, sortable
+     * state, through the shared `maatify/php-persistence` paginator: 20 per page by default, 1 to 100, sortable
      * by `language_code` (default, ascending), `id`, `created_at`, or `updated_at`, ties broken by `id`
      * ascending. The criteria's `maxResults` does not apply.
      *
-     * @return PageResult<OptionValueContentDTO>
+     * @return PageResultDTO<OptionValueContentDTO>
      */
-    public function paginateForManagement(OptionValueContentListCriteriaDTO $criteria, PageRequest $request): PageResult;
+    public function paginateForManagement(OptionValueContentListCriteriaDTO $criteria, PageRequest $request): PageResultDTO;
 }

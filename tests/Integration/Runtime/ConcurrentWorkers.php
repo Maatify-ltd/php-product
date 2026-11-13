@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Maatify\Product\Tests\Integration\Runtime;
 
-use Maatify\Persistence\Pdo\Ordering\ScopedOrderingManager;
+use Maatify\PhpPersistence\Ordering\Repository\ScopedOrderingManager;
 use Maatify\Product\Product\Repository\Pdo\PdoProductConfigurationRepository;
 use Maatify\Product\Product\Service\ProductConfigurationValidator;
 use Maatify\Product\Tests\Support\ProcessPipes;

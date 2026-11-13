@@ -89,7 +89,7 @@ Creation order follows foreign-key dependency.
   Comparison follows `utf8mb4_unicode_ci`, so it is case-insensitive.
 - **Ordering.** `display_order` exists only on Options, Option Values, Variants,
   and image assignments, is positive, has no database default, and is assigned by
-  the application through `maatify/persistence`. `Product` has none (`DEC-006`).
+  the application through `maatify/php-persistence`. `Product` has none (`DEC-006`).
 - **Timestamps.** `created_at`, `updated_at`, and `deleted_at` come from the Host
   Clock; the schema has no `CURRENT_TIMESTAMP` default or `ON UPDATE` clause.
 

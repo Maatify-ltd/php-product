@@ -9,7 +9,7 @@ protection should require only the stable `Final Gate` job.
 
 ## Prerequisites
 
-PHP 8.4 or later with `pdo_mysql`, Composer 2.10 or later (the dependency-policy
+A PHP patch admitted by `composer.json` with `pdo_mysql`, Composer 2.10 or later (the dependency-policy
 model), Docker with the Compose plugin, `openssl`, and `bash`. Install development
 dependencies once:
 
@@ -25,6 +25,8 @@ random, run-scoped database password.
 | Gate | Local command | CI job |
 |---|---|---|
 | Composer validation | `composer validate --strict` | Composer Validate |
+| PHP patch floor | `php scripts/ci/check-php-patch-floor.php 8.4` (or `8.5` for the matching interpreter) | Each PHP job |
+| PHP constraint boundaries | `bash scripts/ci/check-php-constraint.sh` | Composer Validate |
 | Platform requirements | `composer check-platform-reqs` | each dependency job |
 | PHP syntax | `bash scripts/ci/check-php-syntax.sh` | PHP Syntax Check |
 | Autoload (strict PSR-4) | `composer dump-autoload --optimize --strict-psr` | Static Analysis, Unit, Integration |

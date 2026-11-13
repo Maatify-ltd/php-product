@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Maatify\Product\ImageAssignment\Management\Service;
 
-use Maatify\Persistence\Pdo\Pagination\PageRequest;
-use Maatify\Persistence\Pdo\Pagination\PageResult;
-use Maatify\Persistence\Pdo\Transaction\SavepointTransactionRunnerInterface;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
+use Maatify\PhpPersistence\Transaction\Repository\SavepointTransactionRunnerInterface;
 use Maatify\Product\Common\Enum\ProductDeletedStateEnum;
 use Maatify\Product\Common\Exception\ProductBusinessRuleException;
 use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
@@ -157,7 +157,7 @@ final readonly class ImageAssignmentManagementService implements ImageAssignment
                 throw ProductBusinessRuleException::softDeleted('Image Assignment', $assignmentId);
             }
             if (!$this->assignments->updateDisplayOrder($assignmentId, $assignment->scope, $command->displayOrder, $occurredAt)) {
-                throw ImageAssignmentNotFoundException::withId($assignmentId);
+                throw ProductStorageFailureFactory::lockedRowVanished('Image Assignment', $assignmentId);
             }
         });
     }
@@ -221,7 +221,7 @@ final readonly class ImageAssignmentManagementService implements ImageAssignment
         return new ImageAssignmentCollectionDTO($this->reader->listForManagement($criteria));
     }
 
-    public function paginateForManagement(ImageAssignmentListCriteriaDTO $criteria, PageRequest $request): PageResult
+    public function paginateForManagement(ImageAssignmentListCriteriaDTO $criteria, PageRequest $request): PageResultDTO
     {
         return $this->reader->paginateForManagement($criteria, $request);
     }

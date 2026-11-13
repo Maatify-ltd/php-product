@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Maatify\Product\ImageAssignment\Repository;
 
-use Maatify\Persistence\Pdo\Pagination\PageRequest;
-use Maatify\Persistence\Pdo\Pagination\PageResult;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
 use Maatify\Product\ImageAssignment\Consumer\Criteria\ImageAssignmentExactScopeCriteriaDTO;
 use Maatify\Product\ImageAssignment\DTO\ImageAssignmentDTO;
 use Maatify\Product\ImageAssignment\Management\Criteria\ImageAssignmentListCriteriaDTO;
@@ -34,9 +34,9 @@ interface ImageAssignmentQueryReaderInterface
      * One page of the assignments of a Product for management through the shared paginator; the counts
      * use the same filter.
      *
-     * @return PageResult<ImageAssignmentDTO>
+     * @return PageResultDTO<ImageAssignmentDTO>
      */
-    public function paginateForManagement(ImageAssignmentListCriteriaDTO $criteria, PageRequest $request): PageResult;
+    public function paginateForManagement(ImageAssignmentListCriteriaDTO $criteria, PageRequest $request): PageResultDTO;
 
     /**
      * The consumer-visible assignments of one exact scope: every dimension matched exactly (`null` is

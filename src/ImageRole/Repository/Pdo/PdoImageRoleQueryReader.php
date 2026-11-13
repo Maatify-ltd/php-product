@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Maatify\Product\ImageRole\Repository\Pdo;
 
-use Maatify\Persistence\Pdo\Pagination\PageRequest;
-use Maatify\Persistence\Pdo\Pagination\PageResult;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
 use Maatify\Product\Common\Exception\ProductStorageFailureFactory;
 use Maatify\Product\Common\Repository\Pdo\ManagementListQuery;
 use Maatify\Product\Common\Repository\Pdo\RowHydrator;
@@ -62,7 +62,7 @@ final readonly class PdoImageRoleQueryReader implements ImageRoleQueryReaderInte
         ));
     }
 
-    public function paginateForManagement(ImageRoleListCriteriaDTO $criteria, PageRequest $request): PageResult
+    public function paginateForManagement(ImageRoleListCriteriaDTO $criteria, PageRequest $request): PageResultDTO
     {
         [$where, $params] = self::filter($criteria);
         $from = ' FROM `' . self::TABLE . '` WHERE ' . $where;

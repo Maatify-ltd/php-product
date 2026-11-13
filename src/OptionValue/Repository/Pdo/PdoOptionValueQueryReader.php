@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Maatify\Product\OptionValue\Repository\Pdo;
 
-use Maatify\Persistence\Pdo\Pagination\PageRequest;
-use Maatify\Persistence\Pdo\Pagination\PageResult;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
 use Maatify\Product\Common\Exception\ProductStorageFailureFactory;
 use Maatify\Product\Common\Repository\Pdo\ManagementListQuery;
 use Maatify\Product\Common\Repository\Pdo\RowHydrator;
@@ -59,7 +59,7 @@ final readonly class PdoOptionValueQueryReader implements OptionValueQueryReader
         ));
     }
 
-    public function paginateForManagement(int $optionId, OptionValueListCriteriaDTO $criteria, PageRequest $request): PageResult
+    public function paginateForManagement(int $optionId, OptionValueListCriteriaDTO $criteria, PageRequest $request): PageResultDTO
     {
         [$where, $params] = self::filter($optionId, $criteria);
         $from = ' FROM `' . self::TABLE . '` WHERE ' . $where;

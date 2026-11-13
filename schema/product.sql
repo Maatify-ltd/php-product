@@ -56,7 +56,7 @@
 --     assignments (Product has none, DEC-006). It is a positive position within
 --     its scope (product_id, option_id, product_id, and the generated
 --     ordering_scope respectively), assigned by the application through the
---     shared maatify/persistence Ordering API. No database default is given and
+--     shared maatify/php-persistence Ordering API. No database default is given and
 --     it is not unique, because the Ordering API shifts positions.
 --
 -- Content contract:
@@ -179,7 +179,7 @@ CREATE TABLE `maa_product_options`
     `product_id`    BIGINT UNSIGNED NOT NULL COMMENT 'Internal Product identity owning this variant-defining Option',
     `code`          VARCHAR(100) NOT NULL COMMENT 'Stable immutable Option business key; unique within its Product and permanently reserved after soft deletion',
     `status`        VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL DEFAULT 'inactive' COMMENT 'Option lifecycle status; exact lowercase active or inactive; independent of deleted_at',
-    `display_order` INT NOT NULL COMMENT 'Business-controlled positive order within the Product scope; assigned by the Product application through maatify/persistence',
+    `display_order` INT NOT NULL COMMENT 'Business-controlled positive order within the Product scope; assigned by the Product application through maatify/php-persistence',
     `created_at`    DATETIME NOT NULL COMMENT 'Host Clock timestamp assigned by the Product application when the Option is created',
     `updated_at`    DATETIME NOT NULL COMMENT 'Host Clock timestamp assigned by the Product application on mutation, ordering, soft delete, or restore',
     `deleted_at`    DATETIME NULL COMMENT 'Host Clock timestamp assigned by the Product application on soft delete; NULL means not deleted',
@@ -239,7 +239,7 @@ CREATE TABLE `maa_product_option_values`
     `option_id`     BIGINT UNSIGNED NOT NULL COMMENT 'Internal Option identity owning this Value',
     `code`          VARCHAR(100) NOT NULL COMMENT 'Stable immutable Option Value business key; unique within its Option and permanently reserved after soft deletion',
     `status`        VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL DEFAULT 'inactive' COMMENT 'Option Value lifecycle status; exact lowercase active or inactive; independent of deleted_at',
-    `display_order` INT NOT NULL COMMENT 'Business-controlled positive order within the Option scope; assigned by the Product application through maatify/persistence',
+    `display_order` INT NOT NULL COMMENT 'Business-controlled positive order within the Option scope; assigned by the Product application through maatify/php-persistence',
     `created_at`    DATETIME NOT NULL COMMENT 'Host Clock timestamp assigned by the Product application when the Value is created',
     `updated_at`    DATETIME NOT NULL COMMENT 'Host Clock timestamp assigned by the Product application on mutation, ordering, soft delete, or restore',
     `deleted_at`    DATETIME NULL COMMENT 'Host Clock timestamp assigned by the Product application on soft delete; NULL means not deleted',
@@ -301,7 +301,7 @@ CREATE TABLE `maa_product_variants`
     `sku`                     VARCHAR(128) NULL COMMENT 'Optional secondary SKU identifier; NULL or non-empty; unique while assigned; not a Variant identity or an external reference',
     `barcode`                 VARCHAR(128) NULL COMMENT 'Optional secondary barcode identifier stored as a string to preserve leading zeroes; NULL or non-empty; unique while assigned',
     `status`                  VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL COMMENT 'Variant lifecycle status; exact lowercase active or inactive; independent of deleted_at; assigned explicitly by the application',
-    `display_order`           INT NOT NULL COMMENT 'Business-controlled positive order within the Product scope; assigned by the Product application through maatify/persistence',
+    `display_order`           INT NOT NULL COMMENT 'Business-controlled positive order within the Product scope; assigned by the Product application through maatify/php-persistence',
     `created_at`              DATETIME NOT NULL COMMENT 'Host Clock timestamp assigned by the Product application when the Variant is created',
     `updated_at`              DATETIME NOT NULL COMMENT 'Host Clock timestamp assigned by the Product application on mutation, ordering, soft delete, or restore',
     `deleted_at`              DATETIME NULL COMMENT 'Host Clock timestamp assigned by the Product application on soft delete; NULL means not deleted',
@@ -426,9 +426,9 @@ CREATE TABLE `maa_product_image_assignments`
                 ELSE CONCAT('R', CAST(`role_id` AS CHAR))
             END
         )
-    ) STORED COMMENT 'Generated exact Product/Variant target plus language/platform/role scope for maatify/persistence ordering and default uniqueness',
+    ) STORED COMMENT 'Generated exact Product/Variant target plus language/platform/role scope for maatify/php-persistence ordering and default uniqueness',
     `is_default`             TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Explicit default marker within the exact target and scope; zero or one active default is allowed; never auto-promoted',
-    `display_order`          INT NOT NULL COMMENT 'Business-controlled positive order within the exact target and scope; assigned by the Product application through maatify/persistence',
+    `display_order`          INT NOT NULL COMMENT 'Business-controlled positive order within the exact target and scope; assigned by the Product application through maatify/php-persistence',
     `created_at`             DATETIME NOT NULL COMMENT 'Host Clock timestamp assigned by the Product application when the assignment is created',
     `updated_at`             DATETIME NOT NULL COMMENT 'Host Clock timestamp assigned by the Product application on ordering, default mutation, soft delete, or restore',
     `deleted_at`             DATETIME NULL COMMENT 'Host Clock timestamp assigned by the Product application on soft delete; NULL means not deleted',
