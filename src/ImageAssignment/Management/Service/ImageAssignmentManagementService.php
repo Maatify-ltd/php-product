@@ -22,7 +22,6 @@ use Maatify\Product\ImageAssignment\Management\Command\UpdateImageAssignmentDisp
 use Maatify\Product\ImageAssignment\Management\Criteria\ImageAssignmentListCriteriaDTO;
 use Maatify\Product\ImageAssignment\Repository\ImageAssignmentCommandRepositoryInterface;
 use Maatify\Product\ImageAssignment\Repository\ImageAssignmentQueryReaderInterface;
-use Maatify\Product\ImageAssignment\ValueObject\ImageAssignmentScope;
 use Maatify\Product\ImageRole\Exception\ImageRoleNotFoundException;
 use Maatify\Product\ImageRole\Repository\ImageRoleCommandRepositoryInterface;
 use Maatify\Product\Product\Exception\ProductNotFoundException;
@@ -86,9 +85,7 @@ final readonly class ImageAssignmentManagementService implements ImageAssignment
                     throw ProductBusinessRuleException::imageRoleNotActive($command->roleId);
                 }
             }
-            $scope = ImageAssignmentScope::of($command->productId, $command->variantId, $command->roleId, $command->languageCode, $command->platform);
-
-            return new CreatedImageAssignmentDTO($this->assignments->create($command, $scope, $occurredAt));
+            return new CreatedImageAssignmentDTO($this->assignments->create($command, $occurredAt));
         });
     }
 

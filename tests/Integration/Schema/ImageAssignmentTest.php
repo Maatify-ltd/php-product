@@ -98,10 +98,10 @@ final class ImageAssignmentTest extends SchemaTestCase
     {
         $product = $this->assignment([]);
         $variant = $this->assignment(['variant_id' => $this->emptyVariant1, 'language_code' => 'en', 'platform' => 'web', 'role_id' => $this->role]);
-        self::assertSame(sprintf('P%d|N:|N:|N:|N:', $this->p1), self::scalar('SELECT ordering_scope FROM maa_product_image_assignments WHERE id = :i', ['i' => $product]));
-        self::assertSame(
-            sprintf('P%d|V%d|L2:en|L3:web|R%d', $this->p1, $this->emptyVariant1, $this->role),
-            self::scalar('SELECT ordering_scope FROM maa_product_image_assignments WHERE id = :i', ['i' => $variant]),
+        self::assertSame(sprintf('P%d|0|N|N|0', $this->p1), self::scalar('SELECT ordering_scope FROM maa_product_image_assignments WHERE id = :i', ['i' => $product]));
+        self::assertMatchesRegularExpression(
+            sprintf('/^P%d\\|%d\\|[0-9a-f]{64}\\|[0-9a-f]{64}\\|%d$/', $this->p1, $this->emptyVariant1, $this->role),
+            (string) self::scalar('SELECT ordering_scope FROM maa_product_image_assignments WHERE id = :i', ['i' => $variant]),
         );
     }
 

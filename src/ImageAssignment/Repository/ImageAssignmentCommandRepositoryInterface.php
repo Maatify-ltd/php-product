@@ -10,7 +10,6 @@ use Maatify\Product\ImageAssignment\DTO\ImageAssignmentStateDTO;
 use Maatify\Product\ImageAssignment\Exception\ImageAssignmentAlreadyExistsException;
 use Maatify\Product\ImageAssignment\Exception\ImageAssignmentDefaultConflictException;
 use Maatify\Product\ImageAssignment\Management\Command\CreateImageAssignmentCommand;
-use Maatify\Product\ImageAssignment\ValueObject\ImageAssignmentScope;
 
 /**
  * Write port for Image Assignment persistence. The calling Service owns the transaction and holds
@@ -29,7 +28,7 @@ interface ImageAssignmentCommandRepositoryInterface
      *
      * The caller must hold the Product lock in an active transaction.
      */
-    public function create(CreateImageAssignmentCommand $command, ImageAssignmentScope $scope, DateTimeImmutable $occurredAt): int;
+    public function create(CreateImageAssignmentCommand $command, DateTimeImmutable $occurredAt): int;
 
     /**
      * The immutable owner identity (Product, target Variant, Role) of an assignment, whatever its

@@ -17,7 +17,6 @@ use Maatify\Product\ImageAssignment\Exception\ImageAssignmentAlreadyExistsExcept
 use Maatify\Product\ImageAssignment\Exception\ImageAssignmentDefaultConflictException;
 use Maatify\Product\ImageAssignment\Management\Command\CreateImageAssignmentCommand;
 use Maatify\Product\ImageAssignment\Repository\ImageAssignmentCommandRepositoryInterface;
-use Maatify\Product\ImageAssignment\ValueObject\ImageAssignmentScope;
 use PDO;
 use PDOException;
 
@@ -50,12 +49,13 @@ final readonly class PdoImageAssignmentCommandRepository implements ImageAssignm
         private ScopedOrderingManager $orderingManager,
     ) {}
 
-    public function create(CreateImageAssignmentCommand $command, ImageAssignmentScope $scope, DateTimeImmutable $occurredAt): int
+    public function create(CreateImageAssignmentCommand $command, DateTimeImmutable $occurredAt): int
     {
+        $scope = $this->scopeFor($command);
         $displayOrder = $this->orderingManager->getNextPositionForUpdate(
             $this->pdo,
             self::orderingConfig(),
-            $scope->value,
+            $scope,
         );
         $timestamp = $occurredAt->format('Y-m-d H:i:s');
         $statement = $this->pdo->prepare(
@@ -89,6 +89,31 @@ final readonly class PdoImageAssignmentCommandRepository implements ImageAssignm
         }
 
         return $id;
+    }
+
+    /** @return non-empty-string */
+    private function scopeFor(CreateImageAssignmentCommand $command): string
+    {
+        // Match the generated ordering_scope column using the same MySQL collation.
+        $statement = $this->pdo->prepare(
+            "SELECT CONCAT('P', CAST(:product_id AS UNSIGNED), '|', COALESCE(CAST(:variant_id AS UNSIGNED), 0), '|'"
+            . ", COALESCE(SHA2(TRIM(TRAILING WEIGHT_STRING(_utf8mb4' ' COLLATE utf8mb4_unicode_ci) FROM WEIGHT_STRING(CONVERT(:language USING utf8mb4) COLLATE utf8mb4_unicode_ci)), 256), 'N'), '|'"
+            . ", COALESCE(SHA2(TRIM(TRAILING WEIGHT_STRING(_utf8mb4' ' COLLATE utf8mb4_unicode_ci) FROM WEIGHT_STRING(CONVERT(:platform USING utf8mb4) COLLATE utf8mb4_unicode_ci)), 256), 'N'), '|'"
+            . ', COALESCE(CAST(:role_id AS UNSIGNED), 0))',
+        );
+        $statement->execute([
+            'product_id' => $command->productId,
+            'variant_id' => $command->variantId,
+            'role_id' => $command->roleId,
+            'language' => $command->languageCode,
+            'platform' => $command->platform,
+        ]);
+        $scope = $statement->fetchColumn();
+        if (!is_string($scope) || $scope === '') {
+            throw ProductStorageFailureFactory::invalidStorageValue('ordering_scope');
+        }
+
+        return $scope;
     }
 
     public function findIdentity(int $assignmentId): ?ImageAssignmentIdentityDTO

@@ -24,7 +24,6 @@ use Maatify\Product\ImageAssignment\Management\Criteria\ImageAssignmentListCrite
 use Maatify\Product\ImageAssignment\Management\Service\ImageAssignmentManagementService;
 use Maatify\Product\ImageAssignment\Repository\ImageAssignmentCommandRepositoryInterface;
 use Maatify\Product\ImageAssignment\Repository\ImageAssignmentQueryReaderInterface;
-use Maatify\Product\ImageAssignment\ValueObject\ImageAssignmentScope;
 use Maatify\Product\ImageRole\DTO\ImageRoleStateDTO;
 use Maatify\Product\ImageRole\Enum\ImageRoleStatusEnum;
 use Maatify\Product\ImageRole\Management\Command\CreateImageRoleCommand;
@@ -310,7 +309,7 @@ final class ImageAssignmentServiceTest extends TestCase
         $assignments = new class ($calls, $test) implements ImageAssignmentCommandRepositoryInterface {
             public function __construct(private CallLog $calls, private ImageAssignmentServiceTest $test) {}
 
-            public function create(CreateImageAssignmentCommand $command, ImageAssignmentScope $scope, DateTimeImmutable $occurredAt): int
+            public function create(CreateImageAssignmentCommand $command, DateTimeImmutable $occurredAt): int
             {
                 throw new LogicException('create is not expected in this test.');
             }

@@ -6,7 +6,6 @@ namespace Maatify\Product\Tests\Unit\ImageAssignment\Command;
 
 use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
 use Maatify\Product\ImageAssignment\Management\Command\CreateImageAssignmentCommand;
-use Maatify\Product\ImageAssignment\ValueObject\ImageAssignmentScope;
 use PHPUnit\Framework\TestCase;
 
 final class CreateImageAssignmentCommandTest extends TestCase
@@ -51,12 +50,5 @@ final class CreateImageAssignmentCommandTest extends TestCase
                 $this->addToAssertionCount(1);
             }
         }
-    }
-
-    public function testTheScopeKeyMatchesTheGeneratedColumnEncoding(): void
-    {
-        self::assertSame('P5|N:|N:|N:|N:', ImageAssignmentScope::of(5, null, null, null, null)->value);
-        self::assertSame('P5|V9|L2:en|L3:web|R4', ImageAssignmentScope::of(5, 9, 4, 'en', 'web')->value);
-        self::assertSame('P5|N:|L2:ñé|N:|N:', ImageAssignmentScope::of(5, null, null, 'ñé', null)->value, 'Length counts characters, as CHAR_LENGTH does.');
     }
 }

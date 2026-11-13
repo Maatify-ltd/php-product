@@ -101,7 +101,7 @@
 --     language_code, platform) is unique across soft-deleted history through
 --     generated NULL-safe identity columns; their sentinels (0 and '') are
 --     made unreachable by CHECK constraints.
---   - ordering_scope is a generated, length-prefixed exact scope
+--   - ordering_scope is a generated exact scope based on MySQL collation weights
 --     (target, language, platform, role) shared by ordering and by the default
 --     rule. default_scope_identity is NULL unless the row is an active default,
 --     so its unique key allows at most one active default per exact scope while
@@ -405,36 +405,15 @@ CREATE TABLE `maa_product_image_assignments`
     `role_id_identity`       BIGINT UNSIGNED GENERATED ALWAYS AS (COALESCE(`role_id`, 0)) STORED COMMENT 'Generated uniqueness key mapping NULL Role to one database value',
     `language_code_identity` VARCHAR(16) GENERATED ALWAYS AS (COALESCE(`language_code`, '')) STORED COMMENT 'Generated uniqueness key mapping NULL language to one database value',
     `platform_identity`      VARCHAR(255) GENERATED ALWAYS AS (COALESCE(`platform`, '')) STORED COMMENT 'Generated uniqueness key mapping NULL platform to one database value',
-    `ordering_scope`         VARCHAR(512) GENERATED ALWAYS AS (
-        CONCAT(
-            'P', CAST(`product_id` AS CHAR), '|',
-            CASE
-                WHEN `variant_id` IS NULL THEN 'N:'
-                ELSE CONCAT('V', CAST(`variant_id` AS CHAR))
-            END,
-            '|',
-            CASE
-                WHEN `language_code` IS NULL THEN 'N:'
-                ELSE CONCAT('L', CHAR_LENGTH(`language_code`), ':', `language_code`)
-            END,
-            '|',
-            CASE
-                WHEN `platform` IS NULL THEN 'N:'
-                ELSE CONCAT('L', CHAR_LENGTH(`platform`), ':', `platform`)
-            END,
-            '|',
-            CASE
-                WHEN `role_id` IS NULL THEN 'N:'
-                ELSE CONCAT('R', CAST(`role_id` AS CHAR))
-            END
-        )
-    ) STORED COMMENT 'Generated exact Product/Variant target plus language/platform/role scope for maatify/php-persistence ordering and default uniqueness',
+    `ordering_scope`         VARCHAR(192) CHARACTER SET ascii COLLATE ascii_bin GENERATED ALWAYS AS (
+        CONCAT('P', `product_id`, '|', COALESCE(`variant_id`, 0), '|', COALESCE(SHA2(TRIM(TRAILING WEIGHT_STRING(_utf8mb4' ' COLLATE utf8mb4_unicode_ci) FROM WEIGHT_STRING(`language_code` COLLATE utf8mb4_unicode_ci)), 256), 'N'), '|', COALESCE(SHA2(TRIM(TRAILING WEIGHT_STRING(_utf8mb4' ' COLLATE utf8mb4_unicode_ci) FROM WEIGHT_STRING(`platform` COLLATE utf8mb4_unicode_ci)), 256), 'N'), '|', COALESCE(`role_id`, 0))
+    ) STORED COMMENT 'Generated exact scope from MySQL collation weights for ordering and default uniqueness',
     `is_default`             TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Explicit default marker within the exact target and scope; zero or one active default is allowed; never auto-promoted',
     `display_order`          INT NOT NULL COMMENT 'Business-controlled positive order within the exact target and scope; assigned by the Product application through maatify/php-persistence',
     `created_at`             DATETIME NOT NULL COMMENT 'Host Clock timestamp assigned by the Product application when the assignment is created',
     `updated_at`             DATETIME NOT NULL COMMENT 'Host Clock timestamp assigned by the Product application on ordering, default mutation, soft delete, or restore',
     `deleted_at`             DATETIME NULL COMMENT 'Host Clock timestamp assigned by the Product application on soft delete; NULL means not deleted',
-    `default_scope_identity` VARCHAR(512) GENERATED ALWAYS AS (
+    `default_scope_identity` VARCHAR(192) CHARACTER SET ascii COLLATE ascii_bin GENERATED ALWAYS AS (
         CASE
             WHEN `is_default` = 1 AND `deleted_at` IS NULL THEN `ordering_scope`
             ELSE NULL

@@ -7,10 +7,10 @@ namespace Maatify\Product\Tests\Integration\Runtime;
 use Maatify\Product\Common\Enum\ProductDeletedStateEnum;
 use Maatify\Product\Common\Exception\ProductBusinessRuleException;
 use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
+use Maatify\Product\ImageAssignment\Consumer\Criteria\ImageAssignmentExactScopeCriteriaDTO;
 use Maatify\Product\ImageAssignment\Exception\ImageAssignmentAlreadyExistsException;
 use Maatify\Product\ImageAssignment\Exception\ImageAssignmentNotFoundException;
 use Maatify\Product\ImageAssignment\Management\Command\CreateImageAssignmentCommand;
-use Maatify\Product\ImageAssignment\ValueObject\ImageAssignmentScope;
 use Maatify\Product\ImageRole\Enum\ImageRoleStatusEnum;
 use Maatify\Product\ImageRole\Exception\ImageRoleKeyAlreadyExistsException;
 use Maatify\Product\ImageRole\Exception\ImageRoleNotFoundException;
@@ -102,14 +102,6 @@ final class ImageAssignmentCommandTest extends RuntimeTestCase
         $dto = $service->getByIdForManagement($en);
         self::assertSame([$p->productId, null, 10, $hero, 'en', 'web', false], [$dto->productId, $dto->variantId, $dto->mediaAssetId, $dto->roleId, $dto->languageCode, $dto->platform, $dto->isDefault]);
 
-        foreach ([$a1 => [null, null, null, null], $v1 => [$p->variantId, null, null, null], $en => [null, $hero, 'en', 'web']] as $id => [$variant, $role, $language, $platform]) {
-            self::assertSame(
-                ImageAssignmentScope::of($p->productId, $variant, $role, $language, $platform)->value,
-                self::scalar('SELECT ordering_scope FROM maa_product_image_assignments WHERE id = :i', ['i' => $id]),
-                'The PHP scope key equals the generated column, so the Ordering API and the default key address one scope.',
-            );
-        }
-
         $this->assertThrows(ImageAssignmentAlreadyExistsException::class, fn() => $service->create(new CreateImageAssignmentCommand($p->productId, null, 10)));
         $this->assertThrows(ImageAssignmentAlreadyExistsException::class, fn() => $service->create(new CreateImageAssignmentCommand($p->productId, null, 10, $hero, 'EN', 'WEB')), 'Scope strings compare case-insensitively.');
         $service->softDelete($a2);
@@ -126,6 +118,27 @@ final class ImageAssignmentCommandTest extends RuntimeTestCase
         $this->assertThrows(ProductInvalidArgumentException::class, fn() => new CreateImageAssignmentCommand($p->productId, null, 0));
         $this->assertThrows(ProductInvalidArgumentException::class, fn() => new CreateImageAssignmentCommand($p->productId, null, 1, null, ''));
         self::assertSame(4, self::rowCount('maa_product_image_assignments'));
+    }
+
+    public function testCollationEquivalentScopesShareOrderingAndDefault(): void
+    {
+        $product = $this->namedProduct('EQUIVALENT-SCOPES')->productId;
+        $this->activateProduct($product);
+        $assignments = $this->imageAssignmentManagementService();
+        $consumer = $this->imageAssignmentConsumerService();
+
+        $first = $assignments->create(new CreateImageAssignmentCommand($product, null, 10, null, 'en', 'café'))->assignmentId;
+        $second = $assignments->create(new CreateImageAssignmentCommand($product, null, 11, null, 'en ', 'CAFE '))->assignmentId;
+        $third = $assignments->create(new CreateImageAssignmentCommand($product, null, 12, null, 'EN', "cafe\u{0301}"))->assignmentId;
+        self::assertSame(1, $assignments->getByIdForManagement($first)->displayOrder);
+        self::assertSame(2, $assignments->getByIdForManagement($second)->displayOrder);
+        self::assertSame(3, $assignments->getByIdForManagement($third)->displayOrder);
+
+        $assignments->setDefault($first);
+        $assignments->setDefault($second);
+        $items = $consumer->listVisibleByExactScope(new ImageAssignmentExactScopeCriteriaDTO($product, null, null, 'en', 'café'))->items();
+        self::assertSame([$first, $second, $third], array_map(static fn($item): int => $item->id, $items));
+        self::assertSame([false, true, false], array_map(static fn($item): bool => $item->isDefault, $items));
     }
 
     public function testDefaultReplacementIsAtomicWithinTheExactScopeAndNeverPromotes(): void
