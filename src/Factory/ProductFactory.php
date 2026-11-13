@@ -96,6 +96,12 @@ final class ProductFactory
     /**
      * Configures the Management builders for one Host connection. The first lookup miss opens
      * an independent autocommit session on the same primary and schema; builders share it.
+     * The lookup PDO must be separate from the Host PDO, idle, and in exception mode.
+     *
+     * The first operation that needs lookup rejects an unusable PDO with
+     * ProductInvalidArgumentException. The rejected connection is not cached, so a later
+     * lookup can call the opener again. Failure inside a Host transaction is scoped to the
+     * operation's savepoint; the Host retains control of its transaction.
      *
      * @param (callable(): PDO)|null $ownerLookup Opens the independent lookup connection on demand.
      * @throws ProductInvalidArgumentException When the Host PDO is not in exception mode.
