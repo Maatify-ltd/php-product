@@ -10,7 +10,7 @@
 
 [![Status](https://img.shields.io/badge/Status-Development-blue)](README.md)
 [![PHP](https://img.shields.io/badge/PHP-8.4.27%2B%20%7C%208.5.12%2B-8892BF)](composer.json)
-[![License](https://img.shields.io/badge/License-Proprietary-blue)](LICENSE)
+[![License](https://img.shields.io/badge/License-Proprietary-green)](LICENSE)
 [![Maatify Ecosystem](https://img.shields.io/badge/Maatify-Ecosystem-blueviolet)](https://github.com/Maatify)
 
 [![Usage Guide](https://img.shields.io/badge/Docs-Usage%20Guide-informational)](docs/guides/USAGE_GUIDE.md)
@@ -171,7 +171,7 @@ composer verify:consumer    # needs Docker with the Compose plugin
 
 ## License
 
-This package is proprietary. See [LICENSE](LICENSE) for the copyright notice.
+This package is proprietary. See [LICENSE](LICENSE) for the license terms and licensing contact.
 
 ## Author
 
