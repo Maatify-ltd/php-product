@@ -51,6 +51,14 @@ $catalog = ProductFactory::createProductConsumerService($pdo, $clock);
 
 `ProductFactory` is the only construction entry point. Every capability has a Management service, built by `create{X}ManagementService()`, for creation, lifecycle, and management reads, and a Consumer service, built by `create{X}ConsumerService()`, that returns only consumer-visible records and writes nothing (`X` is `Product`, `Variant`, `Option`, `OptionValue`, `ImageAssignment`, `ProductContent`, `OptionContent`, or `OptionValueContent`). Image Roles have no consumer read, so only `createImageRoleManagementService()` exists. Each builder takes the connection and Clock you pass. All writes of one operation use that connection, so a transaction you already hold on it is joined, never committed by the package.
 
+## Before exposing a service call
+
+Apply the [Host access and request limits](../../PRODUCT_PACKAGE_REFERENCE.md#host-access-and-request-limits) at your request boundary:
+
+1. Check that the requester may perform the operation on the target Product or scope. For example, before reordering a Variant by ID, resolve its owning Product within the requester's authorized scope and check the reorder permission. For a storefront read, check access to the requested catalog or Product scope, then call the Consumer service for package visibility.
+2. Reject oversized bodies and collections before constructing Commands or Criteria. Set a page size for exposed list requests and apply request rate limits appropriate to each operation.
+3. For composition resolution, bound the number of submitted selection pairs and set the request budget based on the Product configurations you expose. The work includes reading stored Options and Values, so a small body alone does not bound the cost.
+
 ## 1. Create a Product
 
 - **Input:** a Product `code`: valid UTF-8, at most 100 characters, not empty or whitespace only. It is stored exactly as supplied and is never trimmed.

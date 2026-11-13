@@ -23,6 +23,12 @@ Capabilities:
 
 The capability list is the one enumerated by the Owner-approved architecture (§13). `src/` contains the seven capability directories (`Product`, `Variant`, `Option`, `OptionValue`, `ImageRole`, `ImageAssignment`, `Content`) plus the package-wide `Common`, `Exception`, and `Factory` responsibilities; no empty or ceremonial folder is created. `Content` owns the Content records of all three owners (Product, Option, Option Value), because they share one identity, lifecycle, and read contract (§3.5). The architecture allows capabilities to be merged or split "if the public contract and implementation justify" it (§13), so any change to this list is an approved change to this declaration, and code is placed according to it. The `*CriteriaDTO` types live in the `Criteria/` responsibility of their side; the shared PDO support lives in `Common/Repository/Pdo/`; and `Common/Validation/TextInputRules` holds the shared text-input validation rules that Commands, Criteria, value objects, and Services apply.
 
+## Host access and request limits
+
+The Host authorizes each operation and the Product or other scope it targets before calling a service. Management reads and mutations require the corresponding Host permission, including when a lookup or list is addressed by a business key. Consumer reads apply the package's visibility rules. The Host still decides whether the requester can access the Product and its scope. An ID supplied by a caller identifies a record. It does not establish access to that record. For a child ID or an external media reference, the Host checks access to the target and its owning scope under the Host's own policy.
+
+The Host sets request rate, payload size, and input collection limits appropriate to each exposed operation and its workload. For lists, the Host also controls page sizes and the rate of repeated requests. The package's validation rules and per-call result bounds still apply. In particular, `resolveByComposition()` reads the Product's Option and Option Value state to validate the selection before resolving a Variant. The cost can grow with the stored configuration even when the input is small. Account for that cost when setting request and configuration limits.
+
 ## Implemented Public API
 
 This is the current public runtime inventory. It is not a released contract. Everything under `Maatify\Product\` that is not listed here is internal.
