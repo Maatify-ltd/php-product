@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Maatify\Product\Variant\Consumer\Service;
 
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
 use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
 use Maatify\Product\Common\Exception\ProductStorageFailureFactory;
 use Maatify\Product\Product\Exception\ProductNotFoundException;
@@ -94,5 +96,12 @@ final readonly class VariantConsumerService implements VariantConsumerServiceInt
         if ($identity < 1) {
             throw ProductInvalidArgumentException::nonPositiveId($field);
         }
+    }
+
+    public function paginateByProductId(int $productId, PageRequest $request): PageResultDTO
+    {
+        self::requirePositive($productId, 'productId');
+
+        return $this->reader->paginateVisible($productId, $request);
     }
 }

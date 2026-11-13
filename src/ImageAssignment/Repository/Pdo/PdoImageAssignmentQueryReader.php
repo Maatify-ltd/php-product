@@ -88,6 +88,37 @@ final readonly class PdoImageAssignmentQueryReader implements ImageAssignmentQue
 
     public function listVisibleByExactScope(ImageAssignmentExactScopeCriteriaDTO $criteria): array
     {
+        [$from, $params] = self::visibleFrom($criteria);
+
+        return array_map($this->hydrate(...), ManagementListQuery::fetchBounded(
+            $this->pdo,
+            'SELECT ' . self::COLUMNS . $from . ' ORDER BY a.`display_order` ASC, a.`id` ASC LIMIT :list_limit',
+            $params,
+            $criteria->maxResults,
+        ));
+    }
+
+    public function paginateVisibleByExactScope(ImageAssignmentExactScopeCriteriaDTO $criteria, PageRequest $request): PageResultDTO
+    {
+        [$from, $params] = self::visibleFrom($criteria);
+        $count = 'SELECT COUNT(*)' . $from;
+
+        return ManagementListQuery::paginate(
+            $this->pdo,
+            $count,
+            $params,
+            $count,
+            $params,
+            'SELECT ' . self::COLUMNS . $from,
+            new PageRequest($request->page, $request->perPage),
+            ManagementListQuery::config(['display_order' => 'a.display_order', 'id' => 'a.id'], 'display_order'),
+            $this->hydrate(...),
+        );
+    }
+
+    /** @return array{string, array<string, string|int>} */
+    private static function visibleFrom(ImageAssignmentExactScopeCriteriaDTO $criteria): array
+    {
         $where = 'a.`product_id` = :product_id AND a.`deleted_at` IS NULL '
             . 'AND EXISTS (SELECT 1 FROM `maa_product_products` p WHERE p.`id` = a.`product_id` AND p.`deleted_at` IS NULL AND p.`status` = \'active\')';
         $params = ['product_id' => $criteria->productId];
@@ -114,13 +145,10 @@ final readonly class PdoImageAssignmentQueryReader implements ImageAssignmentQue
             }
         }
 
-        return array_map($this->hydrate(...), ManagementListQuery::fetchBounded(
-            $this->pdo,
-            'SELECT ' . self::COLUMNS . ' FROM `' . self::TABLE . '` a WHERE ' . $where . ' ORDER BY a.`display_order` ASC, a.`id` ASC LIMIT :list_limit',
-            $params,
-            $criteria->maxResults,
-        ));
+
+        return [' FROM `' . self::TABLE . '` a WHERE ' . $where, $params];
     }
+
 
     /**
      * The Product, target, role, language, platform, and deleted-state filter shared by the list, the

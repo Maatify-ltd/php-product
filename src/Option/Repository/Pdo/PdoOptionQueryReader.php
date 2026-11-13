@@ -84,16 +84,40 @@ final readonly class PdoOptionQueryReader implements OptionQueryReaderInterface
     {
         return array_map($this->hydrate(...), ManagementListQuery::fetchBounded(
             $this->pdo,
-            'SELECT ' . self::COLUMNS . ' FROM `' . self::TABLE . '` o WHERE o.`product_id` = :product_id '
-            . 'AND o.`deleted_at` IS NULL AND o.`status` = \'active\' '
-            . 'AND ' . VariantVisibilitySql::labelled('maa_product_option_contents', 'option_id', 'o') . ' '
-            . 'AND EXISTS (SELECT 1 FROM `maa_product_variants` vv WHERE vv.`product_id` = o.`product_id` AND '
-            . VariantVisibilitySql::visiblePredicate('vv') . ') '
-            . 'ORDER BY o.`display_order` ASC, o.`id` ASC LIMIT :list_limit',
+            'SELECT ' . self::COLUMNS . self::visibleFrom() . ' ORDER BY o.`display_order` ASC, o.`id` ASC LIMIT :list_limit',
             ['product_id' => $productId],
             $maxResults,
         ));
     }
+
+    public function paginateVisible(int $productId, PageRequest $request): PageResultDTO
+    {
+        $from = self::visibleFrom();
+        $params = ['product_id' => $productId];
+        $count = 'SELECT COUNT(*)' . $from;
+
+        return ManagementListQuery::paginate(
+            $this->pdo,
+            $count,
+            $params,
+            $count,
+            $params,
+            'SELECT ' . self::COLUMNS . $from,
+            new PageRequest($request->page, $request->perPage),
+            ManagementListQuery::config(['display_order' => 'o.display_order', 'id' => 'o.id'], 'display_order'),
+            $this->hydrate(...),
+        );
+    }
+
+    private static function visibleFrom(): string
+    {
+        return ' FROM `' . self::TABLE . '` o WHERE o.`product_id` = :product_id '
+            . 'AND o.`deleted_at` IS NULL AND o.`status` = \'active\' '
+            . 'AND ' . VariantVisibilitySql::labelled('maa_product_option_contents', 'option_id', 'o') . ' '
+            . 'AND EXISTS (SELECT 1 FROM `maa_product_variants` vv WHERE vv.`product_id` = o.`product_id` AND '
+            . VariantVisibilitySql::visiblePredicate('vv') . ') ';
+    }
+
 
     /**
      * The owner, status, and deleted-state filter shared by the list, the counts, and the page.

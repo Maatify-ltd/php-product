@@ -115,6 +115,52 @@ final readonly class PdoVariantQueryReader implements VariantQueryReaderInterfac
             static fn(array $row): array => $row,
         );
 
+        return $this->hydratePage($page);
+    }
+
+    public function listVisible(int $productId, VariantVisibleListCriteriaDTO $criteria): array
+    {
+        return $this->hydrate(ManagementListQuery::fetchBounded(
+            $this->pdo,
+            'SELECT ' . self::COLUMNS . self::visibleFrom() . ' ORDER BY v.`display_order` ASC, v.`id` ASC LIMIT :list_limit',
+            ['product_id' => $productId],
+            $criteria->maxResults,
+        ));
+    }
+
+    public function paginateVisible(int $productId, PageRequest $request): PageResultDTO
+    {
+        $from = self::visibleFrom();
+        $params = ['product_id' => $productId];
+        $count = 'SELECT COUNT(*)' . $from;
+
+        $page = ManagementListQuery::paginate(
+            $this->pdo,
+            $count,
+            $params,
+            $count,
+            $params,
+            'SELECT ' . self::COLUMNS . $from,
+            new PageRequest($request->page, $request->perPage),
+            ManagementListQuery::config(['display_order' => 'v.display_order', 'id' => 'v.id'], 'display_order'),
+            static fn(array $row): array => $row,
+        );
+
+        return $this->hydratePage($page);
+    }
+
+    private static function visibleFrom(): string
+    {
+        return ' FROM `maa_product_variants` v WHERE '
+            . 'v.`product_id` = :product_id AND ' . VariantVisibilitySql::visiblePredicate('v');
+    }
+
+    /**
+     * @param PageResultDTO<array<string, mixed>> $page
+     * @return PageResultDTO<VariantDTO>
+     */
+    private function hydratePage(PageResultDTO $page): PageResultDTO
+    {
         // The rows are hydrated together so the composition pairs of the page load in one query.
         return new PageResultDTO(
             $this->hydrate($page->data),
@@ -130,17 +176,6 @@ final readonly class PdoVariantQueryReader implements VariantQueryReaderInterfac
         );
     }
 
-    public function listVisible(int $productId, VariantVisibleListCriteriaDTO $criteria): array
-    {
-        return $this->hydrate(ManagementListQuery::fetchBounded(
-            $this->pdo,
-            'SELECT ' . self::COLUMNS . ' FROM `maa_product_variants` v WHERE '
-            . 'v.`product_id` = :product_id AND ' . VariantVisibilitySql::visiblePredicate('v')
-            . ' ORDER BY v.`display_order` ASC, v.`id` ASC LIMIT :list_limit',
-            ['product_id' => $productId],
-            $criteria->maxResults,
-        ));
-    }
 
     /**
      * The management filter shared by the list, the counts, and the page.

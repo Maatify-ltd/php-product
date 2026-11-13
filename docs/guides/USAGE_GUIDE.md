@@ -297,6 +297,14 @@ $heroImages = $assignments->listForManagement(new ImageAssignmentListCriteriaDTO
 
 ## 14. Consumer reads
 
+For more than one page, use `paginateByProductId()` on Variants,
+`paginateVisibleByProductId()` on Options, `paginateVisibleByOptionId()` on Values,
+or `paginateVisibleByExactScope()` on Images. Pass `new PageRequest(2, 100)` for
+the second page. The result contains only visible rows and counts, in the same
+order as the corresponding list. The current lists still return at most 100
+rows. Sort inputs on the page request are ignored, and image `maxResults`
+only limits the unpaginated list.
+
 Build the read-only services from a single Host factory:
 
 ```php

@@ -10,6 +10,8 @@ No version has been released.
 
 ### Added
 
+- Consumer pagination for visible Variants, Options, Option Values, and exact-scope Image Assignments.
+
 - Build Consumer services from the same `ProductFactory::forHost()` configuration, using the Host connection for reads.
 
 - Consumer Product lookup by code and management Variant lookup by SKU or barcode, with the existing visibility and deleted-state rules.

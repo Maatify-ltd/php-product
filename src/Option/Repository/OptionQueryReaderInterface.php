@@ -44,4 +44,7 @@ interface OptionQueryReaderInterface
      * @return list<OptionDTO>
      */
     public function listVisible(int $productId, int $maxResults): array;
+
+    /** @return PageResultDTO<OptionDTO> A page and counts from the same visible rows as listVisible(). */
+    public function paginateVisible(int $productId, PageRequest $request): PageResultDTO;
 }

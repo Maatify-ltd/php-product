@@ -47,4 +47,7 @@ interface ImageAssignmentQueryReaderInterface
      * @return list<ImageAssignmentDTO>
      */
     public function listVisibleByExactScope(ImageAssignmentExactScopeCriteriaDTO $criteria): array;
+
+    /** @return PageResultDTO<ImageAssignmentDTO> A page and counts from the same visible rows as listVisibleByExactScope(). */
+    public function paginateVisibleByExactScope(ImageAssignmentExactScopeCriteriaDTO $criteria, PageRequest $request): PageResultDTO;
 }

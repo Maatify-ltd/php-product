@@ -84,4 +84,7 @@ interface VariantQueryReaderInterface
      * with its actual composition pairs, whatever its consumer visibility.
      */
     public function findActiveByFingerprint(int $productId, string $fingerprint): ?VariantStateDTO;
+
+    /** @return PageResultDTO<VariantDTO> A page and counts from the same visible rows as listVisible(). */
+    public function paginateVisible(int $productId, PageRequest $request): PageResultDTO;
 }

@@ -394,6 +394,11 @@ final class ImageAssignmentServiceTest extends TestCase
                 throw new LogicException('paginateForManagement is not expected in this test.');
             }
 
+            public function paginateVisibleByExactScope(ImageAssignmentExactScopeCriteriaDTO $criteria, PageRequest $request): PageResultDTO
+            {
+                throw new \LogicException('Consumer pagination is not expected in this test.');
+            }
+
             public function listVisibleByExactScope(ImageAssignmentExactScopeCriteriaDTO $criteria): array
             {
                 throw new LogicException('listVisibleByExactScope is not expected in this test.');

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Maatify\Product\Variant\Consumer\Service;
 
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
 use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
 use Maatify\Product\Common\Exception\ProductPersistenceException;
 use Maatify\Product\Product\Exception\ProductNotFoundException;
@@ -56,4 +58,12 @@ interface VariantConsumerServiceInterface
      * @throws ProductPersistenceException When the matching Variant's stored fingerprint does not match its composition pairs.
      */
     public function resolveByComposition(int $productId, VariantCompositionCriteriaDTO $criteria): VariantDTO;
+
+    /**
+     * Returns a page with the same visibility and order as listByProductId().
+     * Uses only the page and page size from the request. Counts include visible rows only.
+     * @throws ProductInvalidArgumentException When $productId is not positive.
+     * @return PageResultDTO<VariantDTO>
+     */
+    public function paginateByProductId(int $productId, PageRequest $request): PageResultDTO;
 }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Maatify\Product\Option\Consumer\Service;
 
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
 use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
 use Maatify\Product\Option\Consumer\Criteria\OptionVisibleListCriteriaDTO;
 use Maatify\Product\Option\DTO\OptionCollectionDTO;
@@ -27,5 +29,14 @@ final readonly class OptionConsumerService implements OptionConsumerServiceInter
         }
 
         return new OptionCollectionDTO($this->reader->listVisible($productId, $criteria->maxResults));
+    }
+
+    public function paginateVisibleByProductId(int $productId, PageRequest $request): PageResultDTO
+    {
+        if ($productId < 1) {
+            throw ProductInvalidArgumentException::nonPositiveId('productId');
+        }
+
+        return $this->reader->paginateVisible($productId, $request);
     }
 }

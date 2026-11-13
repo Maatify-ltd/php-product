@@ -45,4 +45,7 @@ interface OptionValueQueryReaderInterface
      * @return list<OptionValueDTO>
      */
     public function listVisible(int $optionId, int $maxResults): array;
+
+    /** @return PageResultDTO<OptionValueDTO> A page and counts from the same visible rows as listVisible(). */
+    public function paginateVisible(int $optionId, PageRequest $request): PageResultDTO;
 }

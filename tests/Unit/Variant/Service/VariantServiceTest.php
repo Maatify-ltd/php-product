@@ -133,6 +133,11 @@ final class VariantServiceTest extends TestCase
                 return $this->list;
             }
 
+            public function paginateVisible(int $productId, PageRequest $request): PageResultDTO
+            {
+                throw new \LogicException('Consumer pagination is not expected in this test.');
+            }
+
             public function listVisible(int $productId, VariantVisibleListCriteriaDTO $criteria): array
             {
                 return $this->list;

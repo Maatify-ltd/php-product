@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Maatify\Product\ImageAssignment\Consumer\Service;
 
+use Maatify\Product\ImageAssignment\DTO\ImageAssignmentDTO;
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
 use Maatify\Product\ImageAssignment\Consumer\Criteria\ImageAssignmentExactScopeCriteriaDTO;
 use Maatify\Product\ImageAssignment\DTO\ImageAssignmentCollectionDTO;
 
@@ -24,4 +27,12 @@ interface ImageAssignmentConsumerServiceInterface
      * selects no default.
      */
     public function listVisibleByExactScope(ImageAssignmentExactScopeCriteriaDTO $criteria): ImageAssignmentCollectionDTO;
+
+    /**
+     * Returns a page with the same visibility and order as listVisibleByExactScope().
+     * Uses only the page and page size from the request. Counts include visible rows only.
+     * The scope criteria’s maxResults applies only to the unpaginated read.
+     * @return PageResultDTO<ImageAssignmentDTO>
+     */
+    public function paginateVisibleByExactScope(ImageAssignmentExactScopeCriteriaDTO $criteria, PageRequest $request): PageResultDTO;
 }

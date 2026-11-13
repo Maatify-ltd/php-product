@@ -28,6 +28,7 @@ use Maatify\Product\Content\Management\Command\CreateOptionValueContentCommand;
 use Maatify\Product\Content\Management\Command\CreateProductContentCommand;
 use Maatify\Product\Content\ValueObject\ExactContentLanguage;
 use Maatify\Product\Factory\ProductFactory;
+use Maatify\Product\ImageAssignment\Consumer\Criteria\ImageAssignmentExactScopeCriteriaDTO;
 use Maatify\Product\ImageAssignment\Management\Command\CreateImageAssignmentCommand;
 use Maatify\Product\ImageRole\Management\Command\CreateImageRoleCommand;
 use Maatify\Product\Option\Exception\OptionNotFoundException;
@@ -295,6 +296,12 @@ try {
     ]));
     check(count($result->createdVariantIds) === 2 && $result->deactivatedVariantIds === [$created->variantId], 'reconfiguration creates the new Variants and deactivates the empty one');
     [$redVariant, $blueVariant] = $result->createdVariantIds;
+    $variantPage = $consumerVariants->paginateByProductId($productId, new PageRequest(2, 1));
+    check($variantPage->total === 2 && ($variantPage->data[0]->id ?? null) === $blueVariant, 'consumer Variant pagination continues in visible order');
+    $optionPage = $shop->consumerOptions()->paginateVisibleByProductId($productId, new PageRequest(1, 1));
+    check($optionPage->total === 1 && ($optionPage->data[0]->id ?? null) === $color, 'consumer Option pagination returns the visible Option');
+    $valuePage = $shop->consumerOptionValues()->paginateVisibleByOptionId($color, new PageRequest(2, 1));
+    check($valuePage->total === 2 && ($valuePage->data[0]->id ?? null) === $blue, 'consumer Option Value pagination continues in visible order');
     check($consumerVariants->resolveByComposition($productId, new VariantCompositionCriteriaDTO([new OptionValueSelection($color, $blue)]))->id === $blueVariant, 'a complete selection resolves to its Variant');
     try {
         $consumerVariants->resolveByComposition($productId, new VariantCompositionCriteriaDTO());
@@ -332,6 +339,11 @@ try {
     $assignments->setDefault($second);
     check(!$assignments->getByIdForManagement($first)->isDefault && $assignments->getByIdForManagement($second)->isDefault, 'set-default replaces the previous default of the scope');
     $assignments->softDelete($second);
+    $imagePage = $shop->consumerImageAssignments()->paginateVisibleByExactScope(
+        new ImageAssignmentExactScopeCriteriaDTO($productId, null, $hero, null, null),
+        new PageRequest(1, 1),
+    );
+    check($imagePage->total === 1 && ($imagePage->data[0]->id ?? null) === $first, 'consumer image pagination excludes deleted assignments in the exact scope');
     check(!$assignments->getByIdForManagement($first)->isDefault, 'deleting the default promotes nothing');
 
     // The second session commits a new Option after the Host has established its read view.

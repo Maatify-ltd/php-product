@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Maatify\Product\OptionValue\Consumer\Service;
 
+use Maatify\Product\OptionValue\DTO\OptionValueDTO;
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
 use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
 use Maatify\Product\OptionValue\Consumer\Criteria\OptionValueVisibleListCriteriaDTO;
 use Maatify\Product\OptionValue\DTO\OptionValueCollectionDTO;
@@ -26,4 +29,12 @@ interface OptionValueConsumerServiceInterface
         int $optionId,
         OptionValueVisibleListCriteriaDTO $criteria = new OptionValueVisibleListCriteriaDTO(),
     ): OptionValueCollectionDTO;
+
+    /**
+     * Returns a page with the same visibility and order as listVisibleByOptionId().
+     * Uses only the page and page size from the request. Counts include visible rows only.
+     * @throws ProductInvalidArgumentException When $optionId is not positive.
+     * @return PageResultDTO<OptionValueDTO>
+     */
+    public function paginateVisibleByOptionId(int $optionId, PageRequest $request): PageResultDTO;
 }

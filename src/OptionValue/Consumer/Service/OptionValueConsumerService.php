@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Maatify\Product\OptionValue\Consumer\Service;
 
+use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
+use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
 use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
 use Maatify\Product\OptionValue\Consumer\Criteria\OptionValueVisibleListCriteriaDTO;
 use Maatify\Product\OptionValue\DTO\OptionValueCollectionDTO;
@@ -27,5 +29,14 @@ final readonly class OptionValueConsumerService implements OptionValueConsumerSe
         }
 
         return new OptionValueCollectionDTO($this->reader->listVisible($optionId, $criteria->maxResults));
+    }
+
+    public function paginateVisibleByOptionId(int $optionId, PageRequest $request): PageResultDTO
+    {
+        if ($optionId < 1) {
+            throw ProductInvalidArgumentException::nonPositiveId('optionId');
+        }
+
+        return $this->reader->paginateVisible($optionId, $request);
     }
 }
