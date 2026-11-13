@@ -348,6 +348,10 @@ final readonly class ProductManagementService implements ProductManagementServic
             }
         }
 
+        // The write plan now holds all required IDs. Release the first graph before
+        // rebuilding it for final validation. Transaction locks remain held.
+        unset($snapshot, $byFingerprint, $existing, $variant, $option, $value);
+
         // 5. Write in lock order: Options, Option Values, Variants.
         $this->configuration->updateOptionStatus($deactivateOptions, false, $occurredAt);
         $this->configuration->updateOptionStatus($activateOptions, true, $occurredAt);
