@@ -23,7 +23,7 @@ random, run-scoped database password.
 ## Persistence RC trial plan
 
 The owner approved migrating and testing the successor Persistence package on
-[Draft PR #7](https://github.com/Maatify/php-product/pull/7) while retaining the release
+[Draft PR #7](https://github.com/Maatify-ltd/php-product/pull/7) while retaining the release
 hold. The trial follows [Package Building §11](../php-engineering-standards/standards/packages/PACKAGE_BUILDING_STANDARD.md#11-shared-ordering-and-pagination-utilities)
 and [Composer §24](../php-engineering-standards/standards/packages/COMPOSER_PACKAGE_STANDARD.md#24-stability-policy)
 at the adopted standards commit `c5d70cbe005fc26c38a7218967efe991194e76d6`.

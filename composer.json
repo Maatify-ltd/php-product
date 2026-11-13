@@ -7,7 +7,7 @@
         "php",
         "maatify"
     ],
-    "homepage": "https://github.com/Maatify/php-product",
+    "homepage": "https://github.com/Maatify-ltd/php-product",
     "type": "library",
     "license": "proprietary",
     "authors": [
@@ -18,8 +18,8 @@
         }
     ],
     "support": {
-        "issues": "https://github.com/Maatify/php-product/issues",
-        "source": "https://github.com/Maatify/php-product"
+        "issues": "https://github.com/Maatify-ltd/php-product/issues",
+        "source": "https://github.com/Maatify-ltd/php-product"
     },
     "autoload": {
         "psr-4": {
