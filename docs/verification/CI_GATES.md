@@ -51,9 +51,16 @@ at the adopted standards commit `c5d70cbe005fc26c38a7218967efe991194e76d6`.
 - **Exit.** The RC exception ends when a Stable Persistence version is published.
   Verify the Stable release and its API, update the package and fixture constraints
   and identity checks, then rerun dependency, runtime and external consumer gates
-  on that revision. Product remains on release hold until the Stable integration
-  is verified, the applicable first-Stable gates pass, and the owner separately
-  authorizes release.
+  on that revision. Product Stable requires the compatible Stable Persistence
+  integration, the first-Stable gates, and separate owner release authorization.
+- **First Product RC.** The current owner hold remains in force. This plan authorizes
+  testing the dependency on the Draft PR only. Publishing a Product RC while it
+  depends on a Persistence RC requires a separate owner-approved release plan
+  that explicitly changes the hold for that candidate. Record the exact Product
+  and Persistence versions, their source identities, the Composer distribution
+  channel and the consumer root's package-specific stability requirements.
+  Qualify the candidate artifact before publication, then verify installation
+  and run the Consumer Harness against the exact published Product RC.
 
 ## Gates
 
