@@ -115,12 +115,16 @@ final class VariantResolutionTest extends RuntimeTestCase
         $this->optionValueManagementService()->softDelete($this->green);
         $this->optionManagementService()->softDelete($this->material);
 
+        $inactiveValue = $this->preparedValue($this->color, 'yellow', 'Yellow');
+
         $cases = [
+            'inactive Value' => fn() => $service->resolveByComposition($this->product, self::selection([[$this->color, $inactiveValue], [$this->size, $this->m]])),
+            'unknown Value' => fn() => $service->resolveByComposition($this->product, self::selection([[$this->color, 999999], [$this->size, $this->m]])),
             'repeated Option' => fn() => self::selection([[$this->color, $this->red], [$this->color, $this->blue], [$this->size, $this->m]]),
             'Option of another Product' => fn() => $service->resolveByComposition($this->product, self::selection([[$otherOption, $otherValue], [$this->size, $this->m]])),
             'Value of another Product under a local Option' => fn() => $service->resolveByComposition($this->product, self::selection([[$this->color, $otherValue], [$this->size, $this->m]])),
             'Value paired with the wrong Option' => fn() => $service->resolveByComposition($this->product, self::selection([[$this->color, $this->m], [$this->size, $this->red]])),
-            'inactive Value' => fn() => $service->resolveByComposition($this->product, self::selection([[$this->color, $this->green], [$this->size, $this->m]])),
+            'soft-deleted Value' => fn() => $service->resolveByComposition($this->product, self::selection([[$this->color, $this->green], [$this->size, $this->m]])),
             'soft-deleted Option' => fn() => $service->resolveByComposition($this->product, self::selection([[$this->color, $this->red], [$this->size, $this->m], [$this->material, $this->red]])),
             'unknown Option' => fn() => $service->resolveByComposition($this->product, self::selection([[$this->color, $this->red], [$this->size, $this->m], [999999, $this->red]])),
             'partial coverage' => fn() => $service->resolveByComposition($this->product, self::selection([[$this->color, $this->red]])),

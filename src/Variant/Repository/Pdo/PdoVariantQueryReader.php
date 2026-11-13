@@ -9,8 +9,6 @@ use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
 use Maatify\Product\Common\Exception\ProductStorageFailureFactory;
 use Maatify\Product\Common\Repository\Pdo\ManagementListQuery;
 use Maatify\Product\Common\Repository\Pdo\RowHydrator;
-use Maatify\Product\Option\DTO\OptionStateDTO;
-use Maatify\Product\OptionValue\DTO\OptionValueStateDTO;
 use Maatify\Product\Variant\Consumer\Criteria\VariantVisibleListCriteriaDTO;
 use Maatify\Product\Variant\DTO\VariantCompositionPairDTO;
 use Maatify\Product\Variant\DTO\VariantDTO;
@@ -151,55 +149,42 @@ final readonly class PdoVariantQueryReader implements VariantQueryReaderInterfac
         return $statement->fetchColumn() !== false;
     }
 
-    public function listOptionStates(int $productId): array
+    public function listActiveOptionIds(int $productId): array
     {
         $statement = $this->pdo->prepare(
-            'SELECT o.`id`, o.`product_id`, o.`status`, (o.`deleted_at` IS NOT NULL) AS `deleted`, '
-            . VariantVisibilitySql::labelled('maa_product_option_contents', 'option_id', 'o') . ' AS `labelled` '
-            . 'FROM `maa_product_options` o WHERE o.`product_id` = :product_id ORDER BY o.`id` ASC',
+            "SELECT `id` FROM `maa_product_options` WHERE `product_id` = :product_id "
+            . "AND `status` = 'active' AND `deleted_at` IS NULL ORDER BY `id` ASC",
         );
         $statement->execute(['product_id' => $productId]);
 
         /** @var list<array<string, mixed>> $rows */
         $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
-        $options = [];
-        foreach ($rows as $row) {
-            $options[] = new OptionStateDTO(
-                id: RowHydrator::positiveInt($row, 'id'),
-                productId: RowHydrator::positiveInt($row, 'product_id'),
-                active: RowHydrator::isActive($row),
-                deleted: RowHydrator::flag($row, 'deleted'),
-                labelled: RowHydrator::flag($row, 'labelled'),
-            );
-        }
 
-        return $options;
+        return array_map(static fn(array $row): int => RowHydrator::positiveInt($row, 'id'), $rows);
     }
 
-    public function listOptionValueStates(int $productId): array
+    public function findActiveValueOptionIds(int $productId, array $valueIds): array
     {
-        $statement = $this->pdo->prepare(
-            'SELECT ov.`id`, ov.`option_id`, ov.`status`, (ov.`deleted_at` IS NOT NULL) AS `deleted`, '
-            . VariantVisibilitySql::labelled('maa_product_option_value_contents', 'option_value_id', 'ov') . ' AS `labelled` '
-            . 'FROM `maa_product_option_values` ov JOIN `maa_product_options` o ON o.`id` = ov.`option_id` WHERE '
-            . 'o.`product_id` = :product_id ORDER BY ov.`id` ASC',
-        );
-        $statement->execute(['product_id' => $productId]);
-
-        /** @var list<array<string, mixed>> $rows */
-        $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
-        $values = [];
-        foreach ($rows as $row) {
-            $values[] = new OptionValueStateDTO(
-                id: RowHydrator::positiveInt($row, 'id'),
-                optionId: RowHydrator::positiveInt($row, 'option_id'),
-                active: RowHydrator::isActive($row),
-                deleted: RowHydrator::flag($row, 'deleted'),
-                labelled: RowHydrator::flag($row, 'labelled'),
+        $owners = [];
+        // Keep each statement below MySQL's parameter limit without imposing a new selection limit.
+        foreach (array_chunk(array_values(array_unique($valueIds)), 1000) as $batch) {
+            $placeholders = implode(', ', array_fill(0, count($batch), '?'));
+            $statement = $this->pdo->prepare(
+                'SELECT ov.`id`, ov.`option_id` FROM `maa_product_option_values` ov '
+                . 'JOIN `maa_product_options` o ON o.`id` = ov.`option_id` '
+                . 'WHERE o.`product_id` = ? AND ov.`id` IN (' . $placeholders . ') '
+                . "AND ov.`status` = 'active' AND ov.`deleted_at` IS NULL",
             );
+            $statement->execute([$productId, ...$batch]);
+
+            /** @var list<array<string, mixed>> $rows */
+            $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($rows as $row) {
+                $owners[RowHydrator::positiveInt($row, 'id')] = RowHydrator::positiveInt($row, 'option_id');
+            }
         }
 
-        return $values;
+        return $owners;
     }
 
     public function findActiveByFingerprint(int $productId, string $fingerprint): ?VariantStateDTO

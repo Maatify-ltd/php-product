@@ -236,6 +236,24 @@ cost of historical Options and Values in this fixture. Production capacity, mult
 Options, historical Variant compositions, and lock contention between different Products
 were outside this measurement.
 
+## Composition resolution before and after
+
+The baseline at `5329dab` and the optimized reader used the same MySQL 8.0.46 instance,
+PHP 8.4.27, and Product with four active Options and one selected Value per Option.
+Each version ran twice at each history size, with 20 warmup calls and 200 measured calls
+per run. Every call returned the same expected Variant. The table shows the range of
+per-run p95 values and the maximum additional PHP memory peak.
+
+| Deleted Options / Values | Baseline p95 | Optimized p95 | Baseline PHP peak extra | Optimized PHP peak extra |
+| --- | ---: | ---: | ---: | ---: |
+| 0 / 0 | 8.6–11.3 ms | 7.9–11.0 ms | 87.5 KiB | 86 KiB |
+| 20 / 1,000 | 16.9–25.2 ms | 6.9–9.3 ms | 712.8 KiB | 86 KiB |
+| 100 / 5,000 | 26.8–29.6 ms | 6.4–7.0 ms | 3,457.1 KiB | 86 KiB |
+
+The optimized validation reads active, non-deleted Option IDs and only the requested
+active, non-deleted Value IDs with their owners. These synthetic timings cover resolution
+without competing writes.
+
 ## Current limits
 
 Not covered, and not claimed:

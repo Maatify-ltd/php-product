@@ -14,6 +14,7 @@ use Maatify\Product\Variant\DTO\VariantDTO;
 use Maatify\Product\Variant\Exception\VariantNotFoundException;
 use Maatify\Product\Variant\Repository\VariantQueryReaderInterface;
 use Maatify\Product\Variant\ValueObject\CompositionFingerprint;
+use Maatify\Product\Variant\ValueObject\OptionValueSelection;
 
 /**
  * Serves the consumer reads and composition resolution of Variants. Reads write nothing and open
@@ -52,33 +53,22 @@ final readonly class VariantConsumerService implements VariantConsumerServiceInt
             throw ProductNotFoundException::withId($productId);
         }
 
-        $options = [];
-        foreach ($this->reader->listOptionStates($productId) as $option) {
-            $options[$option->id] = $option;
-        }
-        $values = [];
-        foreach ($this->reader->listOptionValueStates($productId) as $value) {
-            $values[$value->id] = $value;
-        }
+        $activeOptions = array_fill_keys($this->reader->listActiveOptionIds($productId), true);
+        $valueOwners = $this->reader->findActiveValueOptionIds(
+            $productId,
+            array_map(static fn(OptionValueSelection $selection): int => $selection->optionValueId, $criteria->selections),
+        );
 
-        $selectedOptions = [];
         foreach ($criteria->selections as $selection) {
-            $option = $options[$selection->optionId] ?? null;
-            if ($option === null || $option->deleted || !$option->active) {
+            if (!isset($activeOptions[$selection->optionId])) {
                 throw ProductInvalidArgumentException::optionNotSelectable($selection->optionId, $productId);
             }
-            $value = $values[$selection->optionValueId] ?? null;
-            if ($value === null || $value->optionId !== $option->id || $value->deleted || !$value->active) {
-                throw ProductInvalidArgumentException::optionValueNotSelectable($selection->optionValueId, $option->id);
+            if (($valueOwners[$selection->optionValueId] ?? null) !== $selection->optionId) {
+                throw ProductInvalidArgumentException::optionValueNotSelectable($selection->optionValueId, $selection->optionId);
             }
-            $selectedOptions[$option->id] = true;
+            unset($activeOptions[$selection->optionId]);
         }
-        $missing = [];
-        foreach ($options as $option) {
-            if (!$option->deleted && $option->active && !isset($selectedOptions[$option->id])) {
-                $missing[] = $option->id;
-            }
-        }
+        $missing = array_keys($activeOptions);
         if ($missing !== []) {
             throw ProductInvalidArgumentException::incompleteSelection($productId, $missing);
         }

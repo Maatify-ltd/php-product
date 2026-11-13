@@ -6,8 +6,6 @@ namespace Maatify\Product\Variant\Repository;
 
 use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
 use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
-use Maatify\Product\Option\DTO\OptionStateDTO;
-use Maatify\Product\OptionValue\DTO\OptionValueStateDTO;
 use Maatify\Product\Variant\Consumer\Criteria\VariantVisibleListCriteriaDTO;
 use Maatify\Product\Variant\DTO\VariantDTO;
 use Maatify\Product\Variant\DTO\VariantStateDTO;
@@ -65,18 +63,15 @@ interface VariantQueryReaderInterface
     public function isProductVisible(int $productId): bool;
 
     /**
-     * The lifecycle state of every Option of a Product, including inactive and soft-deleted ones.
-     *
-     * @return list<OptionStateDTO>
+     * @return list<int> Active, non-deleted Option IDs of the Product, ordered by ID.
      */
-    public function listOptionStates(int $productId): array;
+    public function listActiveOptionIds(int $productId): array;
 
     /**
-     * The lifecycle state of every Option Value of a Product, including inactive and soft-deleted ones.
-     *
-     * @return list<OptionValueStateDTO>
+     * @param list<int> $valueIds
+     * @return array<int, int> Selected active, non-deleted Value IDs mapped to their owning Option IDs within the Product.
      */
-    public function listOptionValueStates(int $productId): array;
+    public function findActiveValueOptionIds(int $productId, array $valueIds): array;
 
     /**
      * Finds the active, non-deleted Variant of a Product that stores the given composition fingerprint,

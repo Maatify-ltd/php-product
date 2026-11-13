@@ -138,12 +138,12 @@ final class VariantServiceTest extends TestCase
                 return false;
             }
 
-            public function listOptionStates(int $productId): array
+            public function listActiveOptionIds(int $productId): array
             {
                 return [];
             }
 
-            public function listOptionValueStates(int $productId): array
+            public function findActiveValueOptionIds(int $productId, array $valueIds): array
             {
                 return [];
             }
