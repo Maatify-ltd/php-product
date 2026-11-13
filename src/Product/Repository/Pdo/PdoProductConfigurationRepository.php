@@ -47,6 +47,7 @@ final readonly class PdoProductConfigurationRepository implements ProductConfigu
     {
         $statement = $this->pdo->prepare('SELECT `configuration_revision` FROM `maa_product_products` WHERE `id` = :id AND `deleted_at` IS NULL');
         $statement->execute(['id' => $productId]);
+        /** @var array<string, mixed>|false $row */
         $row = $statement->fetch(PDO::FETCH_ASSOC);
 
         return $row === false ? null : RowHydrator::positiveInt($row, 'configuration_revision');
