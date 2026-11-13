@@ -63,6 +63,7 @@ final class LargeConfigurationSnapshotTest extends RuntimeTestCase
             self::assertCount(1, $lastVariant->composition);
             self::assertSame($lastValue, $lastVariant->composition[0]->optionValueId);
 
+            $this->execute('SAVEPOINT before_status_fixture');
             // Keep one deleted row in the input to verify the bulk update still excludes it.
             $ids = array_keys($snapshot->variants);
             unset($snapshot);
@@ -78,6 +79,34 @@ final class LargeConfigurationSnapshotTest extends RuntimeTestCase
             self::assertSame(1, self::rowCount('maa_product_variants', "status = 'inactive' AND deleted_at IS NOT NULL"));
             $this->execute('ROLLBACK TO SAVEPOINT before_status_batches');
             self::assertSame(0, self::rowCount('maa_product_variants', "status = 'active'"));
+
+            // Restore the valid simple starting state before exercising the public command.
+            $this->execute('ROLLBACK TO SAVEPOINT before_status_fixture');
+            unset($ids);
+            $value = $this->preparedValue($option, 'current', 'Current');
+            $products = $this->productManagementService();
+            $command = $this->reconfiguration(
+                $created->productId,
+                [$option => [$value]],
+                [[[[$option, $value]]]],
+            );
+
+            // setup-php may configure a different CLI limit. Exercise the default 128 MiB budget.
+            $previousLimit = ini_set('memory_limit', '128M');
+            self::assertNotFalse($previousLimit);
+            try {
+                $result = $products->reconfigure($command);
+            } finally {
+                ini_set('memory_limit', $previousLimit);
+            }
+
+            self::assertTrue(self::$pdo->inTransaction());
+            self::assertCount(1, $result->createdVariantIds);
+            self::assertSame([$created->variantId], $result->deactivatedVariantIds);
+            self::assertSame([$option], $result->activatedOptionIds);
+            self::assertSame([$value], $result->activatedOptionValueIds);
+            self::assertSame($command->expectedRevision + 1, $products->getConfigurationRevision($created->productId));
+            self::assertSame(self::HISTORY_SIZE, self::rowCount('maa_product_variants', 'deleted_at IS NOT NULL'));
         } finally {
             self::$pdo->rollBack();
         }
