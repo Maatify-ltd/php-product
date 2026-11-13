@@ -150,6 +150,7 @@ A taken identity becomes the family's conflict exception (`ProductCodeAlreadyExi
 - [Usage Guide](docs/guides/USAGE_GUIDE.md)
 - [Package Reference](PRODUCT_PACKAGE_REFERENCE.md)
 - [Changelog](CHANGELOG.md)
+- [Security policy](SECURITY.md)
 - [CI gates and local verification](docs/verification/CI_GATES.md)
 
 ## Quality Status

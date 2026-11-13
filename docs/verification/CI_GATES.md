@@ -20,6 +20,25 @@ composer update --no-interaction --prefer-dist --no-progress
 `composer.lock` is not committed. No credential is stored: every run generates a
 random, run-scoped database password.
 
+## Release artifact contents
+
+Run the structural archive check against the exact committed tree under review:
+
+```bash
+bash scripts/ci/check-artifact-contents.sh "$(git rev-parse HEAD)"
+```
+
+The check generates Git and Composer archives from a clean checkout of that SHA.
+It compares the distributed runtime, schema, examples, and required consumer
+documents against the commit, and rejects unexpected paths and private keys.
+Record the command result with the candidate SHA. This is the structural part of
+Release Artifact Verification under [CI Workflow §2.5](../php-engineering-standards/standards/packages/CI_WORKFLOW_STANDARD.md#25-release-artifact-verification).
+Once an exact release target is approved, the qualification also needs review of
+the target identity and install command, the undated changelog section, SECURITY
+lifecycle and support claims, and the approved delivery policy at the qualifying
+SHA. After authorized publication, verify the exact version and actual install
+mode from the approved Composer channel in a clean external root under §2.6.
+
 ## Persistence RC trial plan
 
 The owner approved migrating and testing the successor Persistence package on
