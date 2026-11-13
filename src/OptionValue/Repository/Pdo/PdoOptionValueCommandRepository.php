@@ -10,6 +10,7 @@ use Maatify\PhpPersistence\Ordering\Repository\ScopedOrderingManager;
 use Maatify\Product\Common\Exception\ProductStorageFailureFactory;
 use Maatify\Product\Common\Repository\Pdo\DigitString;
 use Maatify\Product\Common\Repository\Pdo\DuplicateKey;
+use Maatify\Product\Common\Repository\Pdo\OwnerIdentityLookup;
 use Maatify\Product\Common\Repository\Pdo\RowHydrator;
 use Maatify\Product\OptionValue\Enum\OptionValueStatusEnum;
 use Maatify\Product\OptionValue\Exception\OptionValueCodeAlreadyExistsException;
@@ -31,10 +32,15 @@ final readonly class PdoOptionValueCommandRepository implements OptionValueComma
 {
     private const string TABLE = 'maa_product_option_values';
 
+    private OwnerIdentityLookup $ownerLookup;
+
     public function __construct(
         private PDO $pdo,
         private ScopedOrderingManager $orderingManager,
-    ) {}
+        ?PDO $ownerLookupPdo = null,
+    ) {
+        $this->ownerLookup = new OwnerIdentityLookup($pdo, $ownerLookupPdo);
+    }
 
     public function create(CreateOptionValueCommand $command, DateTimeImmutable $occurredAt): int
     {
@@ -74,14 +80,11 @@ final readonly class PdoOptionValueCommandRepository implements OptionValueComma
 
     public function findProductId(int $optionValueId): ?int
     {
-        $statement = $this->pdo->prepare(
+        $row = $this->ownerLookup->find(
             'SELECT o.`product_id` FROM `' . self::TABLE . '` ov JOIN `maa_product_options` o ON o.`id` = ov.`option_id` WHERE '
             . 'ov.`id` = :id LIMIT 1',
+            $optionValueId,
         );
-        $statement->execute(['id' => $optionValueId]);
-
-        /** @var array<string, mixed>|false $row */
-        $row = $statement->fetch(PDO::FETCH_ASSOC);
 
         return $row === false ? null : RowHydrator::positiveInt($row, 'product_id');
     }

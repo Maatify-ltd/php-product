@@ -75,9 +75,13 @@ use PDO;
  * by the package; each operation runs in its own savepoint inside it, and a failed
  * operation is rolled back to that savepoint, so none of its writes reach the Host's commit.
  *
- * Every builder takes the same two arguments: the PDO connection, which must use
+ * Every builder takes the PDO connection, which must use
  * `PDO::ERRMODE_EXCEPTION` and carries all writes of one operation, and the Host Clock, whose
  * instant is stored as the record timestamp and whose timezone hydrates the returned timestamps.
+ *
+ * Supply an independent autocommit PDO on the same primary and schema to the Management builders
+ * that accept `$ownerLookupPdo` when a Host transaction may have an older InnoDB read view.
+ * It only resolves immutable owner identities missing from the transaction's own view.
  */
 final class ProductFactory
 {
@@ -88,7 +92,7 @@ final class ProductFactory
      *
      * @throws ProductInvalidArgumentException When the connection does not report errors as exceptions.
      */
-    public static function createProductManagementService(PDO $pdo, ClockInterface $clock): ProductManagementServiceInterface
+    public static function createProductManagementService(PDO $pdo, ClockInterface $clock, ?PDO $ownerLookupPdo = null): ProductManagementServiceInterface
     {
         self::requireExceptionMode($pdo);
         $ordering = new ScopedOrderingManager();
@@ -97,7 +101,7 @@ final class ProductFactory
             new PdoProductCommandRepository($pdo),
             new PdoVariantCommandRepository($pdo, $ordering),
             new PdoProductQueryReader($pdo, $clock),
-            new PdoProductConfigurationRepository($pdo, $ordering),
+            new PdoProductConfigurationRepository($pdo, $ordering, $ownerLookupPdo),
             new PdoSavepointTransactionRunner($pdo),
             $clock,
         );
@@ -120,7 +124,7 @@ final class ProductFactory
      *
      * @throws ProductInvalidArgumentException When the connection does not report errors as exceptions.
      */
-    public static function createVariantManagementService(PDO $pdo, ClockInterface $clock): VariantManagementServiceInterface
+    public static function createVariantManagementService(PDO $pdo, ClockInterface $clock, ?PDO $ownerLookupPdo = null): VariantManagementServiceInterface
     {
         self::requireExceptionMode($pdo);
         $ordering = new ScopedOrderingManager();
@@ -128,7 +132,7 @@ final class ProductFactory
         return new VariantManagementService(
             new PdoVariantQueryReader($pdo, $clock),
             new PdoVariantCommandRepository($pdo, $ordering),
-            new PdoProductConfigurationRepository($pdo, $ordering),
+            new PdoProductConfigurationRepository($pdo, $ordering, $ownerLookupPdo),
             new PdoSavepointTransactionRunner($pdo),
             $clock,
         );
@@ -151,16 +155,16 @@ final class ProductFactory
      *
      * @throws ProductInvalidArgumentException When the connection does not report errors as exceptions.
      */
-    public static function createOptionManagementService(PDO $pdo, ClockInterface $clock): OptionManagementServiceInterface
+    public static function createOptionManagementService(PDO $pdo, ClockInterface $clock, ?PDO $ownerLookupPdo = null): OptionManagementServiceInterface
     {
         self::requireExceptionMode($pdo);
         $ordering = new ScopedOrderingManager();
 
         return new OptionManagementService(
-            new PdoOptionCommandRepository($pdo, $ordering),
+            new PdoOptionCommandRepository($pdo, $ordering, $ownerLookupPdo),
             new PdoOptionQueryReader($pdo, $clock),
             new PdoProductCommandRepository($pdo),
-            new PdoProductConfigurationRepository($pdo, $ordering),
+            new PdoProductConfigurationRepository($pdo, $ordering, $ownerLookupPdo),
             new PdoSavepointTransactionRunner($pdo),
             $clock,
         );
@@ -183,17 +187,17 @@ final class ProductFactory
      *
      * @throws ProductInvalidArgumentException When the connection does not report errors as exceptions.
      */
-    public static function createOptionValueManagementService(PDO $pdo, ClockInterface $clock): OptionValueManagementServiceInterface
+    public static function createOptionValueManagementService(PDO $pdo, ClockInterface $clock, ?PDO $ownerLookupPdo = null): OptionValueManagementServiceInterface
     {
         self::requireExceptionMode($pdo);
         $ordering = new ScopedOrderingManager();
 
         return new OptionValueManagementService(
-            new PdoOptionValueCommandRepository($pdo, $ordering),
+            new PdoOptionValueCommandRepository($pdo, $ordering, $ownerLookupPdo),
             new PdoOptionValueQueryReader($pdo, $clock),
-            new PdoOptionCommandRepository($pdo, $ordering),
+            new PdoOptionCommandRepository($pdo, $ordering, $ownerLookupPdo),
             new PdoProductCommandRepository($pdo),
-            new PdoProductConfigurationRepository($pdo, $ordering),
+            new PdoProductConfigurationRepository($pdo, $ordering, $ownerLookupPdo),
             new PdoSavepointTransactionRunner($pdo),
             $clock,
         );
@@ -234,13 +238,13 @@ final class ProductFactory
      *
      * @throws ProductInvalidArgumentException When the connection does not report errors as exceptions.
      */
-    public static function createImageAssignmentManagementService(PDO $pdo, ClockInterface $clock): ImageAssignmentManagementServiceInterface
+    public static function createImageAssignmentManagementService(PDO $pdo, ClockInterface $clock, ?PDO $ownerLookupPdo = null): ImageAssignmentManagementServiceInterface
     {
         self::requireExceptionMode($pdo);
         $ordering = new ScopedOrderingManager();
 
         return new ImageAssignmentManagementService(
-            new PdoImageAssignmentCommandRepository($pdo, $ordering),
+            new PdoImageAssignmentCommandRepository($pdo, $ordering, $ownerLookupPdo),
             new PdoImageAssignmentQueryReader($pdo, $clock),
             new PdoProductCommandRepository($pdo),
             new PdoVariantCommandRepository($pdo, $ordering),
@@ -267,9 +271,9 @@ final class ProductFactory
      *
      * @throws ProductInvalidArgumentException When the connection does not report errors as exceptions.
      */
-    public static function createProductContentManagementService(PDO $pdo, ClockInterface $clock): ProductContentManagementServiceInterface
+    public static function createProductContentManagementService(PDO $pdo, ClockInterface $clock, ?PDO $ownerLookupPdo = null): ProductContentManagementServiceInterface
     {
-        return new ProductContentManagementService(self::contentLifecycle($pdo, $clock, ContentOwnerEnum::PRODUCT));
+        return new ProductContentManagementService(self::contentLifecycle($pdo, $clock, ContentOwnerEnum::PRODUCT, $ownerLookupPdo));
     }
 
     /**
@@ -287,9 +291,9 @@ final class ProductFactory
      *
      * @throws ProductInvalidArgumentException When the connection does not report errors as exceptions.
      */
-    public static function createOptionContentManagementService(PDO $pdo, ClockInterface $clock): OptionContentManagementServiceInterface
+    public static function createOptionContentManagementService(PDO $pdo, ClockInterface $clock, ?PDO $ownerLookupPdo = null): OptionContentManagementServiceInterface
     {
-        return new OptionContentManagementService(self::contentLifecycle($pdo, $clock, ContentOwnerEnum::OPTION));
+        return new OptionContentManagementService(self::contentLifecycle($pdo, $clock, ContentOwnerEnum::OPTION, $ownerLookupPdo));
     }
 
     /**
@@ -307,9 +311,9 @@ final class ProductFactory
      *
      * @throws ProductInvalidArgumentException When the connection does not report errors as exceptions.
      */
-    public static function createOptionValueContentManagementService(PDO $pdo, ClockInterface $clock): OptionValueContentManagementServiceInterface
+    public static function createOptionValueContentManagementService(PDO $pdo, ClockInterface $clock, ?PDO $ownerLookupPdo = null): OptionValueContentManagementServiceInterface
     {
-        return new OptionValueContentManagementService(self::contentLifecycle($pdo, $clock, ContentOwnerEnum::OPTION_VALUE));
+        return new OptionValueContentManagementService(self::contentLifecycle($pdo, $clock, ContentOwnerEnum::OPTION_VALUE, $ownerLookupPdo));
     }
 
     /**
@@ -322,13 +326,13 @@ final class ProductFactory
         return new OptionValueContentConsumerService(self::contentLifecycle($pdo, $clock, ContentOwnerEnum::OPTION_VALUE));
     }
 
-    private static function contentLifecycle(PDO $pdo, ClockInterface $clock, ContentOwnerEnum $owner): ContentLifecycle
+    private static function contentLifecycle(PDO $pdo, ClockInterface $clock, ContentOwnerEnum $owner, ?PDO $ownerLookupPdo = null): ContentLifecycle
     {
         self::requireExceptionMode($pdo);
 
         return new ContentLifecycle(
             $owner,
-            new PdoContentCommandRepository($pdo, $owner),
+            new PdoContentCommandRepository($pdo, $owner, $ownerLookupPdo),
             new PdoContentQueryReader($pdo, $owner, $clock),
             new PdoProductConfigurationRepository($pdo, new ScopedOrderingManager()),
             new PdoSavepointTransactionRunner($pdo),

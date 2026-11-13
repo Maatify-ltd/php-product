@@ -10,6 +10,7 @@ use Maatify\PhpPersistence\Ordering\Repository\ScopedOrderingManager;
 use Maatify\Product\Common\Exception\ProductStorageFailureFactory;
 use Maatify\Product\Common\Repository\Pdo\DigitString;
 use Maatify\Product\Common\Repository\Pdo\DuplicateKey;
+use Maatify\Product\Common\Repository\Pdo\OwnerIdentityLookup;
 use Maatify\Product\Common\Repository\Pdo\RowHydrator;
 use Maatify\Product\Option\DTO\OptionStateDTO;
 use Maatify\Product\Option\Enum\OptionStatusEnum;
@@ -32,10 +33,15 @@ final readonly class PdoOptionCommandRepository implements OptionCommandReposito
 {
     private const string TABLE = 'maa_product_options';
 
+    private OwnerIdentityLookup $ownerLookup;
+
     public function __construct(
         private PDO $pdo,
         private ScopedOrderingManager $orderingManager,
-    ) {}
+        ?PDO $ownerLookupPdo = null,
+    ) {
+        $this->ownerLookup = new OwnerIdentityLookup($pdo, $ownerLookupPdo);
+    }
 
     public function create(CreateOptionCommand $command, DateTimeImmutable $occurredAt): int
     {
@@ -100,11 +106,7 @@ final readonly class PdoOptionCommandRepository implements OptionCommandReposito
 
     public function findProductId(int $optionId): ?int
     {
-        $statement = $this->pdo->prepare('SELECT `product_id` FROM `' . self::TABLE . '` WHERE `id` = :id LIMIT 1');
-        $statement->execute(['id' => $optionId]);
-
-        /** @var array<string, mixed>|false $row */
-        $row = $statement->fetch(PDO::FETCH_ASSOC);
+        $row = $this->ownerLookup->find('SELECT `product_id` FROM `' . self::TABLE . '` WHERE `id` = :id LIMIT 1', $optionId);
 
         return $row === false ? null : RowHydrator::positiveInt($row, 'product_id');
     }

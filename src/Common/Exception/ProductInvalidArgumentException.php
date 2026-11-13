@@ -156,4 +156,10 @@ final class ProductInvalidArgumentException extends InvalidArgumentMaatifyExcept
     {
         return new self('The PDO connection must use PDO::ERRMODE_EXCEPTION.');
     }
+
+    /** The lookup needs a distinct, idle autocommit connection that reports errors. */
+    public static function invalidOwnerLookupConnection(): self
+    {
+        return new self('Owner lookup requires a separate autocommit PDO with exception mode and no active transaction.');
+    }
 }

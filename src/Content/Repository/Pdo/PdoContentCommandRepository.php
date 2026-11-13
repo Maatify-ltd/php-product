@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use Maatify\Product\Common\Exception\ProductStorageFailureFactory;
 use Maatify\Product\Common\Repository\Pdo\DigitString;
 use Maatify\Product\Common\Repository\Pdo\DuplicateKey;
+use Maatify\Product\Common\Repository\Pdo\OwnerIdentityLookup;
 use Maatify\Product\Common\Repository\Pdo\RowHydrator;
 use Maatify\Product\Content\DTO\ContentFieldsDTO;
 use Maatify\Product\Content\DTO\ContentIdentityDTO;
@@ -28,10 +29,15 @@ use PDOException;
  */
 final readonly class PdoContentCommandRepository implements ContentCommandRepositoryInterface
 {
+    private OwnerIdentityLookup $ownerLookup;
+
     public function __construct(
         private PDO $pdo,
         private ContentOwnerEnum $owner,
-    ) {}
+        ?PDO $ownerLookupPdo = null,
+    ) {
+        $this->ownerLookup = new OwnerIdentityLookup($pdo, $ownerLookupPdo);
+    }
 
     public function findOwnerProductId(int $ownerId): ?int
     {
@@ -41,11 +47,7 @@ final readonly class PdoContentCommandRepository implements ContentCommandReposi
             ContentOwnerEnum::OPTION_VALUE => 'SELECT o.`product_id` FROM `maa_product_option_values` ov '
                 . 'JOIN `maa_product_options` o ON o.`id` = ov.`option_id` WHERE ov.`id` = :id LIMIT 1',
         };
-        $statement = $this->pdo->prepare($sql);
-        $statement->execute(['id' => $ownerId]);
-
-        /** @var array<string, mixed>|false $row */
-        $row = $statement->fetch(PDO::FETCH_ASSOC);
+        $row = $this->ownerLookup->find($sql, $ownerId);
 
         return $row === false ? null : RowHydrator::positiveInt($row, 'product_id');
     }
@@ -62,11 +64,7 @@ final readonly class PdoContentCommandRepository implements ContentCommandReposi
                 . 'JOIN `maa_product_option_values` ov ON ov.`id` = c.`option_value_id` '
                 . 'JOIN `maa_product_options` o ON o.`id` = ov.`option_id` WHERE c.`id` = :id LIMIT 1',
         };
-        $statement = $this->pdo->prepare($sql);
-        $statement->execute(['id' => $contentId]);
-
-        /** @var array<string, mixed>|false $row */
-        $row = $statement->fetch(PDO::FETCH_ASSOC);
+        $row = $this->ownerLookup->find($sql, $contentId);
         if ($row === false) {
             return null;
         }

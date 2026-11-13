@@ -10,6 +10,7 @@ use Maatify\PhpPersistence\Ordering\Repository\ScopedOrderingManager;
 use Maatify\Product\Common\Exception\ProductStorageFailureFactory;
 use Maatify\Product\Common\Repository\Pdo\DigitString;
 use Maatify\Product\Common\Repository\Pdo\DuplicateKey;
+use Maatify\Product\Common\Repository\Pdo\OwnerIdentityLookup;
 use Maatify\Product\Common\Repository\Pdo\RowHydrator;
 use Maatify\Product\ImageAssignment\DTO\ImageAssignmentIdentityDTO;
 use Maatify\Product\ImageAssignment\DTO\ImageAssignmentStateDTO;
@@ -44,10 +45,15 @@ final readonly class PdoImageAssignmentCommandRepository implements ImageAssignm
 
     private const string PRODUCT_IDENTITY_KEY = 'uq_maa_product_image_assignments_identity';
 
+    private OwnerIdentityLookup $ownerLookup;
+
     public function __construct(
         private PDO $pdo,
         private ScopedOrderingManager $orderingManager,
-    ) {}
+        ?PDO $ownerLookupPdo = null,
+    ) {
+        $this->ownerLookup = new OwnerIdentityLookup($pdo, $ownerLookupPdo);
+    }
 
     public function create(CreateImageAssignmentCommand $command, DateTimeImmutable $occurredAt): int
     {
@@ -118,13 +124,10 @@ final readonly class PdoImageAssignmentCommandRepository implements ImageAssignm
 
     public function findIdentity(int $assignmentId): ?ImageAssignmentIdentityDTO
     {
-        $statement = $this->pdo->prepare(
+        $row = $this->ownerLookup->find(
             'SELECT `product_id`, `variant_id`, `role_id` FROM `' . self::TABLE . '` WHERE `id` = :id LIMIT 1',
+            $assignmentId,
         );
-        $statement->execute(['id' => $assignmentId]);
-
-        /** @var array<string, mixed>|false $row */
-        $row = $statement->fetch(PDO::FETCH_ASSOC);
         if ($row === false) {
             return null;
         }

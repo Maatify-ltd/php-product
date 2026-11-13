@@ -161,7 +161,9 @@ no method or a method that does not exist.
     case the Host transaction stays active, the Host's other work is preserved, and the Host's commit
     or rollback decides the rest; locking reads
     that validate the latest committed state inside a Host transaction holding an older snapshot
-    (`LockingReadSnapshotTest`); and a real deadlock (driver error 1213) between two Host
+    (`LockingReadSnapshotTest`);
+    owner lookup for identities committed after a Host snapshot, and rollback on the main PDO
+    (`OwnerLookupSnapshotTest`); and a real deadlock (driver error 1213) between two Host
     transactions, lost inside a package call, propagated as the original `PDOException` with the Host
     transaction ended on the server (`DeadlockPropagationTest`).
   - Real concurrent writers in separate processes and connections, released together by an explicit

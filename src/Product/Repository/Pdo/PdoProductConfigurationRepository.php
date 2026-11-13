@@ -9,6 +9,7 @@ use Maatify\PhpPersistence\Ordering\Config\ScopedOrderingConfig;
 use Maatify\PhpPersistence\Ordering\Repository\ScopedOrderingManager;
 use Maatify\Product\Common\Exception\ProductStorageFailureFactory;
 use Maatify\Product\Common\Repository\Pdo\DigitString;
+use Maatify\Product\Common\Repository\Pdo\OwnerIdentityLookup;
 use Maatify\Product\Common\Repository\Pdo\RowHydrator;
 use Maatify\Product\Option\DTO\OptionStateDTO;
 use Maatify\Product\OptionValue\DTO\OptionValueStateDTO;
@@ -40,10 +41,15 @@ final readonly class PdoProductConfigurationRepository implements ProductConfigu
 {
     private const int ID_BATCH_SIZE = 1000;
 
+    private OwnerIdentityLookup $ownerLookup;
+
     public function __construct(
         private PDO $pdo,
         private ScopedOrderingManager $orderingManager,
-    ) {}
+        ?PDO $ownerLookupPdo = null,
+    ) {
+        $this->ownerLookup = new OwnerIdentityLookup($pdo, $ownerLookupPdo);
+    }
 
     public function findRevision(int $productId): ?int
     {
@@ -195,11 +201,7 @@ final readonly class PdoProductConfigurationRepository implements ProductConfigu
 
     public function findVariantProductId(int $variantId): ?int
     {
-        $statement = $this->pdo->prepare('SELECT `product_id` FROM `maa_product_variants` WHERE `id` = :id LIMIT 1');
-        $statement->execute(['id' => $variantId]);
-
-        /** @var array<string, mixed>|false $row */
-        $row = $statement->fetch(PDO::FETCH_ASSOC);
+        $row = $this->ownerLookup->find('SELECT `product_id` FROM `maa_product_variants` WHERE `id` = :id LIMIT 1', $variantId);
 
         return $row === false ? null : RowHydrator::positiveInt($row, 'product_id');
     }

@@ -15,6 +15,7 @@ It does not fit if you need prices, stock, suppliers, Categories, orders, URL sl
 - PHP `>=8.4.27 <8.5.0 || >=8.5.12 <8.6.0` with `ext-pdo`, `ext-pdo_mysql`, `ext-mbstring`.
 - MySQL `8.0.16` or later with [`schema/product.sql`](../../schema/product.sql) installed. The schema creates tables only.
 - A PDO connection with `PDO::ERRMODE_EXCEPTION`, and a Host Clock implementing `Maatify\SharedCommon\Contracts\ClockInterface` (for example `SystemClock`). The factory rejects a connection that does not throw.
+- For mutations inside an older InnoDB snapshot, pass `ownerLookupPdo:` to the affected Management builders. Use a second autocommit PDO on the same primary and schema. See [Owner discovery in Host transactions](../../PRODUCT_PACKAGE_REFERENCE.md) in the Package Reference.
 
 ## Capability map
 

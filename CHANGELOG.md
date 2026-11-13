@@ -10,6 +10,8 @@ No version has been released.
 
 ### Added
 
+- Management builders that discover an owner by identity accept an optional same-primary `ownerLookupPdo` for mutations inside an older Host snapshot. The main PDO retains all locks, writes, and transaction control.
+
 - Product reconfiguration requires the editor’s expected configuration revision. A stale save raises a typed conflict and leaves the newer configuration intact.
 
 - MySQL schema `schema/product.sql`: ten `maa_product_` tables for Product, Variant, Option, Option Value, Content, Image Role, and Image Assignment, with foreign keys, case-sensitive status checks, exact-scope uniqueness, and a database-enforced rule that a soft-deleted Image Assignment is never the default.
