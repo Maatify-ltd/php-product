@@ -25,7 +25,7 @@ use PDO;
  * The snapshot is read with locking reads only, so it reflects the latest committed state
  * even when the Host transaction established an earlier consistent-read snapshot. Lock order:
  * Product row, then its Options, Option Values, and Variants, each returned by ascending identity;
- * composition pairs and Content labels are read with shared locks after them. Every read after the
+ * composition pairs and Content labels are read with shared locks after them in ascending ID batches. Every read after the
  * Product row goes through a key that starts with the Product identity or with the identities of
  * the rows already locked, pinned with `FORCE INDEX` so that no plan scans or record-locks another
  * Product's entries. Under `REPEATABLE READ` each range read still takes gap locks: a read keyed by
@@ -38,6 +38,8 @@ use PDO;
  */
 final readonly class PdoProductConfigurationRepository implements ProductConfigurationRepositoryInterface
 {
+    private const int SNAPSHOT_ID_BATCH_SIZE = 1000;
+
     public function __construct(
         private PDO $pdo,
         private ScopedOrderingManager $orderingManager,
@@ -83,6 +85,7 @@ final readonly class PdoProductConfigurationRepository implements ProductConfigu
         $options->execute(['product_id' => $productId]);
         /** @var list<array<string, mixed>> $optionRows */
         $optionRows = $options->fetchAll(PDO::FETCH_ASSOC);
+        unset($options);
 
         $values = $this->pdo->prepare(
             'SELECT ov.`id`, ov.`option_id`, ov.`status`, (ov.`deleted_at` IS NOT NULL) AS `deleted` '
@@ -93,6 +96,7 @@ final readonly class PdoProductConfigurationRepository implements ProductConfigu
         $values->execute(['product_id' => $productId]);
         /** @var list<array<string, mixed>> $valueRows */
         $valueRows = $values->fetchAll(PDO::FETCH_ASSOC);
+        unset($values);
 
         $variants = $this->pdo->prepare(
             'SELECT `id`, `product_id`, `composition_fingerprint`, `status`, (`deleted_at` IS NOT NULL) AS `deleted` '
@@ -102,6 +106,7 @@ final readonly class PdoProductConfigurationRepository implements ProductConfigu
         $variants->execute(['product_id' => $productId]);
         /** @var list<array<string, mixed>> $variantRows */
         $variantRows = $variants->fetchAll(PDO::FETCH_ASSOC);
+        unset($variants);
 
         $compositions = $this->compositionsOf(array_map(
             static fn(array $row): int => RowHydrator::positiveInt($row, 'id'),
@@ -138,6 +143,8 @@ final readonly class PdoProductConfigurationRepository implements ProductConfigu
                 labelled: isset($labelledOptions[$id]),
             );
         }
+        unset($optionRows);
+
         $valueStates = [];
         foreach ($valueRows as $row) {
             $id = RowHydrator::positiveInt($row, 'id');
@@ -149,6 +156,8 @@ final readonly class PdoProductConfigurationRepository implements ProductConfigu
                 labelled: isset($labelledValues[$id]),
             );
         }
+        unset($valueRows);
+
         $variantStates = [];
         foreach ($variantRows as $row) {
             $id = RowHydrator::positiveInt($row, 'id');
@@ -303,25 +312,25 @@ final readonly class PdoProductConfigurationRepository implements ProductConfigu
      */
     private function compositionsOf(array $variantIds): array
     {
-        if ($variantIds === []) {
-            return [];
-        }
-        $statement = $this->pdo->prepare(
-            'SELECT `variant_id`, `option_id`, `option_value_id` FROM `maa_product_variant_option_values` '
-            . 'FORCE INDEX (`uq_maa_product_variant_option_values_variant_option`) WHERE `variant_id` IN ('
-            . self::placeholders($variantIds) . ') FOR SHARE',
-        );
-        $statement->execute($variantIds);
-
-        /** @var list<array<string, mixed>> $rows */
-        $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
         $compositions = [];
-        foreach ($rows as $row) {
-            $compositions[RowHydrator::positiveInt($row, 'variant_id')][] = new OptionValueSelection(
-                RowHydrator::positiveInt($row, 'option_id'),
-                RowHydrator::positiveInt($row, 'option_value_id'),
+        foreach (array_chunk($variantIds, self::SNAPSHOT_ID_BATCH_SIZE) as $batch) {
+            $statement = $this->pdo->prepare(
+                'SELECT `variant_id`, `option_id`, `option_value_id` FROM `maa_product_variant_option_values` '
+                . 'FORCE INDEX (`uq_maa_product_variant_option_values_variant_option`) WHERE `variant_id` IN ('
+                . self::placeholders($batch) . ') FOR SHARE',
             );
+            $statement->execute($batch);
+
+            /** @var list<array<string, mixed>> $rows */
+            $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($rows as $row) {
+                $compositions[RowHydrator::positiveInt($row, 'variant_id')][] = new OptionValueSelection(
+                    RowHydrator::positiveInt($row, 'option_id'),
+                    RowHydrator::positiveInt($row, 'option_value_id'),
+                );
+            }
         }
+
         foreach ($compositions as &$composition) {
             usort($composition, static fn(OptionValueSelection $a, OptionValueSelection $b): int => $a->optionId <=> $b->optionId);
         }
@@ -341,21 +350,20 @@ final readonly class PdoProductConfigurationRepository implements ProductConfigu
      */
     private function labelledOwners(string $table, string $ownerColumn, string $identityKey, array $ownerIds): array
     {
-        if ($ownerIds === []) {
-            return [];
-        }
-        $statement = $this->pdo->prepare(
-            'SELECT DISTINCT `' . $ownerColumn . '` AS `owner` FROM `' . $table . '` FORCE INDEX (`' . $identityKey . '`) WHERE `'
-            . $ownerColumn . '` IN (' . self::placeholders($ownerIds) . ') AND `deleted_at` IS NULL '
-            . 'AND `name` REGEXP \'[^[:space:]]\' FOR SHARE',
-        );
-        $statement->execute($ownerIds);
-
-        /** @var list<array<string, mixed>> $rows */
-        $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
         $owners = [];
-        foreach ($rows as $row) {
-            $owners[RowHydrator::positiveInt($row, 'owner')] = true;
+        foreach (array_chunk($ownerIds, self::SNAPSHOT_ID_BATCH_SIZE) as $batch) {
+            $statement = $this->pdo->prepare(
+                'SELECT DISTINCT `' . $ownerColumn . '` AS `owner` FROM `' . $table . '` FORCE INDEX (`' . $identityKey . '`) WHERE `'
+                . $ownerColumn . '` IN (' . self::placeholders($batch) . ') AND `deleted_at` IS NULL '
+                . 'AND `name` REGEXP \'[^[:space:]]\' FOR SHARE',
+            );
+            $statement->execute($batch);
+
+            /** @var list<array<string, mixed>> $rows */
+            $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($rows as $row) {
+                $owners[RowHydrator::positiveInt($row, 'owner')] = true;
+            }
         }
 
         return $owners;
