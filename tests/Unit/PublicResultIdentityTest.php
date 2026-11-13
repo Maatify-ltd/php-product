@@ -55,9 +55,24 @@ final class PublicResultIdentityTest extends TestCase
         }
     }
 
+    /** @return iterable<string, array{callable(): object}> */
+    public static function invalidListShapes(): iterable
+    {
+        foreach (['non-zero start' => [2 => 3], 'gap' => [1, 2 => 3], 'string key' => ['id' => 3]] as $shape => $ids) {
+            for ($index = 0; $index < 8; ++$index) {
+                $lists = array_fill(0, 8, []);
+                $lists[$index] = $ids;
+                yield "reconfiguration list $index rejects $shape" => [
+                    static fn() => (new ReflectionClass(ProductReconfigurationResultDTO::class))->newInstanceArgs($lists),
+                ];
+            }
+        }
+    }
+
     /** @param callable(): object $construct */
     #[DataProvider('invalidIdentities')]
-    public function testPublicResultsRejectInvalidIdentities(callable $construct): void
+    #[DataProvider('invalidListShapes')]
+    public function testPublicResultsRejectInvalidIdentityInputs(callable $construct): void
     {
         $this->expectException(ProductInvalidArgumentException::class);
         $construct();

@@ -46,9 +46,7 @@ final readonly class ProductReconfigurationResultDTO implements JsonSerializable
             'activatedOptionValueIds' => $activatedOptionValueIds,
             'deactivatedOptionValueIds' => $deactivatedOptionValueIds,
         ] as $field => $ids) {
-            foreach ($ids as $id) {
-                self::assertPositiveIdentity($id, $field);
-            }
+            self::assertIdentityList($ids, $field);
         }
     }
 
@@ -78,10 +76,16 @@ final readonly class ProductReconfigurationResultDTO implements JsonSerializable
         ];
     }
 
-    private static function assertPositiveIdentity(mixed $id, string $field): void
+    /** @param array<array-key, mixed> $ids */
+    private static function assertIdentityList(array $ids, string $field): void
     {
-        if (!is_int($id) || $id < 1) {
-            throw ProductInvalidArgumentException::nonPositiveId($field);
+        if (!array_is_list($ids)) {
+            throw new ProductInvalidArgumentException(sprintf('Field "%s" must be a list with consecutive keys starting at zero.', $field));
+        }
+        foreach ($ids as $id) {
+            if (!is_int($id) || $id < 1) {
+                throw ProductInvalidArgumentException::nonPositiveId($field);
+            }
         }
     }
 }
