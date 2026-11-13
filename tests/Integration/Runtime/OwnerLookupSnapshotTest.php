@@ -12,6 +12,7 @@ use Maatify\Product\ImageAssignment\Management\Command\CreateImageAssignmentComm
 use Maatify\Product\Option\Management\Command\CreateOptionCommand;
 use Maatify\Product\OptionValue\Management\Command\CreateOptionValueCommand;
 use Maatify\Product\Product\Management\Command\CreateProductCommand;
+use Maatify\Product\Variant\Exception\VariantCompositionConflictException;
 use Maatify\Product\Variant\Management\Command\UpdateVariantIdentifiersCommand;
 use Maatify\Product\Variant\ValueObject\VariantIdentifierChange;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -117,6 +118,28 @@ final class OwnerLookupSnapshotTest extends RuntimeTestCase
         self::assertFalse($lookup->inTransaction());
         $host->rollBack();
         self::assertSame(0, self::rowCount($table, $predicate), 'The Host can roll back the package write.');
+    }
+
+    public function testReconfigurationRecognizesNewVariantOfAnotherProduct(): void
+    {
+        $host = self::$pdo;
+        $writer = self::connect(self::$database);
+        $lookup = self::connect(self::$database);
+        $product = $this->namedProduct('HOST-PRODUCT')->productId;
+        $option = $this->preparedOption($product, 'colour', 'Colour');
+        $value = $this->preparedValue($option, 'red', 'Red');
+
+        $host->exec('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+        $host->beginTransaction();
+        self::assertSame(1, self::rowCount('maa_product_variants'));
+        $other = ProductFactory::createProductManagementService($writer, self::clock())
+            ->create(new CreateProductCommand('LATER-PRODUCT'));
+
+        $service = ProductFactory::createProductManagementService($host, self::clock(), $lookup);
+        $command = $this->reconfiguration($product, [$option => [$value]], [[[[$option, $value]], $other->variantId]]);
+        $this->assertThrows(VariantCompositionConflictException::class, fn() => $service->reconfigure($command));
+        self::assertTrue($host->inTransaction());
+        $host->rollBack();
     }
 
     public function testLookupKeepsUncommittedHostIdentitiesVisible(): void
