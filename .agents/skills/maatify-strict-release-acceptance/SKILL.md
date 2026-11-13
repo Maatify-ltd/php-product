@@ -12,7 +12,7 @@ Enable any Lead/Executor to execute Mandatory Pre-Release Strict Lead Acceptance
 ## Canonical Contract Reference
 
 - **Standard Identity:** `std-ai-collaboration-workflow` (Mandatory Pre-Release Strict Lead Acceptance)
-- **Durable Decision:** `DEC-023` (`MANDATORY_PRE_RELEASE_STRICT_LEAD_ACCEPTANCE_DECISION.md`)
+- **Durable Decision:** central upstream `DEC-023` of `Maatify/php-engineering-standards` (record file `MANDATORY_PRE_RELEASE_STRICT_LEAD_ACCEPTANCE_DECISION.md`). This is not a consumer-local decision: a consumer's own `DEC-023`, if any, is an unrelated decision. The central Decision Record is not a pinned asset, so its contract is applied through the pinned `AI_COLLABORATION_WORKFLOW_AR.md`.
 - **Supporting References:** `AI_COLLABORATION_WORKFLOW_AR.md`, `STANDARDS_ADOPTION_STANDARD_AR.md`
 
 ## Operational Procedure
@@ -36,7 +36,9 @@ Enable any Lead/Executor to execute Mandatory Pre-Release Strict Lead Acceptance
 ### Phase 3 — Canonical Contract
 
 1. **Read fresh from repository**: Read `std-ai-collaboration-workflow` (Mandatory Pre-Release Strict Lead Acceptance) fresh from current repository state. Do not rely on memory or prior prompt.
-2. **Read applicable active Decisions**: Read any active Decisions that impose acceptance evidence (including `DEC-023`).
+2. **Apply central and read local Decisions**:
+   - **Central upstream `DEC-023`** of `Maatify/php-engineering-standards` (`MANDATORY_PRE_RELEASE_STRICT_LEAD_ACCEPTANCE_DECISION.md`, identified for provenance only): apply its contract through the pinned `AI_COLLABORATION_WORKFLOW_AR.md`. Do not require reading the central Decision Record, which is not a pinned asset.
+   - **Consumer-local active Decisions**: read applicable ACTIVE Decisions that impose acceptance evidence from this repository's own Decision Index and records, under their own local identities. A consumer-local `DEC-023`, if any, is unrelated to the central `DEC-023`.
 3. **Read other canonical constraints**: Read `AI_COLLABORATION_WORKFLOW_AR.md` and `STANDARDS_ADOPTION_STANDARD_AR.md` to the extent they govern acceptance handling for this boundary.
 4. **Derive contract set**: Build the authoritative contract set from repository evidence only.
 

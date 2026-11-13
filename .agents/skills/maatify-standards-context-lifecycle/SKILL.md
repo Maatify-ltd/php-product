@@ -12,7 +12,7 @@ Establish, maintain, and reconcile the authoritative Standards and Decision gove
 ## Canonical Contract Reference
 
 - **Standard Identity:** `std-ai-collaboration-workflow` (§7.1 Standards Context Lifecycle & Governance Context Reconciliation)
-- **Adoption/Governance:** `STANDARDS_ADOPTION_STANDARD_AR.md` (including §16 Resolution Status), `DEC-031` (§3)
+- **Adoption/Governance:** `STANDARDS_ADOPTION_STANDARD_AR.md` (including §16 Resolution Status), central upstream `DEC-031` of `Maatify/php-engineering-standards` (§3 of `AI_STANDARDS_OPERATIONAL_CONTEXT_AND_PINNED_ASSET_GOVERNANCE_DECISION.md`; not a consumer-local decision, and its record is not a pinned asset)
 
 ## Operational Procedure
 
@@ -115,7 +115,7 @@ Active Decisions (Phase 8)
 ```
 
 Constraints for this path:
-- Resolve adoption state strictly from the authoritative local adoption/pinning sources as required by `std-ai-collaboration-workflow §7.1` and `DEC-031 §3`.
+- Resolve adoption state strictly from the authoritative local adoption/pinning sources as required by `std-ai-collaboration-workflow §7.1` and the central upstream `DEC-031 §3` of `Maatify/php-engineering-standards` (`AI_STANDARDS_OPERATIONAL_CONTEXT_AND_PINNED_ASSET_GOVERNANCE_DECISION.md`), not a consumer-local `DEC-031`.
 - Do **not** introduce network/fetch/fallback during this resolution.
 - Treat the canonical Standards repository state (`standards/`, `docs/decisions/`) as independent from upstream adoption resolution.
 

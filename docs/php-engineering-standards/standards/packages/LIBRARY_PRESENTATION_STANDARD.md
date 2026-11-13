@@ -931,5 +931,6 @@ This Standard explicitly does NOT force:
 
 ### `5.0.0`
 
-- Frozen baseline `4.0.0`, artifact blob `25d4d75d7f23934b3e204a28f1dbc7d06ca63c04` (Maatify/php-paymob completed VALID adoption; upstream commit `5f872d3ef7da847cba3f82fee124a19c22f1c5c4`).
+- Frozen baseline `4.0.0`, artifact blob `25d4d75d7f23934b3e204a28f1dbc7d06ca63c04` (a consumer repository's completed VALID adoption, identity withheld per `DEC-042`; upstream commit `5f872d3ef7da847cba3f82fee124a19c22f1c5c4`).
+- Issue #168 (`DEC-042`): consumer-identity neutralization of the preceding frozen-baseline evidence line only; `EDITORIAL / NO_CONTRACT_CHANGE` (Patch), absorbed in the existing Mutable Candidate calculated from the Frozen Version Baseline; no additional bump, freeze, release, or adoption. The artifact blob and commit hashes are unchanged.
 - `NORMATIVE / BREAKING_CONTRACT_CHANGE`: require exact-target release-facing self-consistency before qualification, separate immutable Release Artifact identity from live Publication State, require target allocation in CHANGELOG before tagging, and prohibit retagging a published version as remediation; existing package release workflows may otherwise qualify a stale artifact.

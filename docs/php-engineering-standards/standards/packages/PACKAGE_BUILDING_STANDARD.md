@@ -5,7 +5,7 @@
 ## Standard Metadata
 
 - **Standard ID:** `std-package-building`
-- **Standard Version:** `3.0.2`
+- **Standard Version:** `4.0.0`
 - **Standard Version Format:** `MAJOR.MINOR.PATCH`
 
 This document is the law for building any new standalone Composer package in the Maatify ecosystem.
@@ -70,12 +70,12 @@ To maintain standalone Composer package boundaries and a framework-agnostic arch
 - **Clock/Date-Time:** A package that requires a clock abstraction MUST depend on `maatify/shared-common` and consume `ClockInterface`, available from `v1.0.0`. `SystemClock` is a production implementation available from `v1.0.0`, but it is not mandatory for every consumer. No shared Frozen/Test Clock is claimed by this Standard.
   Repository: https://github.com/Maatify/SharedCommon
 
-- **Persistence Utilities:** Packages that require reusable PDO row-position/display-order management or pagination capabilities must depend on `maatify/persistence`.
-  Repository: https://github.com/Maatify/persistence
+- **Persistence Utilities:** Packages that require reusable PDO row-position/display-order management or pagination capabilities must depend on `maatify/php-persistence`.
+  Repository: https://github.com/Maatify-ltd/php-persistence
 
 **Rule:** Packages MUST NOT define package-local duplicates of a capability that is available through a stable public API in a Maatify shared package. This prohibition includes exception hierarchies, clock abstractions, PDO row-position/display-order mechanics, and PDO pagination mechanics.
 
-A consuming package MUST declare the minimum stable dependency version that exposes every shared API it uses. Proposed architecture documents, unreleased branches, commits, and implementation contracts are not consumable public APIs and MUST NOT be copied into consumer packages.
+A consuming package MUST declare the minimum stable dependency version that exposes every shared API it uses, subject only to the temporary trial exception in Section 11. Proposed architecture documents, unreleased branches, commits, and implementation contracts are not consumable public APIs and MUST NOT be copied into consumer packages.
 
 The declaration, constraint, ordering, and validation rules for these dependencies are governed by [COMPOSER_PACKAGE_STANDARD.md](COMPOSER_PACKAGE_STANDARD.md).
 
@@ -532,20 +532,22 @@ In any method that uses `beginTransaction()`:
             // ...
             $this->pdo->commit();
         } catch (\Throwable $e) {
-            if ($this->pdo->inTransaction()) {
-                $this->pdo->rollBack();
+            try {
+                if ($this->pdo->inTransaction()) {
+                    $this->pdo->rollBack();
+                }
+            } finally {
+                // Cleanup failure must not replace the original throwable.
+                // Optional documented semantic conversion may occur here.
+                throw $e;
             }
-
-            // Optional documented semantic conversion may occur here.
-
-            throw $e;
         }
 ```
 
 Only package-owned transactions are rolled back by this pattern.
 Rollback must be attempted only while the transaction is active.
-The original throwable is rethrown unless an explicitly documented semantic conversion is performed.
-Swallowing the throwable is forbidden.
+The original throwable is rethrown unless an explicitly documented semantic conversion is performed, even if checking transaction activity or attempting rollback throws.
+Swallowing the original throwable is forbidden.
 If a semantic conversion wraps the original throwable, the original should be retained as `previous` where supported.
 
 ## 8. Command Rules
@@ -637,15 +639,23 @@ final readonly class SomethingCollectionDTO implements \IteratorAggregate, \Json
 | Operation | Returns | Why |
 |---|---|---|
 | `create()` | `int` | `lastInsertId()` |
-| `update()` | `bool` | `rowCount() > 0` |
-| `updateStatus()` | `bool` | `rowCount() > 0` |
-| `updateDisplayOrder()` | `bool` | delegated to `Maatify\Persistence\Pdo\Ordering\ScopedOrderingManager` from `maatify/persistence` |
-| `updateImage()` | `bool` | `rowCount() > 0` |
-| `softDelete()` | `bool` | `rowCount() > 0` |
+| `update()` | `bool` | Documented mutation outcome; changed rows alone do not establish target absence |
+| `updateStatus()` | `bool` | Documented mutation outcome; changed rows alone do not establish target absence |
+| `updateDisplayOrder()` | `bool` | delegated to `Maatify\PhpPersistence\Ordering\Repository\ScopedOrderingManager` from `maatify/php-persistence` |
+| `updateImage()` | `bool` | Documented mutation outcome; changed rows alone do not establish target absence |
+| `softDelete()` | `bool` | Documented deletion/lifecycle outcome, including any already-deleted condition |
 | `hardDelete()` | `bool` | `rowCount() > 0` after transaction |
 | `findById()` | `?DTO` | `null` if not found — Service decides whether to throw |
 
-This table defines Repository-level return contracts. A Service MAY expose `updateDisplayOrder(...): void`, call the Repository operation, and convert `false` into the approved not-found exception according to Section 13. The Repository and Service signatures belong to different layers and MUST NOT be treated as competing alternatives.
+This table defines Repository-level return contracts. A Service MAY expose `updateDisplayOrder(...): void`, call the Repository operation, and convert `false` into the approved not-found exception only when the Repository contract establishes that `false` means the target is missing, as required below and in Section 13. The Repository and Service signatures belong to different layers and MUST NOT be treated as competing alternatives.
+
+### Mutation Outcomes and Missing Targets
+
+A boolean mutation result MUST document whether it reports changed state, a matched target, or another domain-specific outcome. A changed-row contract MAY return `false` for an unchanged existing target; that result MUST NOT be interpreted as proof that the target is missing. Zero affected rows alone cannot distinguish an unchanged existing target from a missing target. A failed conditional update or compare-and-swap condition likewise MUST NOT automatically be classified as target absence.
+
+A Service MUST convert a Repository `false` result to a not-found exception only when the documented Repository contract and its implementation establish that `false` means the target is missing. Otherwise it MUST handle the result according to its actual mutation contract. This does not mandate success for every no-op or redefine domain-specific lifecycle, conditional-update, or conflict outcomes.
+
+The implementation's evidence of absence MUST remain valid within the operation's documented concurrency and transaction boundary. An unprotected existence precheck followed by a separate write is not sufficient proof of the write outcome. This Standard does not prescribe a universal SQL algorithm, connection option such as `ATTR_FOUND_ROWS`, or new public result type.
 
 ### `findById` Pattern
 
@@ -703,19 +713,19 @@ This section governs how standalone Maatify packages consume shared PDO ordering
 The authoritative owner is:
 
 ```text
-Package:    maatify/persistence
-Repository: https://github.com/Maatify/persistence
+Package:    maatify/php-persistence
+Repository: https://github.com/Maatify-ltd/php-persistence
 ```
 
 ### Domain Query and Pagination Ownership
 
-The Package owns its domain query semantics, including searchable fields, filters, matching and escaping behavior, count semantics, and the public result contract. `maatify/persistence` owns only the reusable pagination and ordering mechanics exposed by its stable public API, as detailed below.
+The Package owns its domain query semantics, including searchable fields, filters, matching and escaping behavior, count semantics, and the public result contract. `maatify/php-persistence` owns only the reusable pagination and ordering mechanics exposed by the eligible published public API defined below.
 
-Management list/search collections that do not have a clearly bounded small maximum MUST provide pagination from the start. A Host MUST NOT load an unbounded result set and paginate it after retrieval. The Package owns the alignment of count and data queries and the meaning of each page; shared mechanics remain delegated to the stable `maatify/persistence` API.
+Management list/search collections that do not have a clearly bounded small maximum MUST provide pagination from the start. A Host MUST NOT load an unbounded result set and paginate it after retrieval. The Package owns the alignment of count and data queries and the meaning of each page; shared mechanics remain delegated to the eligible published `maatify/php-persistence` API.
 
 ### Non-Duplication Rule
 
-A consumer package MUST NOT create a local replacement for stable ordering or pagination behavior provided by `maatify/persistence`.
+A consumer package MUST NOT create a local replacement for ordering or pagination behavior provided by `maatify/php-persistence`.
 
 Forbidden duplication includes:
 
@@ -727,29 +737,31 @@ Forbidden duplication includes:
 - canonical pagination result objects and metadata
 - package-local copies of persistence exceptions or public value objects
 
-A consumer package MUST NOT copy Runtime code, tests, internal algorithms, or documentation-only contracts from `maatify/persistence`.
+A consumer package MUST NOT copy Runtime code, tests, internal algorithms, or documentation-only contracts from `maatify/php-persistence`.
 
 ### Capability Availability and Composer Dependency
 
-A package may consume only an API that exists in a stable published release of `maatify/persistence`.
+Stable releases of consuming packages MUST use a published stable release of `maatify/php-persistence` that contains the required capability.
 
 The consumer MUST:
 
-- declare `maatify/persistence` as a direct Composer dependency when its public API is referenced
-- require the minimum stable version that contains the needed capability
-- confirm availability from the published package reference and stable release documentation
+- declare `maatify/php-persistence` as a direct Composer dependency when its public API is referenced
+- set the dependency floor at the first compatible stable version that contains the needed capability, except for the trial below
+- confirm availability from the package reference and release metadata for the selected published version
 - avoid depending on an unreleased branch, commit, proposed contract, or target version as though it were an available Runtime API
 
-A documentation-only architecture contract inside `maatify/persistence` establishes ownership and future implementation rules. It does not authorize another package to implement or consume the proposed API before a stable release publishes it.
+**Temporary trial exception:** While `maatify/php-persistence` has no published stable release, a trial MAY use its latest published release candidate by SemVer precedence. Verify that the release tag and published Composer metadata identify the same version and source revision, and confirm the needed capability in that revision's package reference. Pin the selected RC exactly in the trial's Composer constraint and record its resolved version and revision in the trial lock or verification evidence. Keep `minimum-stability: stable` and `prefer-stable: true`, and follow the [Composer Package Standard](./COMPOSER_PACKAGE_STANDARD.md) for pre-release dependency work. The exception ends when a stable release is published. Selecting a stable replacement requires review of the needed capability and integration. This trial exception does not authorize a stable consumer release.
+
+A proposed or documentation-only API does not qualify until it is published in an eligible release.
 
 ### Ordering Integration
 
-In this section, `Ordering` means reusable row-position and display-order management exposed by `Maatify\Persistence\Pdo\Ordering`. It does not include ordinary consumer-owned read-query sorting expressed through `ORDER BY`.
+In this section, `Ordering` means reusable row-position and display-order management exposed by `Maatify\PhpPersistence\Ordering`. It does not include ordinary consumer-owned read-query sorting expressed through `ORDER BY`.
 
-Reusable row-position and display-order operations covered by the stable `maatify/persistence` Ordering API MUST use:
+Reusable row-position and display-order operations covered by the eligible published `maatify/php-persistence` Ordering API MUST use:
 
 ```text
-Maatify\Persistence\Pdo\Ordering
+Maatify\PhpPersistence\Ordering
 ```
 
 The consumer Repository / Service may:
@@ -757,23 +769,23 @@ The consumer Repository / Service may:
 - provide the PDO connection
 - construct trusted ordering configuration from its own table and column identifiers
 - pass domain ids, scope values, and requested positions
-- translate the stable persistence result into its own existing public contract through a thin adapter
+- translate the persistence result into its own existing public contract through a thin adapter
 
 The consumer MUST NOT reproduce ordering SQL shifts, transaction ownership, scope locking, identifier validation, or persistence exception behavior locally.
 
 **Integration Boundaries:**
-- `getNextPosition()` does not start a transaction or acquire a lock. When concurrency correctness is required, the caller owns both the transaction and the appropriate locking strategy. It alone returns `MAX + 1`.
-- `moveWithinScope()` owns a transaction and refuses to run in an active PDO transaction.
+- `getNextPosition()` is a plain non-locking read that returns `MAX + 1`: it does not start a transaction, acquire a lock, or serialize concurrent allocations. When concurrency correctness is required, the caller MUST own the transaction and a serialization lock that every competing writer takes first (for example on a parent row). Under `REPEATABLE READ`, that lock MUST be taken before the transaction's first non-locking read: a lock taken after the snapshot exists does not refresh it, so the plain read can return a stale value, and repeating the call in the same transaction does not correct it.
+- `moveWithinScope()` owns a transaction only when the PDO connection has no active transaction. When the caller already owns an active PDO transaction, the caller retains final commit and rollback ownership. The operation opens a savepoint only for a move that will write, after finding the target and excluding a no-op. The savepoint protects the operation’s writes while the caller’s transaction remains active.
 - Non-positive movement values are rejected before clamping. Clamping is to the maximum existing position.
 - Soft-delete filtering is supported when `deletedAtColumn` is configured and disabled when it is `null`.
-- Do not duplicate full public signatures; refer to `maatify/persistence`.
+- Do not duplicate full public signatures; refer to `maatify/php-persistence`.
 
 ### Pagination Integration
 
-Paginated Repository / QueryReader operations MUST delegate reusable pagination mechanics to the stable public API under:
+Paginated Repository / QueryReader operations MUST delegate reusable pagination mechanics to the eligible published public API under:
 
 ```text
-Maatify\Persistence\Pdo\Pagination
+Maatify\PhpPersistence\Pagination
 ```
 
 `PdoPaginator` does not own a transaction and can run inside a caller-owned transaction without modifying its state.
@@ -788,7 +800,7 @@ The consumer remains responsible for domain-owned concerns:
 - row mapping into the consumer's array or DTO
 - preserving its own existing public response contract
 
-`maatify/persistence` owns the reusable mechanics exposed by its stable API, including normalization, count execution, deterministic sorting, limit/offset handling, mapper invocation, and canonical pagination metadata.
+`maatify/php-persistence` owns the reusable mechanics exposed by its eligible published API, including normalization, count execution, deterministic sorting, limit/offset handling, mapper invocation, and canonical pagination metadata.
 
 Adopting the shared paginator MUST NOT silently change an existing endpoint, DTO, or package return shape. A thin consumer-owned adapter MAY preserve an established public contract.
 
@@ -796,7 +808,7 @@ Adopting the shared paginator MUST NOT silently change an existing endpoint, DTO
 
 A consumer-owned adapter is permitted only when it:
 
-- translates domain inputs into the stable `maatify/persistence` API
+- translates domain inputs into the eligible published `maatify/php-persistence` API
 - delegates the shared operation without reimplementing its algorithms
 - maps the returned result into an already approved consumer contract
 - adds no competing exception hierarchy, pagination engine, or ordering engine
@@ -805,7 +817,7 @@ An adapter MUST NOT become a fork of the shared capability.
 
 ### Missing Capability
 
-When a required reusable behavior is absent from the stable public API, the default action is to propose and review the capability in `maatify/persistence`.
+When a required reusable behavior is absent from the eligible published public API, the default action is to propose and review the capability in `maatify/php-persistence`.
 
 A package-local alternative is forbidden unless an explicit owner-approved architectural decision proves that the behavior is domain-specific and outside the shared package's scope.
 
@@ -813,7 +825,7 @@ Temporary copying of an unpublished persistence contract is not an acceptable wo
 
 ### Source of Truth
 
-Consumer packages MUST follow the stable public API, package reference, and published integration documentation in `maatify/persistence`.
+Consumer packages MUST follow the public API, package reference, and published integration documentation for the selected eligible release of `maatify/php-persistence`.
 
 Exact class signatures, internal formulas, SQL assembly rules, exception classifications, and verification requirements belong in the owning repository. They MUST NOT be duplicated in this general package-building standard or independently redefined by consumer packages.
 
@@ -878,12 +890,14 @@ Responsibility:
 - **SQL** lives in Repositories or package-local/domain-local SQL support builders
 - **Display formatting** does not belong in Repositories or query layers; those layers return raw domain/database values for the Host's presentation layer.
 
+The mutation example below assumes a documented Repository contract in which `false` means a missing target and `true` includes an accepted unchanged update. The Repository implementation must establish that meaning under Section 10; a boolean meaning only "rows changed" does not satisfy this example's precondition. Other mutation contracts retain their own documented outcome handling.
+
 ```php
-// Command service — throws NotFoundException when repo returns false
+// Command service — Repository false is proven to mean a missing target.
 public function update(UpdateSomethingCommand $command): void
 {
-    $updated = $this->commandRepo->update($command);
-    if (! $updated) {
+    $targetFound = $this->commandRepo->update($command);
+    if (! $targetFound) {
         throw SomethingNotFoundException::withId($command->id);
     }
 }
@@ -958,19 +972,19 @@ When a reporting result depends on persisted state, the aggregate, count, filter
 
 ## 16. display_order Rules
 
-When persisted entities expose mutable row-position or display-order behavior, the package MUST consume the stable public Ordering API from `maatify/persistence`.
+When persisted entities expose mutable row-position or display-order behavior, the package MUST consume the public Ordering API from `maatify/php-persistence` under the release eligibility rules in Section 11.
 
 The package-level integration contract is:
 
 - `display_order` MUST NOT be accepted by `CreateCommand` or `UpdateCommand`
-- creation-time position assignment MUST delegate to the stable Ordering API when automatic assignment applies
+- creation-time position assignment MUST delegate to that Ordering API when automatic assignment applies
 - movement MUST be exposed through a dedicated package operation rather than a generic update command
-- the Command Repository operation MUST return `bool` to report whether the target row existed and was moved
-- a Service MAY expose a `void` operation and convert a Repository `false` result into the approved not-found exception
-- shifting, clamping, scope locking, transaction ownership, identifier validation, and persistence exception behavior MUST remain delegated to `maatify/persistence`
+- the Command Repository operation MUST return `bool` with documented semantics. When it exposes `moveWithinScope()` directly, `true` includes a successful no-op, and `false` can mean a missing target or a zero-row target update
+- a Service MAY expose a `void` operation and convert a Repository `false` result into the approved not-found exception only when the Repository contract establishes that `false` means a missing target, under Section 10
+- shifting, clamping, scope locking, transaction ownership, identifier validation, and persistence exception behavior MUST remain delegated to `maatify/php-persistence`
 - a consumer MUST NOT reproduce or fork the Ordering engine locally
 
-Exact class names, method signatures, transaction behavior, and Runtime semantics are owned by the stable `maatify/persistence` public API and [PERSISTENCE_PACKAGE_REFERENCE.md](https://github.com/Maatify/persistence/blob/fc1459b49fe5af5ead17814eeb3ada7a3fa81791/PERSISTENCE_PACKAGE_REFERENCE.md).
+Exact class names, method signatures, transaction behavior, and Runtime semantics are owned by the selected release’s public API and Package Reference as described in Section 11.
 
 ---
 
@@ -1010,7 +1024,7 @@ Rules:
 - Validate decimal format **before** any `bcmath` call:
 
 ```php
-if (! preg_match('/^\d+(?:\.\d{1,4})?$/', $value)) {
+if (! preg_match('/\A\d+(?:\.\d{1,4})?\z/', $value)) {
     throw SomethingInvalidArgumentException::invalidDecimal($field, $value);
 }
 ```
@@ -1164,6 +1178,7 @@ Compliance requires the repository's CI to pass the current Compliance Checklist
 - [ ] The standalone Package has the reproducible Consumer Verification Harness required by [TESTING_STANDARD.md](../testing/TESTING_STANDARD.md).
 - [ ] Every public service/repository capability intended for infrastructure substitution has a matching contract (interface)
 - [ ] Domain-specific failure semantics are documented
+- [ ] Boolean mutation meanings distinguish changed, unchanged, missing, and conditional outcomes where applicable; not-found mapping follows Section 10 and is not inferred from zero changed rows alone.
 - [ ] Transaction catch blocks rethrow the original `\Throwable` after rollback — never swallow
 - [ ] Business orchestration lives in Services, validation in Commands/filters, SQL in Repositories
 - [ ] Schema/persistence documentation aligns with the package's declared persistence backend and domain-owned storage structures, with no generic `logs` or `event_logs` storage
@@ -1209,3 +1224,14 @@ Extensible content fields are conditional and are appropriate only when a domain
 When this pattern applies, the domain contract may define a stable `field_key`, a value and typed format, exact optional scopes, deterministic ordering, lifecycle, and uniqueness according to actual domain invariants. Identity fields and scopes that define assignment identity MUST remain stable under generic updates.
 
 The Host owns the meaning and administration of `field_key`, including editor configuration, sanitization, rendering, and fallback, unless the Package's own domain explicitly owns those semantics. The Package MUST NOT create a Field Definition Registry solely because it stores a `field_key`; the Registry rule in Section 24 still applies.
+
+## Version History
+
+### `4.0.0`
+
+- Issues #188 and #189: correct the transaction example to preserve the original throwable when cleanup fails, and anchor decimal validation to the whole string. `CLARIFICATION / NO_CONTRACT_CHANGE` (Patch class): both examples now fulfill the existing original-error and pre-bcmath validation contracts; no new exception, logging, retry, decimal-format, or precision policy. This correction is absorbed in the existing Mutable Candidate `4.0.0` under the cumulative Major calculation below.
+
+- Latest qualified Frozen Version Baseline: `3.0.2`, artifact blob `1475bb006eefe9e1ef9a6973f6664c3d0690dc2c`, at upstream Adoption Commit `ebcf55b0591db61d18a1407bc3effef0197b388f`. The completed VALID consumer Upgrade and exact artifact identity were qualified in [PR #148 post-merge reconciliation](https://github.com/Maatify/php-engineering-standards/pull/148#issuecomment-6302878287); the existing Mutable Candidate `4.0.0` already includes the normative breaking Ordering integration corrections from Issue #150.
+- Issue #183 (central upstream `DEC-048` of `Maatify/php-engineering-standards`, not a consumer-local decision): `NORMATIVE / BREAKING_CONTRACT_CHANGE`. Remove changed-row count as a universal mutation-outcome explanation and require a proven missing-target contract before converting Repository `false` to not-found. Existing implementations following the former unconditional mapping may need correction. Preserve boolean signatures and domain-specific no-op/conditional outcomes; no mandatory SQL algorithm, Host connection option, or new public result type.
+- Central upstream `DEC-049` of `Maatify/php-engineering-standards`: `NORMATIVE / BREAKING_CONTRACT_CHANGE`. Move shared Ordering and Pagination integration to `maatify/php-persistence` and permit only the latest verified published RC for temporary trials while no stable release exists. Preserve the `DEC-048` missing-target boundary.
+- The cumulative highest impact since Frozen Baseline `3.0.2` remains Major, so the Mutable Candidate remains `4.0.0`, calculated once from that baseline rather than from an earlier candidate. No Version Finalization, Freeze, release, consumer Adoption/Upgrade, or consumer runtime correction is claimed.
