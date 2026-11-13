@@ -159,7 +159,11 @@ final readonly class PdoProductConfigurationRepository implements ProductConfigu
         unset($valueRows);
 
         $variantStates = [];
-        foreach ($variantRows as $row) {
+        // Consume the raw rows in order so they do not accumulate alongside the DTOs.
+        $variantCount = count($variantRows);
+        for ($index = 0; $index < $variantCount; ++$index) {
+            $row = $variantRows[$index];
+            unset($variantRows[$index]);
             $id = RowHydrator::positiveInt($row, 'id');
             $variantStates[$id] = new VariantStateDTO(
                 id: $id,
@@ -169,6 +173,7 @@ final readonly class PdoProductConfigurationRepository implements ProductConfigu
                 deleted: RowHydrator::flag($row, 'deleted'),
                 composition: $compositions[$id] ?? [],
             );
+            unset($compositions[$id]);
         }
 
         return new ProductConfigurationSnapshotDTO(
