@@ -297,6 +297,17 @@ $heroImages = $assignments->listForManagement(new ImageAssignmentListCriteriaDTO
 
 ## 14. Consumer reads
 
+Build the read-only services from a single Host factory:
+
+```php
+$shop = ProductFactory::forHost($pdo, $clock);
+$products = $shop->consumerProducts();
+$variants = $shop->consumerVariants();
+$images = $shop->consumerImageAssignments();
+```
+
+Consumer reads use the Host PDO. The static Consumer builders remain available for standalone service construction.
+
 Use `getByCode()` on the Product Consumer service when the Host starts with a Product code. It uses the database collation and the same active, non-deleted visibility rule as `getById()`.
 
 - **Input:** a Product identity (Options), an Option identity (Values), or an `ImageAssignmentExactScopeCriteriaDTO` (Product, `variantId` or `null` for the Product level, `roleId`, `languageCode`, `platform`, each `null` meaning exactly `NULL`); optional `OptionVisibleListCriteriaDTO` / `OptionValueVisibleListCriteriaDTO` for `maxResults`.

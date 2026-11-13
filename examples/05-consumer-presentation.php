@@ -57,18 +57,19 @@ $pdo = new PDO(
 $clock = new SystemClock(new DateTimeZone('UTC'));
 $products = ProductFactory::createProductManagementService($pdo, $clock);
 $options = ProductFactory::createOptionManagementService($pdo, $clock);
-$consumerOptions = ProductFactory::createOptionConsumerService($pdo, $clock);
+$shop = ProductFactory::forHost($pdo, $clock);
+$consumerOptions = $shop->consumerOptions();
 $values = ProductFactory::createOptionValueManagementService($pdo, $clock);
-$consumerValues = ProductFactory::createOptionValueConsumerService($pdo, $clock);
+$consumerValues = $shop->consumerOptionValues();
 $productContent = ProductFactory::createProductContentManagementService($pdo, $clock);
-$consumerProductContent = ProductFactory::createProductContentConsumerService($pdo, $clock);
+$consumerProductContent = $shop->consumerProductContent();
 $optionContent = ProductFactory::createOptionContentManagementService($pdo, $clock);
-$consumerOptionContent = ProductFactory::createOptionContentConsumerService($pdo, $clock);
+$consumerOptionContent = $shop->consumerOptionContent();
 $valueContent = ProductFactory::createOptionValueContentManagementService($pdo, $clock);
-$consumerValueContent = ProductFactory::createOptionValueContentConsumerService($pdo, $clock);
+$consumerValueContent = $shop->consumerOptionValueContent();
 $roles = ProductFactory::createImageRoleManagementService($pdo, $clock);
 $images = ProductFactory::createImageAssignmentManagementService($pdo, $clock);
-$consumerImages = ProductFactory::createImageAssignmentConsumerService($pdo, $clock);
+$consumerImages = $shop->consumerImageAssignments();
 
 // Catalog setup (management side): a colour-configurable Product with labels, names, and images.
 $suffix = bin2hex(random_bytes(4));

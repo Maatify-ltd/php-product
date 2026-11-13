@@ -94,9 +94,11 @@ final class ProductFactory
     ) {}
 
     /**
-     * Configures the Management builders for one Host connection. The first lookup miss opens
+     * Configures the Management and Consumer builders for one Host connection. The first
+     * Management lookup miss opens
      * an independent autocommit session on the same primary and schema; builders share it.
      * The lookup PDO must be separate from the Host PDO, idle, and in exception mode.
+     * Consumer services always read through the Host PDO.
      *
      * The first operation that needs lookup rejects an unusable PDO with
      * ProductInvalidArgumentException. The rejected connection is not cached, so a later
@@ -161,9 +163,13 @@ final class ProductFactory
      */
     public static function createProductConsumerService(PDO $pdo, ClockInterface $clock): ProductConsumerServiceInterface
     {
-        self::requireExceptionMode($pdo);
+        return self::forHost($pdo, $clock)->consumerProducts();
+    }
 
-        return new ProductConsumerService(new PdoProductQueryReader($pdo, $clock));
+    /** Builds the read-only Product Consumer service on the Host connection. */
+    public function consumerProducts(): ProductConsumerServiceInterface
+    {
+        return new ProductConsumerService(new PdoProductQueryReader($this->pdo, $this->clock));
     }
 
     /**
@@ -199,9 +205,13 @@ final class ProductFactory
      */
     public static function createVariantConsumerService(PDO $pdo, ClockInterface $clock): VariantConsumerServiceInterface
     {
-        self::requireExceptionMode($pdo);
+        return self::forHost($pdo, $clock)->consumerVariants();
+    }
 
-        return new VariantConsumerService(new PdoVariantQueryReader($pdo, $clock));
+    /** Builds the read-only Variant Consumer service on the Host connection. */
+    public function consumerVariants(): VariantConsumerServiceInterface
+    {
+        return new VariantConsumerService(new PdoVariantQueryReader($this->pdo, $this->clock));
     }
 
     /**
@@ -238,9 +248,13 @@ final class ProductFactory
      */
     public static function createOptionConsumerService(PDO $pdo, ClockInterface $clock): OptionConsumerServiceInterface
     {
-        self::requireExceptionMode($pdo);
+        return self::forHost($pdo, $clock)->consumerOptions();
+    }
 
-        return new OptionConsumerService(new PdoOptionQueryReader($pdo, $clock));
+    /** Builds the read-only Option Consumer service on the Host connection. */
+    public function consumerOptions(): OptionConsumerServiceInterface
+    {
+        return new OptionConsumerService(new PdoOptionQueryReader($this->pdo, $this->clock));
     }
 
     /**
@@ -278,9 +292,13 @@ final class ProductFactory
      */
     public static function createOptionValueConsumerService(PDO $pdo, ClockInterface $clock): OptionValueConsumerServiceInterface
     {
-        self::requireExceptionMode($pdo);
+        return self::forHost($pdo, $clock)->consumerOptionValues();
+    }
 
-        return new OptionValueConsumerService(new PdoOptionValueQueryReader($pdo, $clock));
+    /** Builds the read-only OptionValue Consumer service on the Host connection. */
+    public function consumerOptionValues(): OptionValueConsumerServiceInterface
+    {
+        return new OptionValueConsumerService(new PdoOptionValueQueryReader($this->pdo, $this->clock));
     }
 
     /**
@@ -342,9 +360,13 @@ final class ProductFactory
      */
     public static function createImageAssignmentConsumerService(PDO $pdo, ClockInterface $clock): ImageAssignmentConsumerServiceInterface
     {
-        self::requireExceptionMode($pdo);
+        return self::forHost($pdo, $clock)->consumerImageAssignments();
+    }
 
-        return new ImageAssignmentConsumerService(new PdoImageAssignmentQueryReader($pdo, $clock));
+    /** Builds the read-only ImageAssignment Consumer service on the Host connection. */
+    public function consumerImageAssignments(): ImageAssignmentConsumerServiceInterface
+    {
+        return new ImageAssignmentConsumerService(new PdoImageAssignmentQueryReader($this->pdo, $this->clock));
     }
 
     /**
@@ -372,7 +394,13 @@ final class ProductFactory
      */
     public static function createProductContentConsumerService(PDO $pdo, ClockInterface $clock): ProductContentConsumerServiceInterface
     {
-        return new ProductContentConsumerService(self::contentLifecycle($pdo, $clock, ContentOwnerEnum::PRODUCT));
+        return self::forHost($pdo, $clock)->consumerProductContent();
+    }
+
+    /** Builds the read-only ProductContent Consumer service on the Host connection. */
+    public function consumerProductContent(): ProductContentConsumerServiceInterface
+    {
+        return new ProductContentConsumerService(self::contentLifecycle($this->pdo, $this->clock, ContentOwnerEnum::PRODUCT));
     }
 
     /**
@@ -400,7 +428,13 @@ final class ProductFactory
      */
     public static function createOptionContentConsumerService(PDO $pdo, ClockInterface $clock): OptionContentConsumerServiceInterface
     {
-        return new OptionContentConsumerService(self::contentLifecycle($pdo, $clock, ContentOwnerEnum::OPTION));
+        return self::forHost($pdo, $clock)->consumerOptionContent();
+    }
+
+    /** Builds the read-only OptionContent Consumer service on the Host connection. */
+    public function consumerOptionContent(): OptionContentConsumerServiceInterface
+    {
+        return new OptionContentConsumerService(self::contentLifecycle($this->pdo, $this->clock, ContentOwnerEnum::OPTION));
     }
 
     /**
@@ -428,7 +462,13 @@ final class ProductFactory
      */
     public static function createOptionValueContentConsumerService(PDO $pdo, ClockInterface $clock): OptionValueContentConsumerServiceInterface
     {
-        return new OptionValueContentConsumerService(self::contentLifecycle($pdo, $clock, ContentOwnerEnum::OPTION_VALUE));
+        return self::forHost($pdo, $clock)->consumerOptionValueContent();
+    }
+
+    /** Builds the read-only OptionValueContent Consumer service on the Host connection. */
+    public function consumerOptionValueContent(): OptionValueContentConsumerServiceInterface
+    {
+        return new OptionValueContentConsumerService(self::contentLifecycle($this->pdo, $this->clock, ContentOwnerEnum::OPTION_VALUE));
     }
 
     /** @param PDO|(Closure(): PDO)|null $ownerLookupPdo */

@@ -101,7 +101,7 @@ The [Package Reference](PRODUCT_PACKAGE_REFERENCE.md#implemented-public-api) giv
 
 | Type | Role |
 |---|---|
-| `Factory\ProductFactory` | The only construction entry point: a `create{X}ManagementService()` for every capability (`Product`, `Variant`, `Option`, `OptionValue`, `ImageRole`, `ImageAssignment`, `ProductContent`, `OptionContent`, `OptionValueContent`) and a `create{X}ConsumerService()` for every capability except `ImageRole`, which has no consumer read. |
+| `Factory\ProductFactory` | The only construction entry point: a `create{X}ManagementService()` for every capability (`Product`, `Variant`, `Option`, `OptionValue`, `ImageRole`, `ImageAssignment`, `ProductContent`, `OptionContent`, `OptionValueContent`) and a `create{X}ConsumerService()` for every capability except `ImageRole`, which has no consumer read. Use `forHost()` to configure the Host PDO and Clock once for both sets of builders. |
 | `Product\Management\Service\ProductManagementServiceInterface` | `create()`, `getByIdForManagement()`, `getByCodeForManagement()`, `listForManagement()`, `paginateForManagement()`, `updateStatus()`, `softDelete()`, `restore()`, `getConfigurationRevision()`, `reconfigure()`. |
 | `Product\Consumer\Service\ProductConsumerServiceInterface` | `getById()`, `getByCode()`. |
 | `Variant\Management\Service\VariantManagementServiceInterface` | `getByIdForManagement()`, `getBySkuForManagement()`, `getByBarcodeForManagement()`, `listByProductIdForManagement()`, `paginateByProductIdForManagement()`, `updateStatus()`, `updateIdentifiers()`, `updateDisplayOrder()`, `softDelete()`, `restore()`. |

@@ -191,7 +191,9 @@ try {
 
     // Realistic workflow: Host input -> public API -> service -> database -> observable result.
     $service = ProductFactory::createProductManagementService($pdo, new SystemClock(new DateTimeZone('UTC')));
-    $consumer = ProductFactory::createProductConsumerService($pdo, new SystemClock(new DateTimeZone('UTC')));
+    $clock = new SystemClock(new DateTimeZone('UTC'));
+    $shop = ProductFactory::forHost($pdo, $clock);
+    $consumer = $shop->consumerProducts();
 
     $created = $service->create(new CreateProductCommand('SIMPLE-1'));
     check($created->productId > 0 && $created->variantId > 0, 'creating a Product returns its Product and Variant identities');
@@ -250,14 +252,13 @@ try {
     }
 
     // Lifecycle, reconfiguration, resolution, and image assignments through the public API.
-    $clock = new SystemClock(new DateTimeZone('UTC'));
     $options = ProductFactory::createOptionManagementService($pdo, $clock);
     $values = ProductFactory::createOptionValueManagementService($pdo, $clock);
     $variants = ProductFactory::createVariantManagementService($pdo, $clock);
-    $consumerVariants = ProductFactory::createVariantConsumerService($pdo, $clock);
+    $consumerVariants = $shop->consumerVariants();
     $productId = $created->productId;
     $productContent = ProductFactory::createProductContentManagementService($pdo, $clock);
-    $consumerProductContent = ProductFactory::createProductContentConsumerService($pdo, $clock);
+    $consumerProductContent = $shop->consumerProductContent();
     $optionContent = ProductFactory::createOptionContentManagementService($pdo, $clock);
     $valueContent = ProductFactory::createOptionValueContentManagementService($pdo, $clock);
     $nameId = $productContent->create(new CreateProductContentCommand($productId, null, 'Simple one'))->contentId;
@@ -342,6 +343,7 @@ try {
 
         return new PDO($base . ';dbname=' . $database, env('PRODUCT_TEST_DB_USER'), env('PRODUCT_TEST_DB_PASSWORD'), $pdoOptions);
     });
+    check($host->consumerProducts()->getByCode('simple-1')->id === $productId && $lookupOpens === 0, 'Consumer reads on a configured Host factory do not open the owner lookup connection');
     $hostOptions = $host->options();
     $hostValues = $host->optionValues();
     check($lookupOpens === 0, 'configuring the Host and building services does not open the lookup connection');

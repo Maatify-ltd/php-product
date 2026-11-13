@@ -10,6 +10,8 @@ No version has been released.
 
 ### Added
 
+- Build Consumer services from the same `ProductFactory::forHost()` configuration, using the Host connection for reads.
+
 - Consumer Product lookup by code and management Variant lookup by SKU or barcode, with the existing visibility and deleted-state rules.
 
 - `ProductFactory::forHost()` configures Management services together and opens one shared owner-lookup PDO on demand.
