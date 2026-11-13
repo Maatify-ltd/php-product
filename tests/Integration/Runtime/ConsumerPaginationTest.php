@@ -8,10 +8,16 @@ use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
 use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
 use Maatify\Product\ImageAssignment\Consumer\Criteria\ImageAssignmentExactScopeCriteriaDTO;
 use Maatify\Product\ImageAssignment\Management\Command\CreateImageAssignmentCommand;
+use Maatify\Product\ImageAssignment\Management\Command\UpdateImageAssignmentDisplayOrderCommand;
+use Maatify\Product\Option\Management\Command\UpdateOptionDisplayOrderCommand;
+use Maatify\Product\OptionValue\Management\Command\UpdateOptionValueDisplayOrderCommand;
+use Maatify\Product\Variant\Management\Command\UpdateVariantDisplayOrderCommand;
 
 /** Verifies visible counts and continuation beyond the legacy list limit. */
 final class ConsumerPaginationTest extends RuntimeTestCase
 {
+    private const int POSITION_AFTER_FIXTURE = 103;
+
     public function testOptionsArePagedWithoutCountingInactiveOptions(): void
     {
         $product = $this->namedProduct('PAGED-OPTIONS')->productId;
@@ -27,12 +33,14 @@ final class ConsumerPaginationTest extends RuntimeTestCase
         $this->productManagementService()->reconfigure($this->reconfiguration($product, $options, [[$composition]]));
         $this->activateProduct($product);
 
+        $optionIds = array_keys($options);
+        $this->optionManagementService()->updateDisplayOrder(new UpdateOptionDisplayOrderCommand($optionIds[0], self::POSITION_AFTER_FIXTURE));
         $reader = $this->optionConsumerService();
         $this->assertPages(
             $reader->listVisibleByProductId($product)->items(),
             $reader->paginateVisibleByProductId($product, new PageRequest(1, 100, 'id', 'DESC')),
             $reader->paginateVisibleByProductId($product, new PageRequest(2, 100)),
-            array_keys($options),
+            [...array_slice($optionIds, 1), $optionIds[0]],
         );
     }
 
@@ -53,19 +61,21 @@ final class ConsumerPaginationTest extends RuntimeTestCase
             ->reconfigure($this->reconfiguration($product, [$option => $values], $targets))->createdVariantIds;
         $this->activateProduct($product);
 
+        $this->optionValueManagementService()->updateDisplayOrder(new UpdateOptionValueDisplayOrderCommand($values[0], self::POSITION_AFTER_FIXTURE));
+        $this->variantManagementService()->updateDisplayOrder(new UpdateVariantDisplayOrderCommand($variants[0], self::POSITION_AFTER_FIXTURE));
         $valueReader = $this->optionValueConsumerService();
         $variantReader = $this->variantConsumerService();
         $this->assertPages(
             $valueReader->listVisibleByOptionId($option)->items(),
             $valueReader->paginateVisibleByOptionId($option, new PageRequest(1, 100)),
             $valueReader->paginateVisibleByOptionId($option, new PageRequest(2, 100)),
-            $values,
+            [...array_slice($values, 1), $values[0]],
         );
         $this->assertPages(
             $variantReader->listByProductId($product)->items(),
             $variantReader->paginateByProductId($product, new PageRequest(1, 100)),
             $variantReader->paginateByProductId($product, new PageRequest(2, 100)),
-            $variants,
+            [...array_slice($variants, 1), $variants[0]],
         );
     }
 
@@ -81,13 +91,14 @@ final class ConsumerPaginationTest extends RuntimeTestCase
         for ($i = 1; $i <= 101; ++$i) {
             $ids[] = $writer->create(new CreateImageAssignmentCommand($product, null, $i))->assignmentId;
         }
+        $writer->updateDisplayOrder(new UpdateImageAssignmentDisplayOrderCommand($ids[0], self::POSITION_AFTER_FIXTURE));
         $reader = $this->imageAssignmentConsumerService();
         $criteria = new ImageAssignmentExactScopeCriteriaDTO($product, null, null, null, null);
         $this->assertPages(
             $reader->listVisibleByExactScope($criteria)->items(),
             $reader->paginateVisibleByExactScope($criteria, new PageRequest(1, 100)),
             $reader->paginateVisibleByExactScope(new ImageAssignmentExactScopeCriteriaDTO($product, null, null, null, null, maxResults: 1), new PageRequest(2, 100)),
-            $ids,
+            [...array_slice($ids, 1), $ids[0]],
         );
     }
 
