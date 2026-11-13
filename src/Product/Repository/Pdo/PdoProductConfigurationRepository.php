@@ -108,10 +108,32 @@ final readonly class PdoProductConfigurationRepository implements ProductConfigu
         $variantRows = $variants->fetchAll(PDO::FETCH_ASSOC);
         unset($variants);
 
-        $compositions = $this->compositionsOf(array_map(
-            static fn(array $row): int => RowHydrator::positiveInt($row, 'id'),
-            $variantRows,
-        ));
+        // All Variant rows are already locked. Read and hydrate their compositions in
+        // bounded batches before reading the labels, preserving the lock phases.
+        $variantStates = [];
+        $variantCount = count($variantRows);
+        for ($offset = 0; $offset < $variantCount; $offset += self::ID_BATCH_SIZE) {
+            $batch = array_slice($variantRows, 0, self::ID_BATCH_SIZE, true);
+            $compositions = $this->compositionsOf(array_map(
+                static fn(array $row): int => RowHydrator::positiveInt($row, 'id'),
+                array_values($batch),
+            ));
+            foreach ($batch as $index => $row) {
+                unset($variantRows[$index]);
+                $id = RowHydrator::positiveInt($row, 'id');
+                $variantStates[$id] = new VariantStateDTO(
+                    id: $id,
+                    productId: RowHydrator::positiveInt($row, 'product_id'),
+                    fingerprint: RowHydrator::string($row, 'composition_fingerprint'),
+                    active: RowHydrator::isActive($row),
+                    deleted: RowHydrator::flag($row, 'deleted'),
+                    composition: $compositions[$id] ?? [],
+                );
+            }
+            unset($batch, $compositions);
+        }
+        unset($variantRows);
+
         $labelledOptions = $this->labelledOwners(
             'maa_product_option_contents',
             'option_id',
@@ -157,24 +179,6 @@ final readonly class PdoProductConfigurationRepository implements ProductConfigu
             );
         }
         unset($valueRows);
-
-        $variantStates = [];
-        // Consume the raw rows in order so they do not accumulate alongside the DTOs.
-        $variantCount = count($variantRows);
-        for ($index = 0; $index < $variantCount; ++$index) {
-            $row = $variantRows[$index];
-            unset($variantRows[$index]);
-            $id = RowHydrator::positiveInt($row, 'id');
-            $variantStates[$id] = new VariantStateDTO(
-                id: $id,
-                productId: RowHydrator::positiveInt($row, 'product_id'),
-                fingerprint: RowHydrator::string($row, 'composition_fingerprint'),
-                active: RowHydrator::isActive($row),
-                deleted: RowHydrator::flag($row, 'deleted'),
-                composition: $compositions[$id] ?? [],
-            );
-            unset($compositions[$id]);
-        }
 
         return new ProductConfigurationSnapshotDTO(
             productId: RowHydrator::positiveInt($productRow, 'id'),
