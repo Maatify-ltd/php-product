@@ -2,7 +2,7 @@
 
 **Status:** Owner-approved architecture contract for Product V1, approved under [`DEC-007`](../decisions/DEC-007-product-v1-implementation-start-authorization.md) (2026-10-12) and maintained in place before the first release: the decisions it carries are kept current in this text. Implementation is authorized only within the local Product scope defined here.<br>
 **Package:** `maatify/php-product`  
-**Repository:** `Maatify/php-product`  
+**Repository:** `Maatify-ltd/php-product`<br>
 **Document path:** `docs/architecture/PRODUCT_V1_ARCHITECTURE_CANDIDATE.md`<br>
 **Architecture type:** Standalone, reusable, host-agnostic Composer package  
 **Scope:** Product identity, variants, variant-defining options and values, product content, and product-owned image assignments  
@@ -697,6 +697,6 @@ This architecture was prepared from the supplied Catalog documents and deliberat
 - `Catalog_V1_Architecture_Locked.pdf` — historical Product/Variant/Option model and original Catalog V1 schema.
 - `CATALOG_V1_ARCHITECTURE.md` — Category-package boundary and Catalog integration status.
 - Current `maatify/php-category` `CATEGORY_PACKAGE_REFERENCE.md`, current consumer usage contract, and `schema/category.sql` — actual reusable package contracts used to reconcile language identity, Media Asset ID type, status/deletion, Clock, ordering, and dependency boundaries.
-- Current `Maatify/php-product` repository governance and pinned Composer Package standards.
+- Current `Maatify-ltd/php-product` repository governance and pinned Composer Package standards.
 
 This is the Owner-approved V1 architecture contract, not evidence of implementation, tests, release readiness, or a released contract. The `CANDIDATE` filename is kept so existing references stay valid.

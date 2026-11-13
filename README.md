@@ -18,7 +18,7 @@
 [![Package Reference](https://img.shields.io/badge/Docs-Package%20Reference-informational)](PRODUCT_PACKAGE_REFERENCE.md)
 [![Changelog](https://img.shields.io/badge/Docs-Changelog-informational)](CHANGELOG.md)
 
-Framework-agnostic PHP library for Product and Variant identity on MySQL: a stable Product code, sellable Variant identities with immutable compositions, atomic reconfiguration, composition resolution, Image Roles and Assignments, and a MySQL schema that enforces identity, ownership, status, and exact-scope uniqueness while the package enforces the configuration invariants under a Product lock.
+Framework-agnostic PHP library for Product and Variant identity on MySQL: a stable Product code, Variant identities with immutable compositions, atomic reconfiguration, composition resolution, Image Roles and Assignments, and a MySQL schema that enforces identity, ownership, status, and exact-scope uniqueness while the package enforces the configuration invariants under a Product lock.
 
 </div>
 

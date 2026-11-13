@@ -282,7 +282,7 @@ Not covered, and not claimed:
   applicable before a release target exists.
 
 **Branch protection: in force.** The repository ruleset `main-final-gate` (enforcement `active`, no bypass actors) targets
-the default branch `main`. GitHub reports it through `GET /repos/Maatify/php-product/rules/branches/main`: pull request
+the default branch `main`. GitHub reports it through `GET /repos/Maatify-ltd/php-product/rules/branches/main`: pull request
 required, the stable `Final Gate` job (GitHub Actions) required with the branch up to date, no force push, and no deletion.
 This was read back from GitHub after creation; it is repository configuration, not part of the checked-out tree, so it is
 re-verified with that command rather than by a CI job.
