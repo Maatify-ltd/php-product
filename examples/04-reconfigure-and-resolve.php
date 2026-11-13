@@ -105,6 +105,7 @@ $offered = [
 ];
 $result = $products->reconfigure(new ReconfigureProductCommand(
     $productId,
+    $products->getConfigurationRevision($productId),
     [new ReconfigureOptionTarget($color, [$red, $blue]), new ReconfigureOptionTarget($size, [$medium])],
     $offered,
 ));
@@ -137,6 +138,7 @@ try {
 try {
     $products->reconfigure(new ReconfigureProductCommand(
         $productId,
+        $products->getConfigurationRevision($productId),
         [new ReconfigureOptionTarget($color, [$red]), new ReconfigureOptionTarget($size, [$medium])],
         [new ReconfigureVariantTarget([new OptionValueSelection($color, $red), new OptionValueSelection($size, $medium)])],
     ));
@@ -146,7 +148,7 @@ try {
 }
 
 // Configurable -> simple: reuse the original empty-composition Variant by identity.
-$back = $products->reconfigure(new ReconfigureProductCommand($productId, [], [new ReconfigureVariantTarget([], $created->variantId)]));
+$back = $products->reconfigure(new ReconfigureProductCommand($productId, $products->getConfigurationRevision($productId), [], [new ReconfigureVariantTarget([], $created->variantId)]));
 if ($back->reactivatedVariantIds !== [$created->variantId] || count($back->deactivatedVariantIds) !== 2) {
     throw new RuntimeException('Unexpected transition result.');
 }

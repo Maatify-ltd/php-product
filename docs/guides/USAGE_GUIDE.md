@@ -177,9 +177,14 @@ $products->restore($created->productId);                                  // sta
 - **Result:** a `ProductReconfigurationResultDTO` with the Variant identities created (in request order), reactivated, restored, and deactivated, and the Option and Value identities whose status changed.
 - **Boundary:** one atomic Product-local operation: the Product row is locked before anything is read, and any failure rejects the whole operation. An active Variant absent from the target becomes inactive and keeps its history. A composition that already exists (active, inactive, or soft-deleted) is a `VariantCompositionConflictException` unless `reuseVariantId` names that Variant; the named Variant is then reactivated or restored inside the operation. The empty composition is the simple Product: going back to simple means naming the original empty-composition Variant, never creating a second one (a missing original is a `ProductPersistenceException`). A target that would violate an invariant (an Option of another Product, a deleted or unlabelled Option or Value, incomplete or extra coverage, an unrepresented Value, no Variant) is a `ProductBusinessRuleException`; a repeated element in the command is a `ProductInvalidArgumentException`.
 
+Read the configuration revision before loading the editor's data, then keep it with the edit. If saving raises `ProductConfigurationRevisionConflictException`, reload the configuration and ask the editor to reconcile their changes. Fetching a fresh revision just before submitting an old target bypasses the editor's protection.
+
 ```php
+$editorRevision = $products->getConfigurationRevision($productId);
+// Load the editor data and prepare the target using this revision.
 $result = $products->reconfigure(new ReconfigureProductCommand(
     $productId,
+    $editorRevision,
     [new ReconfigureOptionTarget($color, [$red, $blue])],
     [
         new ReconfigureVariantTarget([new OptionValueSelection($color, $red)]),

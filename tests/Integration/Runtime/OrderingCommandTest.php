@@ -81,7 +81,7 @@ final class OrderingCommandTest extends RuntimeTestCase
         $q = $this->namedProduct('Q');
         [$color] = $this->options($p->productId, ['color'], labelled: true);
         [$red, $green, $blue] = $this->values($color, ['red', 'green', 'blue'], labelled: true);
-        $this->productManagementService()->reconfigure(self::reconfiguration($p->productId, [$color => [$red, $green, $blue]], [[[[$color, $red]]], [[[$color, $green]]], [[[$color, $blue]]]]));
+        $this->productManagementService()->reconfigure($this->reconfiguration($p->productId, [$color => [$red, $green, $blue]], [[[[$color, $red]]], [[[$color, $green]]], [[[$color, $blue]]]]));
         $ids = array_keys($this->positions('maa_product_variants', 'product_id', $p->productId));
         [$v0, $vr, $vg, $vb] = $ids;
         $service = $this->variantManagementService();
@@ -209,7 +209,7 @@ final class OrderingCommandTest extends RuntimeTestCase
         $p = $this->namedProduct('P');
         [$color] = $this->options($p->productId, ['color'], labelled: true);
         [$red, $blue] = $this->values($color, ['red', 'blue'], labelled: true);
-        $this->productManagementService()->reconfigure(self::reconfiguration($p->productId, [$color => [$red]], [[[[$color, $red]]]]));
+        $this->productManagementService()->reconfigure($this->reconfiguration($p->productId, [$color => [$red]], [[[[$color, $red]]]]));
         [$v0, $vr] = array_keys($this->positions('maa_product_variants', 'product_id', $p->productId));
 
         $variants = $this->variantManagementService();
@@ -218,9 +218,9 @@ final class OrderingCommandTest extends RuntimeTestCase
         self::assertSame([$vr => 2, $v0 => 3], $this->positions('maa_product_variants', 'product_id', $p->productId), 'Restore places the Variant last.');
 
         $variants->softDelete($v0);
-        $this->productManagementService()->reconfigure(self::reconfiguration($p->productId, [$color => [$red, $blue]], [[[[$color, $red]], $vr], [[[$color, $blue]]]]));
+        $this->productManagementService()->reconfigure($this->reconfiguration($p->productId, [$color => [$red, $blue]], [[[[$color, $red]], $vr], [[[$color, $blue]]]]));
         $vb = array_key_last($this->positions('maa_product_variants', 'product_id', $p->productId));
-        $this->productManagementService()->reconfigure(self::reconfiguration($p->productId, [], [[[], $v0]]));
+        $this->productManagementService()->reconfigure($this->reconfiguration($p->productId, [], [[[], $v0]]));
         self::assertSame([$vr => 2, $vb => 3, $v0 => 4], $this->positions('maa_product_variants', 'product_id', $p->productId), 'A Variant restored by reconfiguration goes last, never onto a live position.');
     }
 

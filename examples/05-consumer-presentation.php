@@ -81,7 +81,7 @@ $productContent->create(new CreateProductContentCommand($productId, 'ar', 'كو�
 $optionContent->create(new CreateOptionContentCommand($color, null, 'Colour'));
 $valueContent->create(new CreateOptionValueContentCommand($white, null, 'White'));
 $valueContent->create(new CreateOptionValueContentCommand($black, null, 'Black'));
-$result = $products->reconfigure(new ReconfigureProductCommand($productId, [new ReconfigureOptionTarget($color, [$white, $black])], [
+$result = $products->reconfigure(new ReconfigureProductCommand($productId, $products->getConfigurationRevision($productId), [new ReconfigureOptionTarget($color, [$white, $black])], [
     new ReconfigureVariantTarget([new OptionValueSelection($color, $white)]),
     new ReconfigureVariantTarget([new OptionValueSelection($color, $black)]),
 ]));

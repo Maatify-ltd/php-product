@@ -35,11 +35,12 @@ final readonly class ProductConfigurationSnapshotDTO implements JsonSerializable
         public array $options,
         public array $optionValues,
         public array $variants,
+        public int $configurationRevision = 1,
     ) {}
 
     public function withProduct(bool $active, bool $deleted): self
     {
-        return new self($this->productId, $active, $deleted, $this->hasName, $this->options, $this->optionValues, $this->variants);
+        return new self($this->productId, $active, $deleted, $this->hasName, $this->options, $this->optionValues, $this->variants, $this->configurationRevision);
     }
 
     /**
@@ -47,7 +48,7 @@ final readonly class ProductConfigurationSnapshotDTO implements JsonSerializable
      */
     public function withHasName(bool $hasName): self
     {
-        return new self($this->productId, $this->productActive, $this->productDeleted, $hasName, $this->options, $this->optionValues, $this->variants);
+        return new self($this->productId, $this->productActive, $this->productDeleted, $hasName, $this->options, $this->optionValues, $this->variants, $this->configurationRevision);
     }
 
     public function withOption(OptionStateDTO $option): self
@@ -55,7 +56,7 @@ final readonly class ProductConfigurationSnapshotDTO implements JsonSerializable
         $options = $this->options;
         $options[$option->id] = $option;
 
-        return new self($this->productId, $this->productActive, $this->productDeleted, $this->hasName, $options, $this->optionValues, $this->variants);
+        return new self($this->productId, $this->productActive, $this->productDeleted, $this->hasName, $options, $this->optionValues, $this->variants, $this->configurationRevision);
     }
 
     public function withOptionValue(OptionValueStateDTO $value): self
@@ -63,7 +64,7 @@ final readonly class ProductConfigurationSnapshotDTO implements JsonSerializable
         $values = $this->optionValues;
         $values[$value->id] = $value;
 
-        return new self($this->productId, $this->productActive, $this->productDeleted, $this->hasName, $this->options, $values, $this->variants);
+        return new self($this->productId, $this->productActive, $this->productDeleted, $this->hasName, $this->options, $values, $this->variants, $this->configurationRevision);
     }
 
     public function withVariant(VariantStateDTO $variant): self
@@ -71,7 +72,7 @@ final readonly class ProductConfigurationSnapshotDTO implements JsonSerializable
         $variants = $this->variants;
         $variants[$variant->id] = $variant;
 
-        return new self($this->productId, $this->productActive, $this->productDeleted, $this->hasName, $this->options, $this->optionValues, $variants);
+        return new self($this->productId, $this->productActive, $this->productDeleted, $this->hasName, $this->options, $this->optionValues, $variants, $this->configurationRevision);
     }
 
     /** @return array{productId: int, productActive: bool, productDeleted: bool, hasName: bool, options: array<int, array{id: int, productId: int, active: bool, deleted: bool, labelled: bool}>, optionValues: array<int, array{id: int, optionId: int, active: bool, deleted: bool, labelled: bool}>, variants: array<int, array{id: int, productId: int, fingerprint: string, active: bool, deleted: bool, composition: list<array{optionId: int, optionValueId: int}>}>} */

@@ -43,10 +43,30 @@ final readonly class PdoProductConfigurationRepository implements ProductConfigu
         private ScopedOrderingManager $orderingManager,
     ) {}
 
+    public function findRevision(int $productId): ?int
+    {
+        $statement = $this->pdo->prepare('SELECT `configuration_revision` FROM `maa_product_products` WHERE `id` = :id AND `deleted_at` IS NULL');
+        $statement->execute(['id' => $productId]);
+        $row = $statement->fetch(PDO::FETCH_ASSOC);
+
+        return $row === false ? null : RowHydrator::positiveInt($row, 'configuration_revision');
+    }
+
+    public function advanceRevision(int $productId): void
+    {
+        $statement = $this->pdo->prepare(
+            'UPDATE `maa_product_products` SET `configuration_revision` = `configuration_revision` + 1 WHERE `id` = :id',
+        );
+        $statement->execute(['id' => $productId]);
+        if ($statement->rowCount() !== 1) {
+            throw ProductStorageFailureFactory::lockedRowVanished('Product', $productId);
+        }
+    }
+
     public function lockSnapshot(int $productId): ?ProductConfigurationSnapshotDTO
     {
         $product = $this->pdo->prepare(
-            'SELECT `id`, `status`, (`deleted_at` IS NOT NULL) AS `deleted` FROM `maa_product_products` WHERE `id` = :id FOR UPDATE',
+            'SELECT `id`, `status`, `configuration_revision`, (`deleted_at` IS NOT NULL) AS `deleted` FROM `maa_product_products` WHERE `id` = :id FOR UPDATE',
         );
         $product->execute(['id' => $productId]);
         /** @var array<string, mixed>|false $productRow */
@@ -149,6 +169,7 @@ final readonly class PdoProductConfigurationRepository implements ProductConfigu
             options: $optionStates,
             optionValues: $valueStates,
             variants: $variantStates,
+            configurationRevision: RowHydrator::positiveInt($productRow, 'configuration_revision'),
         );
     }
 

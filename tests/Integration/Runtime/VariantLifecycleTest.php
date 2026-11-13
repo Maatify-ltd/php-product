@@ -45,12 +45,12 @@ final class VariantLifecycleTest extends RuntimeTestCase
         $products = $this->productManagementService();
         $service = $this->variantManagementService();
 
-        [$redM, $blueL, $redL] = $products->reconfigure(self::reconfiguration(
+        [$redM, $blueL, $redL] = $products->reconfigure($this->reconfiguration(
             $created->productId,
             [$color => [$red, $blue], $size => [$m, $l]],
             [[[[$color, $red], [$size, $m]]], [[[$color, $blue], [$size, $l]]], [[[$color, $red], [$size, $l]]]],
         ))->createdVariantIds;
-        $products->reconfigure(self::reconfiguration(
+        $products->reconfigure($this->reconfiguration(
             $created->productId,
             [$color => [$red, $blue], $size => [$m, $l]],
             [[[[$color, $red], [$size, $m]], $redM], [[[$color, $blue], [$size, $l]], $blueL]],
@@ -62,7 +62,7 @@ final class VariantLifecycleTest extends RuntimeTestCase
         $service->updateStatus($redL, VariantStatusEnum::INACTIVE);
 
         // The configuration drops the size Option; red-L now selects an inactive Option.
-        $products->reconfigure(self::reconfiguration($created->productId, [$color => [$red, $blue]], [[[[$color, $red]]], [[[$color, $blue]]]]));
+        $products->reconfigure($this->reconfiguration($created->productId, [$color => [$red, $blue]], [[[[$color, $red]]], [[[$color, $blue]]]]));
         $failure = $this->assertThrows(ProductBusinessRuleException::class, fn() => $service->updateStatus($redL, VariantStatusEnum::ACTIVE));
         self::assertStringContainsString('[' . $size . ']', $failure->getMessage());
         self::assertSame(VariantStatusEnum::INACTIVE, $service->getByIdForManagement($redL)->status);
@@ -81,7 +81,7 @@ final class VariantLifecycleTest extends RuntimeTestCase
         $products = $this->productManagementService();
         $service = $this->variantManagementService();
         $consumer = $this->variantConsumerService();
-        [$redM, $redL, $blueM, $blueL] = $products->reconfigure(self::reconfiguration(
+        [$redM, $redL, $blueM, $blueL] = $products->reconfigure($this->reconfiguration(
             $created->productId,
             [$color => [$red, $blue], $size => [$m, $l]],
             [[[[$color, $red], [$size, $m]]], [[[$color, $red], [$size, $l]]], [[[$color, $blue], [$size, $m]]], [[[$color, $blue], [$size, $l]]]],
@@ -104,7 +104,7 @@ final class VariantLifecycleTest extends RuntimeTestCase
 
         // A deleted Variant whose composition no longer matches the configuration cannot be restored.
         $service->softDelete($redL);
-        $products->reconfigure(self::reconfiguration($created->productId, [$color => [$red, $blue]], [[[[$color, $red]]], [[[$color, $blue]]]]));
+        $products->reconfigure($this->reconfiguration($created->productId, [$color => [$red, $blue]], [[[[$color, $red]]], [[[$color, $blue]]]]));
         $this->assertThrows(ProductBusinessRuleException::class, fn() => $service->restore($redL));
         self::assertNotNull($service->getByIdForManagement($redL, ProductDeletedStateEnum::DELETED_ONLY)->deletedAt);
         self::assertSame($blueM, $service->getByIdForManagement($blueM)->id, 'Sanity: untouched identities remain.');

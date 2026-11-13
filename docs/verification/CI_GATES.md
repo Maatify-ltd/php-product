@@ -209,6 +209,33 @@ hard line break); one space, three or more, a tab, or a whitespace-only line fai
 `test-whitespace-gate.sh` proves, in a throwaway repository, that each defect is
 rejected and that clean and hard-break files are accepted.
 
+## Configuration revision and performance trial
+
+Real MySQL integration tests use separate editor connections. The second editor retains a
+`REPEATABLE READ` snapshot while the first commits a different target. The second save raises
+`ProductConfigurationRevisionConflictException`, keeps the Host transaction open, and leaves the
+first target unchanged. Tests also cover racing writers, revision invalidation by an Option
+creation, and rolling back the revision with a Host transaction.
+
+A local synthetic trial used PHP 8.4.27 and MySQL 8.0.46 with `REPEATABLE READ`. Each fixture
+had one active Option and Value plus the soft-deleted history below. Each row summarizes
+200 warm resolution calls, 25 reconfigurations to the same target, and 15 same-Product writer
+races. PHP memory is the maximum additional peak during resolution.
+
+| Historical Options / Values | Resolution p95 | PHP peak extra | Reconfigure p95 | Resolution p95 with writer holding locks | Stale writer p95 with 50 ms Host hold |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 0 / 0 | 21.5 ms | 84.8 KiB | 27.7 ms | 20.1 ms | 130.0 ms |
+| 20 / 400 | 20.6 ms | 317.1 KiB | 45.9 ms | 30.0 ms | 105.8 ms |
+| 100 / 5,000 | 48.4 ms | 3,412.5 KiB | 156.4 ms | 54.1 ms | 190.4 ms |
+
+MySQL `performance_schema.data_lock_waits` showed the stale writer waiting in all 45 races.
+The reader resolved the committed Variant before the lock holder committed in every race.
+The stale writer timings include the artificial Host hold, the intervening resolution call,
+and the stale check. The lab shared a machine with other test jobs. These results show the
+cost of historical Options and Values in this fixture. Production capacity, multiple active
+Options, historical Variant compositions, and lock contention between different Products
+were outside this measurement.
+
 ## Current limits
 
 Not covered, and not claimed:

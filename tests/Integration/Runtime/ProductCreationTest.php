@@ -245,13 +245,13 @@ final class ProductCreationTest extends RuntimeTestCase
         $black = $this->preparedValue($color, 'black', 'Black');
         $products = $this->productManagementService();
 
-        [$redVariant, $blueVariant] = $products->reconfigure(self::reconfiguration($created->productId, [$color => [$red, $blue]], [[[[$color, $red]]], [[[$color, $blue]]]]))->createdVariantIds;
+        [$redVariant, $blueVariant] = $products->reconfigure($this->reconfiguration($created->productId, [$color => [$red, $blue]], [[[[$color, $red]]], [[[$color, $blue]]]]))->createdVariantIds;
         self::assertSame([$created->variantId => 1, $redVariant => 2, $blueVariant => 3], $this->variantPositions($created->productId));
 
-        $products->reconfigure(self::reconfiguration($created->productId, [$color => [$red]], [[[[$color, $red]], $redVariant]]));
+        $products->reconfigure($this->reconfiguration($created->productId, [$color => [$red]], [[[[$color, $red]], $redVariant]]));
         $this->variantManagementService()->softDelete($blueVariant);
 
-        [$greenVariant, $blackVariant] = $products->reconfigure(self::reconfiguration(
+        [$greenVariant, $blackVariant] = $products->reconfigure($this->reconfiguration(
             $created->productId,
             [$color => [$red, $green, $black]],
             [[[[$color, $red]], $redVariant], [[[$color, $green]]], [[[$color, $black]]]],

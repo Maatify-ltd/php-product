@@ -103,7 +103,7 @@ final class ManagementListTest extends RuntimeTestCase
         foreach (['red', 'green', 'blue'] as $code) {
             $values[] = $this->preparedValue($color, $code, ucfirst($code));
         }
-        $this->productManagementService()->reconfigure(self::reconfiguration($p->productId, [$color => $values], array_map(static fn(int $v): array => [[[$color, $v]]], $values)));
+        $this->productManagementService()->reconfigure($this->reconfiguration($p->productId, [$color => $values], array_map(static fn(int $v): array => [[[$color, $v]]], $values)));
         $service = $this->variantManagementService();
 
         $first = $service->paginateByProductIdForManagement($p->productId, new VariantListCriteriaDTO(), new PageRequest(1, 3));

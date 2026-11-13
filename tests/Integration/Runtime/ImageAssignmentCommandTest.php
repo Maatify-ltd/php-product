@@ -175,7 +175,7 @@ final class ImageAssignmentCommandTest extends RuntimeTestCase
         $m = $this->preparedValue($this->preparedOption($p->productId, 'size', 'Size'), 'm', 'M');
         $size = $this->optionValueManagementService()->getByIdForManagement($m)->optionId;
         $l = $this->preparedValue($size, 'l', 'L');
-        [$redM, $redL, $blueM, $blueL] = $this->productManagementService()->reconfigure(self::reconfiguration(
+        [$redM, $redL, $blueM, $blueL] = $this->productManagementService()->reconfigure($this->reconfiguration(
             $p->productId,
             [$color => [$red, $blue], $size => [$m, $l]],
             [[[[$color, $red], [$size, $m]]], [[[$color, $red], [$size, $l]]], [[[$color, $blue], [$size, $m]]], [[[$color, $blue], [$size, $l]]]],

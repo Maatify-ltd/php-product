@@ -63,7 +63,7 @@ final class ClockTimestampTest extends RuntimeTestCase
         $created = $this->namedProduct('P-VARIANT');
         $color = $this->preparedOption($created->productId, 'color', 'Color');
         $red = $this->preparedValue($color, 'red', 'Red');
-        $this->productManagementService()->reconfigure(self::reconfiguration($created->productId, [$color => [$red]], [[[[$color, $red]]]]));
+        $this->productManagementService()->reconfigure($this->reconfiguration($created->productId, [$color => [$red]], [[[[$color, $red]]]]));
 
         $this->variantManagementService(self::deleteClock())->softDelete($created->variantId);
 

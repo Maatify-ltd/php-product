@@ -14,6 +14,15 @@ public package contract; this file only indexes and explains the SQL asset.
 |---|---|
 | [`product.sql`](product.sql) | Creates exactly the ten Product tables. It is the only install asset; there are no migrations. |
 
+For an existing trial database installed from an earlier Product development snapshot, pause Product writes and add the revision column before running this code. This keeps existing rows and initializes their revisions to 1. Discard editor drafts created before the upgrade.
+
+```sql
+ALTER TABLE `maa_product_products`
+    ADD COLUMN `configuration_revision` BIGINT NOT NULL DEFAULT 1
+        COMMENT 'Product configuration revision for stale write detection' AFTER `updated_at`,
+    ADD CONSTRAINT `chk_maa_product_products_configuration_revision` CHECK (`configuration_revision` > 0);
+```
+
 ## Requirements
 
 - MySQL `8.0.16` or later. The minimum is part of the storage contract because

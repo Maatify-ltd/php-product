@@ -33,6 +33,7 @@ use Maatify\Product\ImageAssignment\Management\Command\CreateImageAssignmentComm
 use Maatify\Product\ImageAssignment\Management\Command\UpdateImageAssignmentDisplayOrderCommand;
 use Maatify\Product\Option\Management\Command\UpdateOptionDisplayOrderCommand;
 use Maatify\Product\Product\Enum\ProductStatusEnum;
+use Maatify\Product\Product\Exception\ProductConfigurationRevisionConflictException;
 use Maatify\Product\Product\Management\Command\ReconfigureOptionTarget;
 use Maatify\Product\Product\Management\Command\ReconfigureProductCommand;
 use Maatify\Product\Product\Management\Command\ReconfigureVariantTarget;
@@ -111,7 +112,7 @@ try {
                     $spec[1] ?? null,
                 );
             }
-            $result = $products->reconfigure(new ReconfigureProductCommand($int('productId'), $optionTargets, $variantTargets));
+            $result = $products->reconfigure(new ReconfigureProductCommand($int('productId'), $int('revision'), $optionTargets, $variantTargets));
             echo 'ok:' . implode(',', $result->createdVariantIds);
             break;
         case 'set-default':
@@ -155,6 +156,8 @@ try {
             echo 'error:unknown operation';
             break;
     }
+} catch (ProductConfigurationRevisionConflictException) {
+    echo 'stale-revision';
 } catch (VariantCompositionConflictException|ImageAssignmentDefaultConflictException) {
     echo 'conflict';
 } catch (ProductBusinessRuleException) {

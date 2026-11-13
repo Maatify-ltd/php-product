@@ -35,7 +35,7 @@ final class ConsumerReadTest extends RuntimeTestCase
         $green = $this->preparedValue($color, 'green', 'Green');
         $medium = $this->preparedValue($size, 'm', 'Medium');
         $this->preparedValue($material, 'cotton', 'Cotton');
-        $this->productManagementService()->reconfigure(self::reconfiguration($p->productId, [$color => [$red, $blue], $size => [$medium]], [
+        $this->productManagementService()->reconfigure($this->reconfiguration($p->productId, [$color => [$red, $blue], $size => [$medium]], [
             [[[$color, $red], [$size, $medium]]],
             [[[$color, $blue], [$size, $medium]]],
         ]));
@@ -94,7 +94,7 @@ final class ConsumerReadTest extends RuntimeTestCase
         $color = $this->preparedOption($p->productId, 'color', 'Color');
         $red = $this->preparedValue($color, 'red', 'Red');
         $blue = $this->preparedValue($color, 'blue', 'Blue');
-        $this->productManagementService()->reconfigure(self::reconfiguration($p->productId, [$color => [$red, $blue]], [[[[$color, $red]]], [[[$color, $blue]]]]));
+        $this->productManagementService()->reconfigure($this->reconfiguration($p->productId, [$color => [$red, $blue]], [[[[$color, $red]]], [[[$color, $blue]]]]));
         $this->activateProduct($p->productId);
         $variants = array_map(static fn($v): int => $v->id, $this->variantManagementService()->listByProductIdForManagement($p->productId)->items());
         [$original, $vr, $vb] = $variants;

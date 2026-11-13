@@ -88,7 +88,7 @@ final class OptionLifecycleTest extends RuntimeTestCase
         $blue = $this->preparedValue($color, 'blue', 'Blue');
         $m = $this->preparedValue($size, 'm', 'M');
         $green = $this->preparedValue($color, 'green', 'Green');
-        $this->productManagementService()->reconfigure(self::reconfiguration(
+        $this->productManagementService()->reconfigure($this->reconfiguration(
             $created->productId,
             [$color => [$red, $blue], $size => [$m]],
             [[[[$color, $red], [$size, $m]]], [[[$color, $blue], [$size, $m]]]],
@@ -109,7 +109,7 @@ final class OptionLifecycleTest extends RuntimeTestCase
         $this->assertThrows(ProductBusinessRuleException::class, fn() => $values->restore($green), 'Restoring a live row is rejected.');
 
         // Reconfiguration retires size; then size and its Value can be deleted and restored freely.
-        $this->productManagementService()->reconfigure(self::reconfiguration($created->productId, [$color => [$red, $blue]], [[[[$color, $red]]], [[[$color, $blue]]]]));
+        $this->productManagementService()->reconfigure($this->reconfiguration($created->productId, [$color => [$red, $blue]], [[[[$color, $red]]], [[[$color, $blue]]]]));
         self::assertSame(OptionStatusEnum::INACTIVE, $options->getByIdForManagement($size)->status);
         $options->softDelete($size);
         $this->assertThrows(ProductBusinessRuleException::class, fn() => $values->softDelete($m), 'A Value under a deleted Option cannot be changed.');
@@ -126,11 +126,11 @@ final class OptionLifecycleTest extends RuntimeTestCase
         $size = $this->preparedOption($created->productId, 'size', 'Size');
         $red = $this->preparedValue($color, 'red', 'Red');
         $m = $this->preparedValue($size, 'm', 'M');
-        $this->productManagementService()->reconfigure(self::reconfiguration($created->productId, [$color => [$red], $size => [$m]], [[[[$color, $red], [$size, $m]]]]));
+        $this->productManagementService()->reconfigure($this->reconfiguration($created->productId, [$color => [$red], $size => [$m]], [[[[$color, $red], [$size, $m]]]]));
 
         // size leaves through direct SQL while saved active, then the configuration is rebuilt without it.
         $this->execute('UPDATE maa_product_options SET deleted_at = :t WHERE id = :i', ['t' => self::SEED_TS, 'i' => $size]);
-        $this->productManagementService()->reconfigure(self::reconfiguration($created->productId, [$color => [$red]], [[[[$color, $red]]]]));
+        $this->productManagementService()->reconfigure($this->reconfiguration($created->productId, [$color => [$red]], [[[[$color, $red]]]]));
 
         $failure = $this->assertThrows(ProductBusinessRuleException::class, fn() => $this->optionManagementService()->restore($size), 'Restoring an active Option that no active Variant covers breaks INV-02.');
         self::assertStringContainsString('[' . $size . ']', $failure->getMessage());

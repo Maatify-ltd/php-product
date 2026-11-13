@@ -15,6 +15,16 @@ use Maatify\Product\Variant\ValueObject\CompositionFingerprint;
  */
 final class UnusedProductConfigurationRepository implements ProductConfigurationRepositoryInterface
 {
+    public function findRevision(int $productId): ?int
+    {
+        throw new LogicException('findRevision is not expected in this test.');
+    }
+
+    public function advanceRevision(int $productId): void
+    {
+        throw new LogicException('advanceRevision is not expected in this test.');
+    }
+
     public function lockSnapshot(int $productId): ?ProductConfigurationSnapshotDTO
     {
         throw new LogicException('lockSnapshot is not expected in this test.');

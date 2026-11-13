@@ -21,6 +21,12 @@ use Maatify\Product\Variant\ValueObject\OptionValueSelection;
  */
 interface ProductConfigurationRepositoryInterface
 {
+    /** Current revision of a live Product. */
+    public function findRevision(int $productId): ?int;
+
+    /** Advance the revision inside the mutation transaction while holding the Product lock. */
+    public function advanceRevision(int $productId): void;
+
     /**
      * Locks the Product row, then its Options, Option Values, and Variants in that order
      * (ascending identity within each table), and returns the complete graph as read under

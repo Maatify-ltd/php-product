@@ -98,6 +98,7 @@ final readonly class VariantManagementService implements VariantManagementServic
             if (!$this->variants->updateStatus($variantId, $status, $occurredAt)) {
                 throw ProductStorageFailureFactory::lockedRowVanished('Variant', $variantId);
             }
+            $this->configuration->advanceRevision($snapshot->productId);
         });
     }
 
@@ -113,6 +114,7 @@ final readonly class VariantManagementService implements VariantManagementServic
             if (!$this->variants->softDelete($variantId, $occurredAt)) {
                 throw ProductStorageFailureFactory::lockedRowVanished('Variant', $variantId);
             }
+            $this->configuration->advanceRevision($snapshot->productId);
         });
     }
 
@@ -170,6 +172,7 @@ final readonly class VariantManagementService implements VariantManagementServic
             if (!$this->variants->restore($variantId, $snapshot->productId, $occurredAt)) {
                 throw ProductStorageFailureFactory::lockedRowVanished('Variant', $variantId);
             }
+            $this->configuration->advanceRevision($snapshot->productId);
         });
     }
 

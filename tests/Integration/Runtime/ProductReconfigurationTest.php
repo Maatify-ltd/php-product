@@ -92,7 +92,7 @@ final class ProductReconfigurationTest extends RuntimeTestCase
         $variants = $this->variantManagementService();
         $consumerVariants = $this->variantConsumerService();
 
-        $result = $products->reconfigure(self::reconfiguration(
+        $result = $products->reconfigure($this->reconfiguration(
             $this->product,
             [$this->color => [$this->red, $this->blue], $this->size => [$this->m, $this->l]],
             [$this->target($this->red, $this->m), $this->target($this->blue, $this->l)],
@@ -116,7 +116,7 @@ final class ProductReconfigurationTest extends RuntimeTestCase
         $this->activateProduct($this->product);
         self::assertSame([$redM, $blueL], array_map(static fn(VariantDTO $v): int => $v->id, $consumerVariants->listByProductId($this->product)->items()));
 
-        $back = $products->reconfigure(self::reconfiguration($this->product, [], [$this->emptyTarget($this->empty)]));
+        $back = $products->reconfigure($this->reconfiguration($this->product, [], [$this->emptyTarget($this->empty)]));
         self::assertSame([], $back->createdVariantIds);
         self::assertSame([$this->empty], $back->reactivatedVariantIds);
         self::assertSame([$redM, $blueL], $back->deactivatedVariantIds);
@@ -134,24 +134,24 @@ final class ProductReconfigurationTest extends RuntimeTestCase
         $products = $this->productManagementService();
         $other = $this->namedProduct('OTHER');
         $all = [$this->color => [$this->red, $this->blue], $this->size => [$this->m, $this->l]];
-        [$redM, $blueL] = $products->reconfigure(self::reconfiguration($this->product, $all, [$this->target($this->red, $this->m), $this->target($this->blue, $this->l)]))->createdVariantIds;
+        [$redM, $blueL] = $products->reconfigure($this->reconfiguration($this->product, $all, [$this->target($this->red, $this->m), $this->target($this->blue, $this->l)]))->createdVariantIds;
 
         $conflict = $this->assertThrows(
             VariantCompositionConflictException::class,
-            fn() => $products->reconfigure(self::reconfiguration($this->product, $all, [$this->target($this->red, $this->m), $this->target($this->blue, $this->l)])),
+            fn() => $products->reconfigure($this->reconfiguration($this->product, $all, [$this->target($this->red, $this->m), $this->target($this->blue, $this->l)])),
             'An existing composition without reuseVariantId is a conflict even when it is currently active.',
         );
         self::assertStringContainsString('[' . $redM . ']', $conflict->getMessage(), 'The conflict identifies the existing Variant.');
 
-        $kept = $products->reconfigure(self::reconfiguration($this->product, $all, [$this->target($this->red, $this->m, $redM), $this->target($this->blue, $this->l, $blueL)]));
+        $kept = $products->reconfigure($this->reconfiguration($this->product, $all, [$this->target($this->red, $this->m, $redM), $this->target($this->blue, $this->l, $blueL)]));
         self::assertSame([[], [], [], []], [$kept->createdVariantIds, $kept->deactivatedVariantIds, $kept->reactivatedVariantIds, $kept->restoredVariantIds], 'Reusing the active set changes nothing.');
 
-        $this->assertThrows(VariantCompositionConflictException::class, fn() => $products->reconfigure(self::reconfiguration($this->product, $all, [$this->target($this->red, $this->m, $blueL), $this->target($this->blue, $this->l, $redM)])), 'The named Variant must be the one that carries the composition.');
-        $this->assertThrows(VariantCompositionConflictException::class, fn() => $products->reconfigure(self::reconfiguration($this->product, $all, [$this->target($this->red, $this->m, $redM), $this->target($this->blue, $this->l, $blueL), $this->target($this->red, $this->l, $this->empty)])), 'A new composition cannot borrow another Variant identity.');
-        $this->assertThrows(VariantCompositionConflictException::class, fn() => $products->reconfigure(self::reconfiguration($this->product, $all, [$this->target($this->red, $this->m, $redM), $this->target($this->blue, $this->l, $blueL), $this->target($this->red, $this->l, $other->variantId)])), 'A Variant of another Product cannot be reused.');
-        $this->assertThrows(VariantNotFoundException::class, fn() => $products->reconfigure(self::reconfiguration($this->product, $all, [$this->target($this->red, $this->m, $redM), $this->target($this->blue, $this->l, $blueL), $this->target($this->red, $this->l, 999999)])), 'An unknown reuse identity is not found.');
-        $this->assertThrows(ProductInvalidArgumentException::class, fn() => self::reconfiguration($this->product, $all, [$this->target($this->red, $this->m, $redM), $this->target($this->red, $this->m)]), 'A repeated composition is rejected by the command.');
-        $this->assertThrows(ProductInvalidArgumentException::class, fn() => self::reconfiguration($this->product, $all, [$this->target($this->red, $this->m, $redM), $this->target($this->blue, $this->l, $redM)]), 'A repeated reuse identity is rejected by the command.');
+        $this->assertThrows(VariantCompositionConflictException::class, fn() => $products->reconfigure($this->reconfiguration($this->product, $all, [$this->target($this->red, $this->m, $blueL), $this->target($this->blue, $this->l, $redM)])), 'The named Variant must be the one that carries the composition.');
+        $this->assertThrows(VariantCompositionConflictException::class, fn() => $products->reconfigure($this->reconfiguration($this->product, $all, [$this->target($this->red, $this->m, $redM), $this->target($this->blue, $this->l, $blueL), $this->target($this->red, $this->l, $this->empty)])), 'A new composition cannot borrow another Variant identity.');
+        $this->assertThrows(VariantCompositionConflictException::class, fn() => $products->reconfigure($this->reconfiguration($this->product, $all, [$this->target($this->red, $this->m, $redM), $this->target($this->blue, $this->l, $blueL), $this->target($this->red, $this->l, $other->variantId)])), 'A Variant of another Product cannot be reused.');
+        $this->assertThrows(VariantNotFoundException::class, fn() => $products->reconfigure($this->reconfiguration($this->product, $all, [$this->target($this->red, $this->m, $redM), $this->target($this->blue, $this->l, $blueL), $this->target($this->red, $this->l, 999999)])), 'An unknown reuse identity is not found.');
+        $this->assertThrows(ProductInvalidArgumentException::class, fn() => $this->reconfiguration($this->product, $all, [$this->target($this->red, $this->m, $redM), $this->target($this->red, $this->m)]), 'A repeated composition is rejected by the command.');
+        $this->assertThrows(ProductInvalidArgumentException::class, fn() => $this->reconfiguration($this->product, $all, [$this->target($this->red, $this->m, $redM), $this->target($this->blue, $this->l, $redM)]), 'A repeated reuse identity is rejected by the command.');
         self::assertSame([$redM, $blueL], $this->activeVariantIds(), 'Every rejected call left the configuration unchanged.');
     }
 
@@ -161,21 +161,21 @@ final class ProductReconfigurationTest extends RuntimeTestCase
         $products = $this->productManagementService();
         $variants = $this->variantManagementService();
         $all = [$this->color => [$this->red, $this->blue], $this->size => [$this->m, $this->l]];
-        [$redM, $blueL, $redL] = $products->reconfigure(self::reconfiguration($this->product, $all, [$this->target($this->red, $this->m), $this->target($this->blue, $this->l), $this->target($this->red, $this->l)]))->createdVariantIds;
+        [$redM, $blueL, $redL] = $products->reconfigure($this->reconfiguration($this->product, $all, [$this->target($this->red, $this->m), $this->target($this->blue, $this->l), $this->target($this->red, $this->l)]))->createdVariantIds;
 
-        $dropped = $products->reconfigure(self::reconfiguration($this->product, $all, [$this->target($this->red, $this->m, $redM), $this->target($this->blue, $this->l, $blueL)]));
+        $dropped = $products->reconfigure($this->reconfiguration($this->product, $all, [$this->target($this->red, $this->m, $redM), $this->target($this->blue, $this->l, $blueL)]));
         self::assertSame([$redL], $dropped->deactivatedVariantIds);
         self::assertSame(VariantStatusEnum::INACTIVE, $variants->getByIdForManagement($redL)->status);
 
-        $this->assertThrows(VariantCompositionConflictException::class, fn() => $products->reconfigure(self::reconfiguration($this->product, $all, [$this->target($this->red, $this->m, $redM), $this->target($this->blue, $this->l, $blueL), $this->target($this->red, $this->l)])), 'A historical composition is never reused implicitly.');
-        $back = $products->reconfigure(self::reconfiguration($this->product, $all, [$this->target($this->red, $this->m, $redM), $this->target($this->blue, $this->l, $blueL), $this->target($this->red, $this->l, $redL)]));
+        $this->assertThrows(VariantCompositionConflictException::class, fn() => $products->reconfigure($this->reconfiguration($this->product, $all, [$this->target($this->red, $this->m, $redM), $this->target($this->blue, $this->l, $blueL), $this->target($this->red, $this->l)])), 'A historical composition is never reused implicitly.');
+        $back = $products->reconfigure($this->reconfiguration($this->product, $all, [$this->target($this->red, $this->m, $redM), $this->target($this->blue, $this->l, $blueL), $this->target($this->red, $this->l, $redL)]));
         self::assertSame([$redL], $back->reactivatedVariantIds);
         self::assertSame([], $back->createdVariantIds);
         self::assertSame(VariantStatusEnum::ACTIVE, $variants->getByIdForManagement($redL)->status);
 
         $variants->softDelete($redL);
-        $this->assertThrows(VariantCompositionConflictException::class, fn() => $products->reconfigure(self::reconfiguration($this->product, $all, [$this->target($this->red, $this->m, $redM), $this->target($this->blue, $this->l, $blueL), $this->target($this->red, $this->l)])), 'A soft-deleted composition is a conflict too.');
-        $restored = $products->reconfigure(self::reconfiguration($this->product, $all, [$this->target($this->red, $this->m, $redM), $this->target($this->blue, $this->l, $blueL), $this->target($this->red, $this->l, $redL)]));
+        $this->assertThrows(VariantCompositionConflictException::class, fn() => $products->reconfigure($this->reconfiguration($this->product, $all, [$this->target($this->red, $this->m, $redM), $this->target($this->blue, $this->l, $blueL), $this->target($this->red, $this->l)])), 'A soft-deleted composition is a conflict too.');
+        $restored = $products->reconfigure($this->reconfiguration($this->product, $all, [$this->target($this->red, $this->m, $redM), $this->target($this->blue, $this->l, $blueL), $this->target($this->red, $this->l, $redL)]));
         self::assertSame([$redL], $restored->restoredVariantIds);
         self::assertSame([], $restored->reactivatedVariantIds);
         $redLDto = $variants->getByIdForManagement($redL);
@@ -189,12 +189,12 @@ final class ProductReconfigurationTest extends RuntimeTestCase
         $this->prepared();
         $products = $this->productManagementService();
         $all = [$this->color => [$this->red], $this->size => [$this->m]];
-        [$redM] = $products->reconfigure(self::reconfiguration($this->product, $all, [$this->target($this->red, $this->m)]))->createdVariantIds;
+        [$redM] = $products->reconfigure($this->reconfiguration($this->product, $all, [$this->target($this->red, $this->m)]))->createdVariantIds;
 
-        $this->assertThrows(VariantCompositionConflictException::class, fn() => $products->reconfigure(self::reconfiguration($this->product, [], [$this->emptyTarget(null)])), 'The empty composition exists in history and must be named.');
+        $this->assertThrows(VariantCompositionConflictException::class, fn() => $products->reconfigure($this->reconfiguration($this->product, [], [$this->emptyTarget(null)])), 'The empty composition exists in history and must be named.');
 
         $this->execute('DELETE FROM maa_product_variants WHERE id = :i', ['i' => $this->empty]);
-        $this->assertThrows(ProductPersistenceException::class, fn() => $products->reconfigure(self::reconfiguration($this->product, [], [$this->emptyTarget(null)])), 'The original identity is missing: fail closed, never create a second one.');
+        $this->assertThrows(ProductPersistenceException::class, fn() => $products->reconfigure($this->reconfiguration($this->product, [], [$this->emptyTarget(null)])), 'The original identity is missing: fail closed, never create a second one.');
         self::assertSame([$redM], $this->activeVariantIds(), 'The failed transition changed nothing.');
         self::assertSame(OptionStatusEnum::ACTIVE, $this->optionManagementService()->getByIdForManagement($this->color)->status);
         self::assertSame(0, self::rowCount('maa_product_variants', "composition_fingerprint = '" . hash('sha256', 'v1') . "'"));
@@ -218,25 +218,25 @@ final class ProductReconfigurationTest extends RuntimeTestCase
         $all = [$this->color => [$this->red, $this->blue], $this->size => [$this->m, $this->l]];
 
         $businessRule = [
-            'Option of another Product' => self::reconfiguration($this->product, [$otherOption => [$otherValue]], [[[[$otherOption, $otherValue]]]]),
-            'Value of another Product' => self::reconfiguration($this->product, [$this->color => [$otherValue]], [[[[$this->color, $otherValue]]]]),
-            'Value of the wrong Option' => self::reconfiguration($this->product, [$this->color => [$this->m]], [[[[$this->color, $this->m]]]]),
-            'soft-deleted Option' => self::reconfiguration($this->product, [$deletedOption => [$finishValue]], [[[[$deletedOption, $finishValue]]]]),
-            'soft-deleted Value' => self::reconfiguration($this->product, [$this->color => [$deletedValue]], [[[[$this->color, $deletedValue]]]]),
-            'unlabelled Value' => self::reconfiguration($this->product, [$unlabelledOption => [$unlabelledValue]], [[[[$unlabelledOption, $unlabelledValue]]]]),
-            'composition missing a target Option' => self::reconfiguration($this->product, $all, [$this->target($this->red), $this->target($this->blue, $this->l)]),
-            'composition selecting an Option outside the target set' => self::reconfiguration($this->product, [$this->color => [$this->red, $this->blue]], [$this->target($this->red, $this->m), $this->target($this->blue)]),
-            'composition selecting a Value outside the target set' => self::reconfiguration($this->product, [$this->color => [$this->red], $this->size => [$this->m]], [$this->target($this->red, $this->m), $this->target($this->blue, $this->m)]),
-            'unrepresented target Value' => self::reconfiguration($this->product, $all, [$this->target($this->red, $this->m), $this->target($this->blue, $this->m)]),
-            'no Variant at all' => self::reconfiguration($this->product, [$this->color => [$this->red]], []),
-            'empty composition in a configurable target' => self::reconfiguration($this->product, [$this->color => [$this->red]], [$this->emptyTarget($this->empty), $this->target($this->red)]),
-            'non-empty composition in a simple target' => self::reconfiguration($this->product, [], [$this->target($this->red)]),
+            'Option of another Product' => $this->reconfiguration($this->product, [$otherOption => [$otherValue]], [[[[$otherOption, $otherValue]]]]),
+            'Value of another Product' => $this->reconfiguration($this->product, [$this->color => [$otherValue]], [[[[$this->color, $otherValue]]]]),
+            'Value of the wrong Option' => $this->reconfiguration($this->product, [$this->color => [$this->m]], [[[[$this->color, $this->m]]]]),
+            'soft-deleted Option' => $this->reconfiguration($this->product, [$deletedOption => [$finishValue]], [[[[$deletedOption, $finishValue]]]]),
+            'soft-deleted Value' => $this->reconfiguration($this->product, [$this->color => [$deletedValue]], [[[[$this->color, $deletedValue]]]]),
+            'unlabelled Value' => $this->reconfiguration($this->product, [$unlabelledOption => [$unlabelledValue]], [[[[$unlabelledOption, $unlabelledValue]]]]),
+            'composition missing a target Option' => $this->reconfiguration($this->product, $all, [$this->target($this->red), $this->target($this->blue, $this->l)]),
+            'composition selecting an Option outside the target set' => $this->reconfiguration($this->product, [$this->color => [$this->red, $this->blue]], [$this->target($this->red, $this->m), $this->target($this->blue)]),
+            'composition selecting a Value outside the target set' => $this->reconfiguration($this->product, [$this->color => [$this->red], $this->size => [$this->m]], [$this->target($this->red, $this->m), $this->target($this->blue, $this->m)]),
+            'unrepresented target Value' => $this->reconfiguration($this->product, $all, [$this->target($this->red, $this->m), $this->target($this->blue, $this->m)]),
+            'no Variant at all' => $this->reconfiguration($this->product, [$this->color => [$this->red]], []),
+            'empty composition in a configurable target' => $this->reconfiguration($this->product, [$this->color => [$this->red]], [$this->emptyTarget($this->empty), $this->target($this->red)]),
+            'non-empty composition in a simple target' => $this->reconfiguration($this->product, [], [$this->target($this->red)]),
         ];
         foreach ($businessRule as $case => $command) {
             $this->assertThrows(ProductBusinessRuleException::class, fn() => $products->reconfigure($command), $case . ' must be an FC-INV failure.');
         }
-        $this->assertThrows(ProductInvalidArgumentException::class, fn() => new ReconfigureProductCommand($this->product, [new ReconfigureOptionTarget($this->color, [$this->red]), new ReconfigureOptionTarget($this->color, [$this->blue])], []), 'A repeated Option is rejected by the command.');
-        $this->assertThrows(ProductInvalidArgumentException::class, fn() => new ReconfigureProductCommand($this->product, [new ReconfigureOptionTarget($this->color, [$this->red]), new ReconfigureOptionTarget($this->size, [$this->red])], []), 'A Value under two Options is rejected by the command.');
+        $this->assertThrows(ProductInvalidArgumentException::class, fn() => new ReconfigureProductCommand($this->product, 1, [new ReconfigureOptionTarget($this->color, [$this->red]), new ReconfigureOptionTarget($this->color, [$this->blue])], []), 'A repeated Option is rejected by the command.');
+        $this->assertThrows(ProductInvalidArgumentException::class, fn() => new ReconfigureProductCommand($this->product, 1, [new ReconfigureOptionTarget($this->color, [$this->red]), new ReconfigureOptionTarget($this->size, [$this->red])], []), 'A Value under two Options is rejected by the command.');
         $this->assertThrows(ProductInvalidArgumentException::class, fn() => new ReconfigureVariantTarget([new OptionValueSelection($this->color, $this->red), new OptionValueSelection($this->color, $this->blue)]), 'A repeated Option in a composition is rejected by the command.');
         $this->assertThrows(ProductInvalidArgumentException::class, fn() => new ReconfigureOptionTarget($this->color, []));
 
@@ -245,9 +245,10 @@ final class ProductReconfigurationTest extends RuntimeTestCase
         self::assertSame(0, self::rowCount('maa_product_options', "product_id = {$this->product} AND status = 'active'"));
         self::assertSame(0, self::rowCount('maa_product_option_values', "status = 'active'"));
 
-        $this->assertThrows(ProductNotFoundException::class, fn() => $products->reconfigure(self::reconfiguration(999999, [], [$this->emptyTarget(null)])));
+        $this->assertThrows(ProductNotFoundException::class, fn() => $products->reconfigure($this->reconfiguration(999999, [], [$this->emptyTarget(null)], 1)));
+        $command = $this->reconfiguration($this->product, $all, [$this->target($this->red, $this->m), $this->target($this->blue, $this->l)]);
         $products->softDelete($this->product);
-        $this->assertThrows(ProductBusinessRuleException::class, fn() => $products->reconfigure(self::reconfiguration($this->product, $all, [$this->target($this->red, $this->m), $this->target($this->blue, $this->l)])), 'A soft-deleted Product cannot be reconfigured.');
+        $this->assertThrows(ProductBusinessRuleException::class, fn() => $products->reconfigure($command), 'A soft-deleted Product cannot be reconfigured.');
     }
 
     public function testAStoredFingerprintThatDoesNotMatchItsPairsIsAPersistenceFailure(): void
@@ -255,10 +256,10 @@ final class ProductReconfigurationTest extends RuntimeTestCase
         $this->prepared();
         $products = $this->productManagementService();
         $all = [$this->color => [$this->red, $this->blue], $this->size => [$this->m, $this->l]];
-        [$redM, $blueL] = $products->reconfigure(self::reconfiguration($this->product, $all, [$this->target($this->red, $this->m), $this->target($this->blue, $this->l)]))->createdVariantIds;
+        [$redM, $blueL] = $products->reconfigure($this->reconfiguration($this->product, $all, [$this->target($this->red, $this->m), $this->target($this->blue, $this->l)]))->createdVariantIds;
         $this->execute('UPDATE maa_product_variant_option_values SET option_value_id = :l WHERE variant_id = :v AND option_id = :o', ['l' => $this->l, 'v' => $redM, 'o' => $this->size]);
 
-        $this->assertThrows(ProductPersistenceException::class, fn() => $products->reconfigure(self::reconfiguration($this->product, $all, [$this->target($this->red, $this->m, $redM), $this->target($this->blue, $this->l, $blueL)])));
+        $this->assertThrows(ProductPersistenceException::class, fn() => $products->reconfigure($this->reconfiguration($this->product, $all, [$this->target($this->red, $this->m, $redM), $this->target($this->blue, $this->l, $blueL)])));
     }
 
     public function testAFailureInsideAHostTransactionLeavesTheHostWorkIntactAndTheConfigurationUnchanged(): void
@@ -269,9 +270,9 @@ final class ProductReconfigurationTest extends RuntimeTestCase
 
         self::$pdo->beginTransaction();
         $hostWork = $products->create(new CreateProductCommand('HOST-WORK'));
-        $this->assertThrows(ProductBusinessRuleException::class, fn() => $products->reconfigure(self::reconfiguration($this->product, $all, [$this->target($this->red, $this->m)])), 'blue, l are unrepresented.');
+        $this->assertThrows(ProductBusinessRuleException::class, fn() => $products->reconfigure($this->reconfiguration($this->product, $all, [$this->target($this->red, $this->m)])), 'blue, l are unrepresented.');
         self::assertTrue(self::$pdo->inTransaction(), 'The Host transaction is neither committed nor rolled back.');
-        $result = $products->reconfigure(self::reconfiguration($this->product, $all, [$this->target($this->red, $this->m), $this->target($this->blue, $this->l)]));
+        $result = $products->reconfigure($this->reconfiguration($this->product, $all, [$this->target($this->red, $this->m), $this->target($this->blue, $this->l)]));
         self::$pdo->commit();
 
         self::assertSame($hostWork->productId, $products->getByIdForManagement($hostWork->productId)->id, 'Host work before the failed call survived.');
@@ -279,7 +280,7 @@ final class ProductReconfigurationTest extends RuntimeTestCase
         self::assertSame(OptionStatusEnum::ACTIVE, $this->optionManagementService()->getByIdForManagement($this->size)->status);
 
         self::$pdo->beginTransaction();
-        $products->reconfigure(self::reconfiguration($this->product, [], [$this->emptyTarget($this->empty)]));
+        $products->reconfigure($this->reconfiguration($this->product, [], [$this->emptyTarget($this->empty)]));
         self::assertSame([$this->empty], $this->activeVariantIds());
         self::$pdo->rollBack();
         self::assertSame($result->createdVariantIds, $this->activeVariantIds(), 'A Host rollback discards the package writes with the rest.');
@@ -295,7 +296,7 @@ final class ProductReconfigurationTest extends RuntimeTestCase
         );
 
         try {
-            $products->reconfigure(self::reconfiguration($this->product, [$this->color => [$this->red], $this->size => [$this->m]], [$this->target($this->red, $this->m)]));
+            $products->reconfigure($this->reconfiguration($this->product, [$this->color => [$this->red], $this->size => [$this->m]], [$this->target($this->red, $this->m)]));
             self::fail('The storage failure must propagate.');
         } catch (Throwable $caught) {
             self::assertInstanceOf(PDOException::class, $caught);

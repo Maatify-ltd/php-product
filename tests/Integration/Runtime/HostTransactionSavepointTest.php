@@ -96,7 +96,7 @@ final class HostTransactionSavepointTest extends RuntimeTestCase
 
         $this->assertFailureInsideHostTransaction(
             'maa_product_variants',
-            fn() => $this->productManagementService(self::laterClock())->reconfigure(self::reconfiguration($created->productId, [$color => [$red]], [[[[$color, $red]]]])),
+            fn() => $this->productManagementService(self::laterClock())->reconfigure($this->reconfiguration($created->productId, [$color => [$red]], [[[[$color, $red]]]])),
             'maa_product_options',
             'maa_product_option_values',
             'maa_product_variant_option_values',
@@ -122,7 +122,7 @@ final class HostTransactionSavepointTest extends RuntimeTestCase
         $size = $this->preparedOption($created->productId, 'size', 'Size');
         $m = $this->preparedValue($size, 'm', 'M');
         $l = $this->preparedValue($size, 'l', 'L');
-        [$redM] = $this->productManagementService()->reconfigure(self::reconfiguration(
+        [$redM] = $this->productManagementService()->reconfigure($this->reconfiguration(
             $created->productId,
             [$color => [$red, $blue], $size => [$m, $l]],
             [[[[$color, $red], [$size, $m]]], [[[$color, $red], [$size, $l]]], [[[$color, $blue], [$size, $m]]], [[[$color, $blue], [$size, $l]]]],

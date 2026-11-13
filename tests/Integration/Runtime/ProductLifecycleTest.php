@@ -112,8 +112,9 @@ final class ProductLifecycleTest extends RuntimeTestCase
         $created = $this->namedProduct('PARENT');
         $color = $this->preparedOption($created->productId, 'color', 'Color');
         $red = $this->preparedValue($color, 'red', 'Red');
-        $result = $this->productManagementService()->reconfigure(self::reconfiguration($created->productId, [$color => [$red]], [[[[$color, $red]]]]));
+        $result = $this->productManagementService()->reconfigure($this->reconfiguration($created->productId, [$color => [$red]], [[[[$color, $red]]]]));
         $redVariant = $result->createdVariantIds[0];
+        $reconfigure = $this->reconfiguration($created->productId, [], [[[], $created->variantId]]);
         $this->productManagementService()->softDelete($created->productId);
 
         self::assertSame('active', self::scalar('SELECT status FROM maa_product_options WHERE id = :i', ['i' => $color]), 'No cascade to the Option.');
@@ -124,7 +125,7 @@ final class ProductLifecycleTest extends RuntimeTestCase
         $this->assertThrows(ProductBusinessRuleException::class, fn() => $this->optionValueManagementService()->softDelete($red));
         $this->assertThrows(ProductBusinessRuleException::class, fn() => $this->variantManagementService()->updateStatus($redVariant, VariantStatusEnum::INACTIVE));
         $this->assertThrows(ProductBusinessRuleException::class, fn() => $this->variantManagementService()->softDelete($created->variantId));
-        $this->assertThrows(ProductBusinessRuleException::class, fn() => $this->productManagementService()->reconfigure(self::reconfiguration($created->productId, [], [[[], $created->variantId]])));
+        $this->assertThrows(ProductBusinessRuleException::class, fn() => $this->productManagementService()->reconfigure($reconfigure));
         self::assertSame($redVariant, $this->variantManagementService()->getByIdForManagement($redVariant)->id, 'Management reads still work.');
         self::assertSame($color, $this->optionManagementService()->getByIdForManagement($color)->id);
 

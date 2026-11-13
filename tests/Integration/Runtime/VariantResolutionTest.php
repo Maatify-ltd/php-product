@@ -55,7 +55,7 @@ final class VariantResolutionTest extends RuntimeTestCase
             [[[$this->color, $this->blue], [$this->size, $this->l]]],
             [[[$this->color, $this->red], [$this->size, $this->l]]],
         ];
-        $result = $this->productManagementService()->reconfigure(self::reconfiguration(
+        $result = $this->productManagementService()->reconfigure($this->reconfiguration(
             $this->product,
             [$this->color => [$this->red, $this->blue], $this->size => [$this->m, $this->l]],
             $offered,
@@ -167,7 +167,7 @@ final class VariantResolutionTest extends RuntimeTestCase
             [[[$this->color, $this->red], [$this->size, $this->m]], $this->redM],
             [[[$this->color, $this->blue], [$this->size, $this->l]], $this->blueL],
         ];
-        $result = $this->productManagementService()->reconfigure(self::reconfiguration(
+        $result = $this->productManagementService()->reconfigure($this->reconfiguration(
             $this->product,
             [$this->color => [$this->red, $this->blue], $this->size => [$this->m, $this->l]],
             $kept,

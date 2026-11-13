@@ -317,7 +317,7 @@ abstract class RuntimeTestCase extends DatabaseTestCase
      * @param array<int, list<int>> $options optionId => active value ids
      * @param list<array{0: list<array{int, int}>, 1?: int|null}> $variants each: [[optionId, valueId], ...] and an optional reuse identity
      */
-    protected static function reconfiguration(int $productId, array $options, array $variants): ReconfigureProductCommand
+    protected function reconfiguration(int $productId, array $options, array $variants, ?int $revision = null): ReconfigureProductCommand
     {
         $optionTargets = [];
         foreach ($options as $optionId => $valueIds) {
@@ -331,7 +331,7 @@ abstract class RuntimeTestCase extends DatabaseTestCase
             );
         }
 
-        return new ReconfigureProductCommand($productId, $optionTargets, $variantTargets);
+        return new ReconfigureProductCommand($productId, $revision ?? $this->productManagementService()->getConfigurationRevision($productId), $optionTargets, $variantTargets);
     }
 
     protected function activateProduct(int $productId): void

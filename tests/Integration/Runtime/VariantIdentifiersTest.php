@@ -59,7 +59,7 @@ final class VariantIdentifiersTest extends RuntimeTestCase
         // The original empty-composition Variant becomes inactive after reconfiguration, so it can be soft deleted.
         $color = $this->preparedOption($a->productId, 'color', 'Color');
         $red = $this->preparedValue($color, 'red', 'Red');
-        $this->productManagementService()->reconfigure(self::reconfiguration($a->productId, [$color => [$red]], [[[[$color, $red]]]]));
+        $this->productManagementService()->reconfigure($this->reconfiguration($a->productId, [$color => [$red]], [[[[$color, $red]]]]));
         $service->softDelete($a->variantId);
         $this->assertThrows(VariantSkuAlreadyExistsException::class, fn() => $service->updateIdentifiers(self::change($b->variantId, VariantIdentifierChange::set('SKU-A'), VariantIdentifierChange::unchanged())), 'A soft-deleted Variant keeps its SKU reserved.');
         $this->assertThrows(VariantBarcodeAlreadyExistsException::class, fn() => $service->updateIdentifiers(self::change($b->variantId, VariantIdentifierChange::unchanged(), VariantIdentifierChange::set('111'))));

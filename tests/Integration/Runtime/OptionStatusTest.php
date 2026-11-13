@@ -130,7 +130,7 @@ final class OptionStatusTest extends RuntimeTestCase
         $color = $this->preparedOption($productId, 'color', 'Color');
         $red = $this->preparedValue($color, 'red', 'Red');
         $blue = $this->preparedValue($color, 'blue', 'Blue');
-        $this->productManagementService()->reconfigure(self::reconfiguration($productId, [$color => [$red, $blue]], [[[[$color, $red]]], [[[$color, $blue]]]]));
+        $this->productManagementService()->reconfigure($this->reconfiguration($productId, [$color => [$red, $blue]], [[[[$color, $red]]], [[[$color, $blue]]]]));
         $green = $this->preparedValue($color, 'green', 'Green');
         $size = $this->preparedOption($productId, 'size', 'Size');
         $m = $this->preparedValue($size, 'm', 'M');

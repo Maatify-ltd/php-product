@@ -72,7 +72,10 @@ final readonly class OptionValueManagementService implements OptionValueManageme
                 throw ProductBusinessRuleException::ownerSoftDeletedForCreate('Option Value', 'Option', $command->optionId);
             }
 
-            return new CreatedOptionValueDTO($this->values->create($command, $occurredAt));
+            $created = new CreatedOptionValueDTO($this->values->create($command, $occurredAt));
+            $this->configuration->advanceRevision($productId);
+
+            return $created;
         });
     }
 
@@ -95,6 +98,7 @@ final readonly class OptionValueManagementService implements OptionValueManageme
             if (!$this->values->updateStatus($optionValueId, $status, $occurredAt)) {
                 throw ProductStorageFailureFactory::lockedRowVanished('Option Value', $optionValueId);
             }
+            $this->configuration->advanceRevision($snapshot->productId);
         });
     }
 
@@ -113,6 +117,7 @@ final readonly class OptionValueManagementService implements OptionValueManageme
             if (!$this->values->softDelete($optionValueId, $occurredAt)) {
                 throw ProductStorageFailureFactory::lockedRowVanished('Option Value', $optionValueId);
             }
+            $this->configuration->advanceRevision($snapshot->productId);
         });
     }
 
@@ -148,6 +153,7 @@ final readonly class OptionValueManagementService implements OptionValueManageme
             if (!$this->values->restore($optionValueId, $value->optionId, $occurredAt)) {
                 throw ProductStorageFailureFactory::lockedRowVanished('Option Value', $optionValueId);
             }
+            $this->configuration->advanceRevision($snapshot->productId);
         });
     }
 

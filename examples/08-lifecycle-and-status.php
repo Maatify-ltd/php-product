@@ -174,6 +174,7 @@ $offered = [
 ];
 $result = $products->reconfigure(new ReconfigureProductCommand(
     $sofa,
+    $products->getConfigurationRevision($sofa),
     [new ReconfigureOptionTarget($color, [$red, $blue]), new ReconfigureOptionTarget($size, [$medium])],
     $offered,
 ));
@@ -256,6 +257,7 @@ foreach ([$oak, $ash] as $finishValue) {
 }
 [$oakWool, $oakFelt] = $products->reconfigure(new ReconfigureProductCommand(
     $chair,
+    $products->getConfigurationRevision($chair),
     [new ReconfigureOptionTarget($finish, [$oak, $ash]), new ReconfigureOptionTarget($seat, [$wool, $felt])],
     $compositions,
 ))->createdVariantIds;

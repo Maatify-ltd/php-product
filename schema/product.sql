@@ -126,6 +126,7 @@ CREATE TABLE `maa_product_products`
     `status`     VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL DEFAULT 'inactive' COMMENT 'Product lifecycle status; exact lowercase active or inactive; independent of deleted_at',
     `created_at` DATETIME NOT NULL COMMENT 'Host Clock timestamp assigned by the Product application when the Product is created',
     `updated_at` DATETIME NOT NULL COMMENT 'Host Clock timestamp assigned by the Product application on mutation, soft delete, or restore',
+    `configuration_revision` BIGINT NOT NULL DEFAULT 1 COMMENT 'Product configuration revision for stale write detection',
     `deleted_at` DATETIME NULL COMMENT 'Host Clock timestamp assigned by the Product application on soft delete; NULL means not deleted',
 
     PRIMARY KEY (`id`),
@@ -134,6 +135,7 @@ CREATE TABLE `maa_product_products`
     CONSTRAINT `chk_maa_product_products_code` CHECK (
         `code` REGEXP '[^[:space:]]' AND CHAR_LENGTH(`code`) <= 100
     ),
+    CONSTRAINT `chk_maa_product_products_configuration_revision` CHECK (`configuration_revision` > 0),
     CONSTRAINT `chk_maa_product_products_status` CHECK (
         BINARY `status` IN (BINARY 'active', BINARY 'inactive')
     )

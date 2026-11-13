@@ -67,7 +67,10 @@ final readonly class ContentLifecycle
                 throw ProductBusinessRuleException::ownerSoftDeletedForCreate($this->owner->resource(), $deletedOwner[0], $deletedOwner[1]);
             }
 
-            return $this->contents->create($ownerId, $languageCode, $fields, $occurredAt);
+            $contentId = $this->contents->create($ownerId, $languageCode, $fields, $occurredAt);
+            $this->configuration->advanceRevision($snapshot->productId);
+
+            return $contentId;
         });
     }
 
@@ -76,7 +79,7 @@ final readonly class ContentLifecycle
         $occurredAt = $this->clock->now();
 
         $this->transactions->run(function () use ($contentId, $fields, $occurredAt): void {
-            [, $content] = $this->lockedContent($contentId);
+            [$snapshot, $content] = $this->lockedContent($contentId);
             if ($content->deleted) {
                 throw ProductBusinessRuleException::softDeleted($this->owner->resource(), $contentId);
             }
@@ -86,6 +89,7 @@ final readonly class ContentLifecycle
             if (!$this->contents->update($contentId, $fields, $occurredAt)) {
                 throw ProductStorageFailureFactory::lockedRowVanished($this->owner->resource(), $contentId);
             }
+            $this->configuration->advanceRevision($snapshot->productId);
         });
     }
 
@@ -104,6 +108,7 @@ final readonly class ContentLifecycle
             if (!$this->contents->softDelete($contentId, $occurredAt)) {
                 throw ProductStorageFailureFactory::lockedRowVanished($this->owner->resource(), $contentId);
             }
+            $this->configuration->advanceRevision($snapshot->productId);
         });
     }
 
@@ -121,6 +126,7 @@ final readonly class ContentLifecycle
             if (!$this->contents->restore($contentId, $occurredAt)) {
                 throw ProductStorageFailureFactory::lockedRowVanished($this->owner->resource(), $contentId);
             }
+            $this->configuration->advanceRevision($snapshot->productId);
         });
     }
 

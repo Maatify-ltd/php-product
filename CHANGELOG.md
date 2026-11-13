@@ -10,6 +10,8 @@ No version has been released.
 
 ### Added
 
+- Product reconfiguration requires the editor’s expected configuration revision. A stale save raises a typed conflict and leaves the newer configuration intact.
+
 - MySQL schema `schema/product.sql`: ten `maa_product_` tables for Product, Variant, Option, Option Value, Content, Image Role, and Image Assignment, with foreign keys, case-sensitive status checks, exact-scope uniqueness, and a database-enforced rule that a soft-deleted Image Assignment is never the default.
 - Separate Management and Consumer contracts for every capability: `{Capability}\Management\Service\*ManagementServiceInterface` for creation, lifecycle, and management reads, and `{Capability}\Consumer\Service\*ConsumerServiceInterface` for the consumer-visible reads, which write nothing; Image Roles have a Management contract only. Commands and management criteria live under `Management\Command` and `Management\Criteria`, consumer criteria under `Consumer\Criteria`, and result DTOs, enums, exceptions, and value objects stay at the capability level.
 - Product creation: `ProductManagementServiceInterface::create()` writes an inactive Product and its single active empty-composition Variant atomically, including inside a Host-owned transaction (operation-local savepoint).

@@ -16,6 +16,7 @@ use Maatify\Product\Product\DTO\ProductDTO;
 use Maatify\Product\Product\DTO\ProductReconfigurationResultDTO;
 use Maatify\Product\Product\Enum\ProductStatusEnum;
 use Maatify\Product\Product\Exception\ProductCodeAlreadyExistsException;
+use Maatify\Product\Product\Exception\ProductConfigurationRevisionConflictException;
 use Maatify\Product\Product\Exception\ProductNotFoundException;
 use Maatify\Product\Product\Management\Command\CreateProductCommand;
 use Maatify\Product\Product\Management\Command\ReconfigureProductCommand;
@@ -93,6 +94,13 @@ interface ProductManagementServiceInterface
     public function restore(int $productId): void;
 
     /**
+     * Returns the current configuration revision of a non-deleted Product.
+     * @throws ProductNotFoundException When the Product is missing or soft deleted.
+     * @throws ProductInvalidArgumentException When the identity is not positive.
+     */
+    public function getConfigurationRevision(int $productId): int;
+
+    /**
      * Replaces the active configuration of a Product atomically: the target active Options and
      * Values, and the target active Variant set, as described by {@see ReconfigureProductCommand}.
      *
@@ -109,6 +117,7 @@ interface ProductManagementServiceInterface
      *
      * @throws ProductNotFoundException When no Product has that identity.
      * @throws VariantNotFoundException When a `reuseVariantId` names no Variant.
+     * @throws ProductConfigurationRevisionConflictException When the editor revision differs from the locked revision.
      * @throws VariantCompositionConflictException When a composition exists without a reuse identity, or the named Variant does not match.
      * @throws ProductBusinessRuleException When the Product is soft deleted, or the target violates a structural invariant.
      * @throws ProductPersistenceException When stored state changed or is invalid, including a fingerprint that does not match its pairs or a missing original empty-composition Variant.

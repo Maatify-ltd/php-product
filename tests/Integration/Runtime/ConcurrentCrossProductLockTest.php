@@ -40,11 +40,12 @@ final class ConcurrentCrossProductLockTest extends RuntimeTestCase
                 $red = $this->preparedValue($color, 'red', 'Red');
                 $blue = $this->preparedValue($color, 'blue', 'Blue');
                 [$redVariant] = $this->productManagementService()->reconfigure(
-                    self::reconfiguration($productId, [$color => [$red]], [[[[$color, $red]]]]),
+                    $this->reconfiguration($productId, [$color => [$red]], [[[[$color, $red]]]]),
                 )->createdVariantIds;
                 $productIds[] = $productId;
                 $commands[] = ['reconfigure', [
                     'productId' => $productId,
+                    'revision' => $this->productManagementService()->getConfigurationRevision($productId),
                     'options' => [$color => [$red, $blue]],
                     'variants' => [[[[$color, $red]], $redVariant], [[[$color, $blue]]]],
                 ]];

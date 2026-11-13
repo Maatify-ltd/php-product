@@ -259,7 +259,7 @@ final class ContentCommandTest extends RuntimeTestCase
         $this->optionContentManagementService()->create(new CreateOptionContentCommand($color, null, 'Color'));
         $this->optionValueContentManagementService()->create(new CreateOptionValueContentCommand($red, null, 'Red'));
         $this->optionValueContentManagementService()->create(new CreateOptionValueContentCommand($blue, null, 'Blue'));
-        $this->productManagementService()->reconfigure(self::reconfiguration($productId, [$color => [$red, $blue]], [[[[$color, $red]]], [[[$color, $blue]]]]));
+        $this->productManagementService()->reconfigure($this->reconfiguration($productId, [$color => [$red, $blue]], [[[[$color, $red]]], [[[$color, $blue]]]]));
 
         return [$color, $red, $blue];
     }

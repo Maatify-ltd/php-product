@@ -19,6 +19,7 @@ use Maatify\Product\Product\DTO\ProductConfigurationSnapshotDTO;
 use Maatify\Product\Product\DTO\ProductDTO;
 use Maatify\Product\Product\DTO\ProductReconfigurationResultDTO;
 use Maatify\Product\Product\Enum\ProductStatusEnum;
+use Maatify\Product\Product\Exception\ProductConfigurationRevisionConflictException;
 use Maatify\Product\Product\Exception\ProductNotFoundException;
 use Maatify\Product\Product\Management\Command\CreateProductCommand;
 use Maatify\Product\Product\Management\Command\ReconfigureProductCommand;
@@ -136,6 +137,7 @@ final readonly class ProductManagementService implements ProductManagementServic
             if (!$this->products->updateStatus($productId, $status, $occurredAt)) {
                 throw ProductStorageFailureFactory::lockedRowVanished('Product', $productId);
             }
+            $this->configuration->advanceRevision($productId);
         });
     }
 
@@ -155,6 +157,7 @@ final readonly class ProductManagementService implements ProductManagementServic
             if (!$this->products->softDelete($productId, $occurredAt)) {
                 throw ProductStorageFailureFactory::lockedRowVanished('Product', $productId);
             }
+            $this->configuration->advanceRevision($productId);
         });
     }
 
@@ -172,7 +175,15 @@ final readonly class ProductManagementService implements ProductManagementServic
             if (!$this->products->restore($productId, $occurredAt)) {
                 throw ProductStorageFailureFactory::lockedRowVanished('Product', $productId);
             }
+            $this->configuration->advanceRevision($productId);
         });
+    }
+
+    public function getConfigurationRevision(int $productId): int
+    {
+        self::requirePositive($productId);
+
+        return $this->configuration->findRevision($productId) ?? throw ProductNotFoundException::withId($productId);
     }
 
     public function reconfigure(ReconfigureProductCommand $command): ProductReconfigurationResultDTO
@@ -190,6 +201,10 @@ final readonly class ProductManagementService implements ProductManagementServic
         $snapshot = $this->lockedSnapshot($productId);
         if ($snapshot->productDeleted) {
             throw ProductBusinessRuleException::softDeleted('Product', $productId);
+        }
+
+        if ($command->expectedRevision !== $snapshot->configurationRevision) {
+            throw ProductConfigurationRevisionConflictException::forProduct($productId);
         }
 
         // 1. The target active Option/Value set must exist under the Product, be non-deleted, and be labelled.
@@ -352,6 +367,7 @@ final readonly class ProductManagementService implements ProductManagementServic
 
         // 6. Every Product-local invariant must hold before the operation completes.
         self::assertValid($this->lockedSnapshot($productId));
+        $this->configuration->advanceRevision($productId);
 
         return new ProductReconfigurationResultDTO(
             createdVariantIds: $created,

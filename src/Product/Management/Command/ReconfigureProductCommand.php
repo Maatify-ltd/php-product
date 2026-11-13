@@ -33,11 +33,16 @@ final readonly class ReconfigureProductCommand implements JsonSerializable
      */
     public function __construct(
         public int $productId,
+        public int $expectedRevision,
         array $options,
         array $variants,
     ) {
         if ($productId < 1) {
             throw ProductInvalidArgumentException::nonPositiveId('productId');
+        }
+
+        if ($expectedRevision < 1) {
+            throw ProductInvalidArgumentException::nonPositiveId('expectedRevision');
         }
 
         $optionIds = [];
@@ -75,11 +80,12 @@ final readonly class ReconfigureProductCommand implements JsonSerializable
         $this->variants = $variants;
     }
 
-    /** @return array{productId: int, options: list<array<string, mixed>>, variants: list<array<string, mixed>>} */
+    /** @return array{productId: int, expectedRevision: int, options: list<array<string, mixed>>, variants: list<array<string, mixed>>} */
     public function jsonSerialize(): array
     {
         return [
             'productId' => $this->productId,
+            'expectedRevision' => $this->expectedRevision,
             'options' => array_map(static fn(ReconfigureOptionTarget $option): array => $option->jsonSerialize(), $this->options),
             'variants' => array_map(static fn(ReconfigureVariantTarget $variant): array => $variant->jsonSerialize(), $this->variants),
         ];

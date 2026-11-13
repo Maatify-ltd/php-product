@@ -54,7 +54,7 @@ final class LockingReadSnapshotTest extends RuntimeTestCase
         $size = $this->preparedOption($created->productId, 'size', 'Size');
         $m = $this->preparedValue($size, 'm', 'M');
         $l = $this->preparedValue($size, 'l', 'L');
-        [$redM, $redL] = $this->productManagementService()->reconfigure(self::reconfiguration(
+        [$redM, $redL] = $this->productManagementService()->reconfigure($this->reconfiguration(
             $created->productId,
             [$color => [$red, $blue], $size => [$m, $l]],
             [[[[$color, $red], [$size, $m]]], [[[$color, $red], [$size, $l]]], [[[$color, $blue], [$size, $m]]], [[[$color, $blue], [$size, $l]]]],

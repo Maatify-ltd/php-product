@@ -284,7 +284,7 @@ try {
     $valueContent->create(new CreateOptionValueContentCommand($blue, null, 'Blue'));
     check($options->getByIdForManagement($color)->status->value === 'inactive', 'a new Option is inactive');
 
-    $result = $service->reconfigure(new ReconfigureProductCommand($productId, [new ReconfigureOptionTarget($color, [$red, $blue])], [
+    $result = $service->reconfigure(new ReconfigureProductCommand($productId, $service->getConfigurationRevision($productId), [new ReconfigureOptionTarget($color, [$red, $blue])], [
         new ReconfigureVariantTarget([new OptionValueSelection($color, $red)]),
         new ReconfigureVariantTarget([new OptionValueSelection($color, $blue)]),
     ]));
@@ -298,7 +298,7 @@ try {
         check(true, 'an incomplete selection is a validation failure');
     }
     try {
-        $service->reconfigure(new ReconfigureProductCommand($productId, [new ReconfigureOptionTarget($color, [$red])], [new ReconfigureVariantTarget([new OptionValueSelection($color, $red)])]));
+        $service->reconfigure(new ReconfigureProductCommand($productId, $service->getConfigurationRevision($productId), [new ReconfigureOptionTarget($color, [$red])], [new ReconfigureVariantTarget([new OptionValueSelection($color, $red)])]));
         check(false, 'an existing composition without reuseVariantId must conflict');
     } catch (VariantCompositionConflictException) {
         check(true, 'an existing composition is reused only by explicit identity');
@@ -309,7 +309,7 @@ try {
     } catch (ProductBusinessRuleException) {
         check(true, 'a mutation that would break the configuration is a business-rule failure');
     }
-    $back = $service->reconfigure(new ReconfigureProductCommand($productId, [], [new ReconfigureVariantTarget([], $created->variantId)]));
+    $back = $service->reconfigure(new ReconfigureProductCommand($productId, $service->getConfigurationRevision($productId), [], [new ReconfigureVariantTarget([], $created->variantId)]));
     check($back->reactivatedVariantIds === [$created->variantId] && $back->deactivatedVariantIds === [$redVariant, $blueVariant], 'the transition back to simple reuses the original empty Variant');
     try {
         $consumerVariants->resolveByComposition($productId, new VariantCompositionCriteriaDTO([new OptionValueSelection($color, $red)]));
