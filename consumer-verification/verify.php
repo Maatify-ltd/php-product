@@ -19,6 +19,7 @@ declare(strict_types=1);
 use Composer\InstalledVersions;
 use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
 use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
+use Maatify\Product\Common\Enum\ProductDeletedStateEnum;
 use Maatify\Product\Common\Exception\ProductBusinessRuleException;
 use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
 use Maatify\Product\Content\Exception\ProductContentAlreadyExistsException;
@@ -29,6 +30,7 @@ use Maatify\Product\Content\ValueObject\ExactContentLanguage;
 use Maatify\Product\Factory\ProductFactory;
 use Maatify\Product\ImageAssignment\Management\Command\CreateImageAssignmentCommand;
 use Maatify\Product\ImageRole\Management\Command\CreateImageRoleCommand;
+use Maatify\Product\Option\Exception\OptionNotFoundException;
 use Maatify\Product\Option\Management\Command\CreateOptionCommand;
 use Maatify\Product\OptionValue\Management\Command\CreateOptionValueCommand;
 use Maatify\Product\Product\Consumer\Service\ProductConsumerServiceInterface;
@@ -328,6 +330,33 @@ try {
     check(!$assignments->getByIdForManagement($first)->isDefault && $assignments->getByIdForManagement($second)->isDefault, 'set-default replaces the previous default of the scope');
     $assignments->softDelete($second);
     check(!$assignments->getByIdForManagement($first)->isDefault, 'deleting the default promotes nothing');
+
+    // The second session commits a new Option after the Host has established its read view.
+    $lookupPdo = new PDO($base . ';dbname=' . $database, env('PRODUCT_TEST_DB_USER'), env('PRODUCT_TEST_DB_PASSWORD'), $options);
+    $otherOptions = ProductFactory::createOptionManagementService($lookupPdo, $clock);
+    $hostOptions = ProductFactory::createOptionManagementService($pdo, $clock, ownerLookupPdo: $lookupPdo);
+    $pdo->exec('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+    $pdo->beginTransaction();
+    try {
+        $service->getByIdForManagement($productId);
+        $lateOption = $otherOptions->create(new CreateOptionCommand($productId, 'late-host-option'))->optionId;
+        try {
+            $hostOptions->getByIdForManagement($lateOption);
+            check(false, 'the Host snapshot must hide the newly committed Option');
+        } catch (OptionNotFoundException) {
+            check(true, 'the Host snapshot hides the newly committed Option');
+        }
+
+        $hostOptions->softDelete($lateOption);
+        check($pdo->inTransaction(), 'the Host still owns the transaction after the mutation');
+        $deleted = $hostOptions->getByIdForManagement($lateOption, ProductDeletedStateEnum::DELETED_ONLY);
+        check($deleted->deletedAt !== null, 'owner lookup lets the Host soft-delete the newly committed Option');
+    } finally {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+    }
+    check($otherOptions->getByIdForManagement($lateOption)->deletedAt === null, 'Host rollback leaves the committed Option live');
 
     $service->softDelete($productId);
     try {
