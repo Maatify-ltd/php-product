@@ -113,14 +113,15 @@ final readonly class PdoProductConfigurationRepository implements ProductConfigu
         $variantStates = [];
         $variantCount = count($variantRows);
         for ($offset = 0; $offset < $variantCount; $offset += self::ID_BATCH_SIZE) {
-            $batch = array_slice($variantRows, 0, self::ID_BATCH_SIZE, true);
-            $compositions = $this->compositionsOf(array_map(
-                static fn(array $row): int => RowHydrator::positiveInt($row, 'id'),
-                array_values($batch),
-            ));
-            foreach ($batch as $index => $row) {
+            $batch = [];
+            $end = min($offset + self::ID_BATCH_SIZE, $variantCount);
+            for ($index = $offset; $index < $end; ++$index) {
+                $row = $variantRows[$index];
                 unset($variantRows[$index]);
-                $id = RowHydrator::positiveInt($row, 'id');
+                $batch[RowHydrator::positiveInt($row, 'id')] = $row;
+            }
+            $compositions = $this->compositionsOf(array_keys($batch));
+            foreach ($batch as $id => $row) {
                 $variantStates[$id] = new VariantStateDTO(
                     id: $id,
                     productId: RowHydrator::positiveInt($row, 'product_id'),
