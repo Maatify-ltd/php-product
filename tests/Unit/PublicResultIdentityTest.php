@@ -18,6 +18,7 @@ use Maatify\Product\Product\DTO\CreatedProductDTO;
 use Maatify\Product\Product\DTO\ProductReconfigurationResultDTO;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use ReflectionClass;
 
 final class PublicResultIdentityTest extends TestCase
 {
@@ -41,6 +42,15 @@ final class PublicResultIdentityTest extends TestCase
                 $lists = array_fill(0, 8, []);
                 $lists[$index] = [$id];
                 yield "reconfiguration list $index identity $id" => [static fn() => new ProductReconfigurationResultDTO(...$lists)];
+            }
+        }
+        foreach (['float' => 1.5, 'numeric string' => '2', 'boolean' => true] as $type => $id) {
+            for ($index = 0; $index < 8; ++$index) {
+                $lists = array_fill(0, 8, []);
+                $lists[$index] = [$id];
+                yield "reconfiguration list $index rejects $type" => [
+                    static fn() => (new ReflectionClass(ProductReconfigurationResultDTO::class))->newInstanceArgs($lists),
+                ];
             }
         }
     }

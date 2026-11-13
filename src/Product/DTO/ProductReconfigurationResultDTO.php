@@ -47,9 +47,7 @@ final readonly class ProductReconfigurationResultDTO implements JsonSerializable
             'deactivatedOptionValueIds' => $deactivatedOptionValueIds,
         ] as $field => $ids) {
             foreach ($ids as $id) {
-                if ($id < 1) {
-                    throw ProductInvalidArgumentException::nonPositiveId($field);
-                }
+                self::assertPositiveIdentity($id, $field);
             }
         }
     }
@@ -78,5 +76,12 @@ final readonly class ProductReconfigurationResultDTO implements JsonSerializable
             'activatedOptionValueIds' => $this->activatedOptionValueIds,
             'deactivatedOptionValueIds' => $this->deactivatedOptionValueIds,
         ];
+    }
+
+    private static function assertPositiveIdentity(mixed $id, string $field): void
+    {
+        if (!is_int($id) || $id < 1) {
+            throw ProductInvalidArgumentException::nonPositiveId($field);
+        }
     }
 }
