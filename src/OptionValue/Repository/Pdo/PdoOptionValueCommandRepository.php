@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Maatify\Product\OptionValue\Repository\Pdo;
 
+use Closure;
 use DateTimeImmutable;
 use Maatify\PhpPersistence\Ordering\Config\ScopedOrderingConfig;
 use Maatify\PhpPersistence\Ordering\Repository\ScopedOrderingManager;
@@ -34,10 +35,11 @@ final readonly class PdoOptionValueCommandRepository implements OptionValueComma
 
     private OwnerIdentityLookup $ownerLookup;
 
+    /** @param PDO|(Closure(): PDO)|null $ownerLookupPdo */
     public function __construct(
         private PDO $pdo,
         private ScopedOrderingManager $orderingManager,
-        ?PDO $ownerLookupPdo = null,
+        PDO|Closure|null $ownerLookupPdo = null,
     ) {
         $this->ownerLookup = new OwnerIdentityLookup($pdo, $ownerLookupPdo);
     }

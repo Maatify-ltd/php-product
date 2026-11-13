@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Maatify\Product\Common\Repository\Pdo;
 
+use Closure;
 use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
 use PDO;
 
@@ -14,9 +15,10 @@ use PDO;
  */
 final readonly class OwnerIdentityLookup
 {
+    /** @param PDO|(Closure(): PDO)|null $lookupConnection */
     public function __construct(
         private PDO $transactionConnection,
-        private ?PDO $lookupConnection,
+        private PDO|Closure|null $lookupConnection,
     ) {}
 
     /**
@@ -31,15 +33,21 @@ final readonly class OwnerIdentityLookup
         if ($row !== false || $this->lookupConnection === null) {
             return $row;
         }
-        if ($this->lookupConnection === $this->transactionConnection
-            || $this->lookupConnection->inTransaction()
-            || !$this->lookupConnection->getAttribute(PDO::ATTR_AUTOCOMMIT)
-            || $this->lookupConnection->getAttribute(PDO::ATTR_ERRMODE) !== PDO::ERRMODE_EXCEPTION
+        $connection = $this->lookupConnection instanceof Closure ? ($this->lookupConnection)() : $this->lookupConnection;
+        self::requireUsableConnection($this->transactionConnection, $connection);
+
+        return self::read($connection, $sql, $id);
+    }
+
+    public static function requireUsableConnection(PDO $transactionConnection, PDO $lookupConnection): void
+    {
+        if ($lookupConnection === $transactionConnection
+            || $lookupConnection->inTransaction()
+            || !$lookupConnection->getAttribute(PDO::ATTR_AUTOCOMMIT)
+            || $lookupConnection->getAttribute(PDO::ATTR_ERRMODE) !== PDO::ERRMODE_EXCEPTION
         ) {
             throw ProductInvalidArgumentException::invalidOwnerLookupConnection();
         }
-
-        return self::read($this->lookupConnection, $sql, $id);
     }
 
     /** @return array<string, mixed>|false */

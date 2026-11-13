@@ -15,7 +15,7 @@ It does not fit if you need prices, stock, suppliers, Categories, orders, URL sl
 - PHP `>=8.4.27 <8.5.0 || >=8.5.12 <8.6.0` with `ext-pdo`, `ext-pdo_mysql`, `ext-mbstring`.
 - MySQL `8.0.16` or later with [`schema/product.sql`](../../schema/product.sql) installed. The schema creates tables only.
 - A PDO connection with `PDO::ERRMODE_EXCEPTION`, and a Host Clock implementing `Maatify\SharedCommon\Contracts\ClockInterface` (for example `SystemClock`). The factory rejects a connection that does not throw.
-- For mutations inside an older InnoDB snapshot, pass `ownerLookupPdo:` to the affected Management builders. Use a second autocommit PDO on the same primary and schema. See [Owner discovery in Host transactions](../../PRODUCT_PACKAGE_REFERENCE.md) in the Package Reference.
+- For mutations inside an older InnoDB snapshot, configure [the Host factory and lookup connection](#5-compose-with-a-host-transaction).
 
 ## Capability map
 
@@ -120,6 +120,21 @@ for ($attempt = 1; ; ++$attempt) {
 ```
 
 ## 5. Compose with a Host transaction
+
+Configure the Management services once if the Host may work inside an older MySQL `REPEATABLE READ` snapshot:
+
+```php
+$host = ProductFactory::forHost(
+    pdo: $pdo,
+    clock: $clock,
+    ownerLookup: $openPrimaryLookupPdo,
+);
+$options = $host->options();
+$variants = $host->variants();
+```
+
+`$openPrimaryLookupPdo` is your callable returning a separate, idle autocommit PDO in exception mode on the same primary and schema. The first identity miss opens it, and all Management services from this factory reuse it. A hit on the Host connection, including an uncommitted insert, needs no second connection. The existing static builders also accept an already-open `ownerLookupPdo` where applicable. The Host PDO still carries all locks, writes, and savepoints.
+
 
 - **Input:** a transaction you opened on the same PDO connection you gave the factory.
 - **Public call:** any mutation inside it (`create()`, `reconfigure()`, the lifecycle commands, the image-assignment commands).

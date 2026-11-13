@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Maatify\Product\Content\Repository\Pdo;
 
+use Closure;
 use DateTimeImmutable;
 use Maatify\Product\Common\Exception\ProductStorageFailureFactory;
 use Maatify\Product\Common\Repository\Pdo\DigitString;
@@ -31,10 +32,11 @@ final readonly class PdoContentCommandRepository implements ContentCommandReposi
 {
     private OwnerIdentityLookup $ownerLookup;
 
+    /** @param PDO|(Closure(): PDO)|null $ownerLookupPdo */
     public function __construct(
         private PDO $pdo,
         private ContentOwnerEnum $owner,
-        ?PDO $ownerLookupPdo = null,
+        PDO|Closure|null $ownerLookupPdo = null,
     ) {
         $this->ownerLookup = new OwnerIdentityLookup($pdo, $ownerLookupPdo);
     }

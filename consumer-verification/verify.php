@@ -332,14 +332,25 @@ try {
     check(!$assignments->getByIdForManagement($first)->isDefault, 'deleting the default promotes nothing');
 
     // The second session commits a new Option after the Host has established its read view.
-    $lookupPdo = new PDO($base . ';dbname=' . $database, env('PRODUCT_TEST_DB_USER'), env('PRODUCT_TEST_DB_PASSWORD'), $pdoOptions);
-    $otherOptions = ProductFactory::createOptionManagementService($lookupPdo, $clock);
-    $hostOptions = ProductFactory::createOptionManagementService($pdo, $clock, ownerLookupPdo: $lookupPdo);
+    $writerPdo = new PDO($base . ';dbname=' . $database, env('PRODUCT_TEST_DB_USER'), env('PRODUCT_TEST_DB_PASSWORD'), $pdoOptions);
+    $otherOptions = ProductFactory::createOptionManagementService($writerPdo, $clock);
+    $lookupOpens = 0;
+    $host = ProductFactory::forHost($pdo, $clock, static function () use ($base, $database, $pdoOptions, &$lookupOpens): PDO {
+        ++$lookupOpens;
+
+        return new PDO($base . ';dbname=' . $database, env('PRODUCT_TEST_DB_USER'), env('PRODUCT_TEST_DB_PASSWORD'), $pdoOptions);
+    });
+    $hostOptions = $host->options();
+    $hostValues = $host->optionValues();
+    check($lookupOpens === 0, 'configuring the Host and building services does not open the lookup connection');
     $pdo->exec('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
     $pdo->beginTransaction();
     try {
         $service->getByIdForManagement($productId);
         $lateOption = $otherOptions->create(new CreateOptionCommand($productId, 'late-host-option'))->optionId;
+        $hostOption = $hostOptions->create(new CreateOptionCommand($productId, 'local-host-option'))->optionId;
+        $hostOptions->softDelete($hostOption);
+        check($lookupOpens === 0, 'a Host-local identity does not open the lookup connection');
         try {
             $hostOptions->getByIdForManagement($lateOption);
             check(false, 'the Host snapshot must hide the newly committed Option');
@@ -347,7 +358,10 @@ try {
             check(true, 'the Host snapshot hides the newly committed Option');
         }
 
+        $hostValues->create(new CreateOptionValueCommand($lateOption, 'host-value'));
+        check($lookupOpens === 1, 'the first owner lookup miss opens one connection');
         $hostOptions->softDelete($lateOption);
+        check($lookupOpens === 1, 'a second service reuses the lookup connection');
         check($pdo->inTransaction(), 'the Host still owns the transaction after the mutation');
         $deleted = $hostOptions->getByIdForManagement($lateOption, ProductDeletedStateEnum::DELETED_ONLY);
         check($deleted->deletedAt !== null, 'owner lookup lets the Host soft-delete the newly committed Option');

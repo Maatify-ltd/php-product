@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Maatify\Product\Factory;
 
+use Closure;
 use Maatify\PhpPersistence\Ordering\Repository\ScopedOrderingManager;
 use Maatify\PhpPersistence\Transaction\Repository\PdoSavepointTransactionRunner;
 use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
+use Maatify\Product\Common\Repository\Pdo\OwnerIdentityLookup;
 use Maatify\Product\Content\Consumer\Service\OptionContentConsumerService;
 use Maatify\Product\Content\Consumer\Service\OptionContentConsumerServiceInterface;
 use Maatify\Product\Content\Consumer\Service\OptionValueContentConsumerService;
@@ -69,8 +71,7 @@ use PDO;
  * records and writes nothing.
  *
  * The Host supplies the PDO connection to a database where `schema/product.sql`
- * has been installed, and its Clock. The factory holds no container, state, or
- * global. Every service built on one connection shares its transactions: a
+ * has been installed, and its Clock. Every service built on one connection shares its transactions: a
  * transaction the Host has already started on it is never committed or rolled back
  * by the package; each operation runs in its own savepoint inside it, and a failed
  * operation is rolled back to that savepoint, so none of its writes reach the Host's commit.
@@ -85,7 +86,40 @@ use PDO;
  */
 final class ProductFactory
 {
-    private function __construct() {}
+    /** @param PDO|(Closure(): PDO)|null $ownerLookup */
+    private function __construct(
+        private readonly PDO $pdo,
+        private readonly ClockInterface $clock,
+        private readonly PDO|Closure|null $ownerLookup = null,
+    ) {}
+
+    /**
+     * Configures the Management builders for one Host connection. The first lookup miss opens
+     * an independent autocommit session on the same primary and schema; builders share it.
+     *
+     * @param (callable(): PDO)|null $ownerLookup Opens the independent lookup connection on demand.
+     * @throws ProductInvalidArgumentException When the Host PDO is not in exception mode.
+     */
+    public static function forHost(PDO $pdo, ClockInterface $clock, ?callable $ownerLookup = null): self
+    {
+        self::requireExceptionMode($pdo);
+        if ($ownerLookup === null) {
+            return new self($pdo, $clock);
+        }
+
+        $lookup = null;
+        $open = static function () use ($pdo, $ownerLookup, &$lookup): PDO {
+            if ($lookup === null) {
+                $connection = $ownerLookup();
+                OwnerIdentityLookup::requireUsableConnection($pdo, $connection);
+                $lookup = $connection;
+            }
+
+            return $lookup;
+        };
+
+        return new self($pdo, $clock, $open);
+    }
 
     /**
      * Builds the Product Management service: creation, management reads, lifecycle, and reconfiguration.
@@ -95,15 +129,22 @@ final class ProductFactory
     public static function createProductManagementService(PDO $pdo, ClockInterface $clock, ?PDO $ownerLookupPdo = null): ProductManagementServiceInterface
     {
         self::requireExceptionMode($pdo);
+
+        return (new self($pdo, $clock, $ownerLookupPdo))->products();
+    }
+
+    /** Builds the Product Management service for this Host. */
+    public function products(): ProductManagementServiceInterface
+    {
         $ordering = new ScopedOrderingManager();
 
         return new ProductManagementService(
-            new PdoProductCommandRepository($pdo),
-            new PdoVariantCommandRepository($pdo, $ordering),
-            new PdoProductQueryReader($pdo, $clock),
-            new PdoProductConfigurationRepository($pdo, $ordering, $ownerLookupPdo),
-            new PdoSavepointTransactionRunner($pdo),
-            $clock,
+            new PdoProductCommandRepository($this->pdo),
+            new PdoVariantCommandRepository($this->pdo, $ordering),
+            new PdoProductQueryReader($this->pdo, $this->clock),
+            new PdoProductConfigurationRepository($this->pdo, $ordering, $this->ownerLookup),
+            new PdoSavepointTransactionRunner($this->pdo),
+            $this->clock,
         );
     }
 
@@ -127,14 +168,21 @@ final class ProductFactory
     public static function createVariantManagementService(PDO $pdo, ClockInterface $clock, ?PDO $ownerLookupPdo = null): VariantManagementServiceInterface
     {
         self::requireExceptionMode($pdo);
+
+        return (new self($pdo, $clock, $ownerLookupPdo))->variants();
+    }
+
+    /** Builds the Variant Management service for this Host. */
+    public function variants(): VariantManagementServiceInterface
+    {
         $ordering = new ScopedOrderingManager();
 
         return new VariantManagementService(
-            new PdoVariantQueryReader($pdo, $clock),
-            new PdoVariantCommandRepository($pdo, $ordering),
-            new PdoProductConfigurationRepository($pdo, $ordering, $ownerLookupPdo),
-            new PdoSavepointTransactionRunner($pdo),
-            $clock,
+            new PdoVariantQueryReader($this->pdo, $this->clock),
+            new PdoVariantCommandRepository($this->pdo, $ordering),
+            new PdoProductConfigurationRepository($this->pdo, $ordering, $this->ownerLookup),
+            new PdoSavepointTransactionRunner($this->pdo),
+            $this->clock,
         );
     }
 
@@ -158,15 +206,22 @@ final class ProductFactory
     public static function createOptionManagementService(PDO $pdo, ClockInterface $clock, ?PDO $ownerLookupPdo = null): OptionManagementServiceInterface
     {
         self::requireExceptionMode($pdo);
+
+        return (new self($pdo, $clock, $ownerLookupPdo))->options();
+    }
+
+    /** Builds the Option Management service for this Host. */
+    public function options(): OptionManagementServiceInterface
+    {
         $ordering = new ScopedOrderingManager();
 
         return new OptionManagementService(
-            new PdoOptionCommandRepository($pdo, $ordering, $ownerLookupPdo),
-            new PdoOptionQueryReader($pdo, $clock),
-            new PdoProductCommandRepository($pdo),
-            new PdoProductConfigurationRepository($pdo, $ordering, $ownerLookupPdo),
-            new PdoSavepointTransactionRunner($pdo),
-            $clock,
+            new PdoOptionCommandRepository($this->pdo, $ordering, $this->ownerLookup),
+            new PdoOptionQueryReader($this->pdo, $this->clock),
+            new PdoProductCommandRepository($this->pdo),
+            new PdoProductConfigurationRepository($this->pdo, $ordering, $this->ownerLookup),
+            new PdoSavepointTransactionRunner($this->pdo),
+            $this->clock,
         );
     }
 
@@ -190,16 +245,23 @@ final class ProductFactory
     public static function createOptionValueManagementService(PDO $pdo, ClockInterface $clock, ?PDO $ownerLookupPdo = null): OptionValueManagementServiceInterface
     {
         self::requireExceptionMode($pdo);
+
+        return (new self($pdo, $clock, $ownerLookupPdo))->optionValues();
+    }
+
+    /** Builds the OptionValue Management service for this Host. */
+    public function optionValues(): OptionValueManagementServiceInterface
+    {
         $ordering = new ScopedOrderingManager();
 
         return new OptionValueManagementService(
-            new PdoOptionValueCommandRepository($pdo, $ordering, $ownerLookupPdo),
-            new PdoOptionValueQueryReader($pdo, $clock),
-            new PdoOptionCommandRepository($pdo, $ordering, $ownerLookupPdo),
-            new PdoProductCommandRepository($pdo),
-            new PdoProductConfigurationRepository($pdo, $ordering, $ownerLookupPdo),
-            new PdoSavepointTransactionRunner($pdo),
-            $clock,
+            new PdoOptionValueCommandRepository($this->pdo, $ordering, $this->ownerLookup),
+            new PdoOptionValueQueryReader($this->pdo, $this->clock),
+            new PdoOptionCommandRepository($this->pdo, $ordering, $this->ownerLookup),
+            new PdoProductCommandRepository($this->pdo),
+            new PdoProductConfigurationRepository($this->pdo, $ordering, $this->ownerLookup),
+            new PdoSavepointTransactionRunner($this->pdo),
+            $this->clock,
         );
     }
 
@@ -233,6 +295,12 @@ final class ProductFactory
         );
     }
 
+    /** Builds the ImageRole Management service for this Host. */
+    public function imageRoles(): ImageRoleManagementServiceInterface
+    {
+        return self::createImageRoleManagementService($this->pdo, $this->clock);
+    }
+
     /**
      * Builds the Image Assignment Management service: creation, default operations, lifecycle, and management reads.
      *
@@ -241,16 +309,23 @@ final class ProductFactory
     public static function createImageAssignmentManagementService(PDO $pdo, ClockInterface $clock, ?PDO $ownerLookupPdo = null): ImageAssignmentManagementServiceInterface
     {
         self::requireExceptionMode($pdo);
+
+        return (new self($pdo, $clock, $ownerLookupPdo))->imageAssignments();
+    }
+
+    /** Builds the ImageAssignment Management service for this Host. */
+    public function imageAssignments(): ImageAssignmentManagementServiceInterface
+    {
         $ordering = new ScopedOrderingManager();
 
         return new ImageAssignmentManagementService(
-            new PdoImageAssignmentCommandRepository($pdo, $ordering, $ownerLookupPdo),
-            new PdoImageAssignmentQueryReader($pdo, $clock),
-            new PdoProductCommandRepository($pdo),
-            new PdoVariantCommandRepository($pdo, $ordering),
-            new PdoImageRoleCommandRepository($pdo),
-            new PdoSavepointTransactionRunner($pdo),
-            $clock,
+            new PdoImageAssignmentCommandRepository($this->pdo, $ordering, $this->ownerLookup),
+            new PdoImageAssignmentQueryReader($this->pdo, $this->clock),
+            new PdoProductCommandRepository($this->pdo),
+            new PdoVariantCommandRepository($this->pdo, $ordering),
+            new PdoImageRoleCommandRepository($this->pdo),
+            new PdoSavepointTransactionRunner($this->pdo),
+            $this->clock,
         );
     }
 
@@ -273,7 +348,15 @@ final class ProductFactory
      */
     public static function createProductContentManagementService(PDO $pdo, ClockInterface $clock, ?PDO $ownerLookupPdo = null): ProductContentManagementServiceInterface
     {
-        return new ProductContentManagementService(self::contentLifecycle($pdo, $clock, ContentOwnerEnum::PRODUCT, $ownerLookupPdo));
+        self::requireExceptionMode($pdo);
+
+        return (new self($pdo, $clock, $ownerLookupPdo))->productContent();
+    }
+
+    /** Builds the ProductContent Management service for this Host. */
+    public function productContent(): ProductContentManagementServiceInterface
+    {
+        return new ProductContentManagementService(self::contentLifecycle($this->pdo, $this->clock, ContentOwnerEnum::PRODUCT, $this->ownerLookup));
     }
 
     /**
@@ -293,7 +376,15 @@ final class ProductFactory
      */
     public static function createOptionContentManagementService(PDO $pdo, ClockInterface $clock, ?PDO $ownerLookupPdo = null): OptionContentManagementServiceInterface
     {
-        return new OptionContentManagementService(self::contentLifecycle($pdo, $clock, ContentOwnerEnum::OPTION, $ownerLookupPdo));
+        self::requireExceptionMode($pdo);
+
+        return (new self($pdo, $clock, $ownerLookupPdo))->optionContent();
+    }
+
+    /** Builds the OptionContent Management service for this Host. */
+    public function optionContent(): OptionContentManagementServiceInterface
+    {
+        return new OptionContentManagementService(self::contentLifecycle($this->pdo, $this->clock, ContentOwnerEnum::OPTION, $this->ownerLookup));
     }
 
     /**
@@ -313,7 +404,15 @@ final class ProductFactory
      */
     public static function createOptionValueContentManagementService(PDO $pdo, ClockInterface $clock, ?PDO $ownerLookupPdo = null): OptionValueContentManagementServiceInterface
     {
-        return new OptionValueContentManagementService(self::contentLifecycle($pdo, $clock, ContentOwnerEnum::OPTION_VALUE, $ownerLookupPdo));
+        self::requireExceptionMode($pdo);
+
+        return (new self($pdo, $clock, $ownerLookupPdo))->optionValueContent();
+    }
+
+    /** Builds the OptionValueContent Management service for this Host. */
+    public function optionValueContent(): OptionValueContentManagementServiceInterface
+    {
+        return new OptionValueContentManagementService(self::contentLifecycle($this->pdo, $this->clock, ContentOwnerEnum::OPTION_VALUE, $this->ownerLookup));
     }
 
     /**
@@ -326,7 +425,8 @@ final class ProductFactory
         return new OptionValueContentConsumerService(self::contentLifecycle($pdo, $clock, ContentOwnerEnum::OPTION_VALUE));
     }
 
-    private static function contentLifecycle(PDO $pdo, ClockInterface $clock, ContentOwnerEnum $owner, ?PDO $ownerLookupPdo = null): ContentLifecycle
+    /** @param PDO|(Closure(): PDO)|null $ownerLookupPdo */
+    private static function contentLifecycle(PDO $pdo, ClockInterface $clock, ContentOwnerEnum $owner, PDO|Closure|null $ownerLookupPdo = null): ContentLifecycle
     {
         self::requireExceptionMode($pdo);
 
