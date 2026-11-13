@@ -103,8 +103,8 @@ The [Package Reference](PRODUCT_PACKAGE_REFERENCE.md#implemented-public-api) giv
 |---|---|
 | `Factory\ProductFactory` | The only construction entry point: a `create{X}ManagementService()` for every capability (`Product`, `Variant`, `Option`, `OptionValue`, `ImageRole`, `ImageAssignment`, `ProductContent`, `OptionContent`, `OptionValueContent`) and a `create{X}ConsumerService()` for every capability except `ImageRole`, which has no consumer read. |
 | `Product\Management\Service\ProductManagementServiceInterface` | `create()`, `getByIdForManagement()`, `getByCodeForManagement()`, `listForManagement()`, `paginateForManagement()`, `updateStatus()`, `softDelete()`, `restore()`, `getConfigurationRevision()`, `reconfigure()`. |
-| `Product\Consumer\Service\ProductConsumerServiceInterface` | `getById()`. |
-| `Variant\Management\Service\VariantManagementServiceInterface` | `getByIdForManagement()`, `listByProductIdForManagement()`, `paginateByProductIdForManagement()`, `updateStatus()`, `updateIdentifiers()`, `updateDisplayOrder()`, `softDelete()`, `restore()`. |
+| `Product\Consumer\Service\ProductConsumerServiceInterface` | `getById()`, `getByCode()`. |
+| `Variant\Management\Service\VariantManagementServiceInterface` | `getByIdForManagement()`, `getBySkuForManagement()`, `getByBarcodeForManagement()`, `listByProductIdForManagement()`, `paginateByProductIdForManagement()`, `updateStatus()`, `updateIdentifiers()`, `updateDisplayOrder()`, `softDelete()`, `restore()`. |
 | `Variant\Consumer\Service\VariantConsumerServiceInterface` | `getById()`, `listByProductId()`, `resolveByComposition()`. |
 | `Option\Management\Service\OptionManagementServiceInterface`, `OptionValue\Management\Service\OptionValueManagementServiceInterface` | `create()`, `updateStatus()`, `updateDisplayOrder()`, `softDelete()`, `restore()`, `getByIdForManagement()`, and the owner-scoped `list…ForManagement()` and `paginate…ForManagement()`. |
 | `Option\Consumer\Service\OptionConsumerServiceInterface`, `OptionValue\Consumer\Service\OptionValueConsumerServiceInterface` | `listVisibleByProductId()` / `listVisibleByOptionId()`. |

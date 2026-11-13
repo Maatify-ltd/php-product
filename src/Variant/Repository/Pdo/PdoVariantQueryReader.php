@@ -52,6 +52,26 @@ final readonly class PdoVariantQueryReader implements VariantQueryReaderInterfac
         return $variants[0] ?? null;
     }
 
+    public function findBySku(string $sku): ?VariantDTO
+    {
+        $variants = $this->fetch(
+            'SELECT ' . self::COLUMNS . ' FROM `maa_product_variants` v WHERE v.`sku` = :identifier LIMIT 1',
+            ['identifier' => $sku],
+        );
+
+        return $variants[0] ?? null;
+    }
+
+    public function findByBarcode(string $barcode): ?VariantDTO
+    {
+        $variants = $this->fetch(
+            'SELECT ' . self::COLUMNS . ' FROM `maa_product_variants` v WHERE v.`barcode` = :identifier LIMIT 1',
+            ['identifier' => $barcode],
+        );
+
+        return $variants[0] ?? null;
+    }
+
     public function findVisibleById(int $variantId): ?VariantDTO
     {
         $variants = $this->fetch(

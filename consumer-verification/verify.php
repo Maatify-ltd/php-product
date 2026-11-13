@@ -46,7 +46,9 @@ use Maatify\Product\Product\Management\Service\ProductManagementServiceInterface
 use Maatify\Product\Variant\Consumer\Criteria\VariantCompositionCriteriaDTO;
 use Maatify\Product\Variant\Exception\VariantCompositionConflictException;
 use Maatify\Product\Variant\Exception\VariantNotFoundException;
+use Maatify\Product\Variant\Management\Command\UpdateVariantIdentifiersCommand;
 use Maatify\Product\Variant\ValueObject\OptionValueSelection;
+use Maatify\Product\Variant\ValueObject\VariantIdentifierChange;
 use Maatify\SharedCommon\Infrastructure\SystemClock;
 
 require __DIR__ . '/vendor/autoload.php';
@@ -381,6 +383,15 @@ try {
     }
     $service->restore($productId);
     check($consumer->getById($productId)->status === ProductStatusEnum::ACTIVE, 'restore preserves the saved status');
+    check($consumer->getByCode('simple-1')->id === $productId, 'consumer lookup by code returns the visible Product');
+    $variantManagement = ProductFactory::createVariantManagementService($pdo, $clock);
+    $variantManagement->updateIdentifiers(new UpdateVariantIdentifiersCommand(
+        $created->variantId,
+        VariantIdentifierChange::set('SIMPLE-SKU'),
+        VariantIdentifierChange::set('000501'),
+    ));
+    check($variantManagement->getBySkuForManagement('simple-sku')->id === $created->variantId, 'management lookup finds a Variant by SKU');
+    check($variantManagement->getByBarcodeForManagement('000501')->id === $created->variantId, 'management lookup keeps barcode leading zeroes');
     try {
         $consumerVariants->getById($redVariant);
         check(false, 'an inactive Variant must not be consumer-visible');

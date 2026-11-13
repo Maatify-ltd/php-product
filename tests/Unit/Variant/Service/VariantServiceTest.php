@@ -113,6 +113,16 @@ final class VariantServiceTest extends TestCase
                 return $this->all;
             }
 
+            public function findBySku(string $sku): ?VariantDTO
+            {
+                return $this->all;
+            }
+
+            public function findByBarcode(string $barcode): ?VariantDTO
+            {
+                return $this->all;
+            }
+
             public function findVisibleById(int $variantId): ?VariantDTO
             {
                 return $this->visible;

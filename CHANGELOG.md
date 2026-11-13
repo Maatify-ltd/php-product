@@ -10,6 +10,8 @@ No version has been released.
 
 ### Added
 
+- Consumer Product lookup by code and management Variant lookup by SKU or barcode, with the existing visibility and deleted-state rules.
+
 - `ProductFactory::forHost()` configures Management services together and opens one shared owner-lookup PDO on demand.
 
 - Management builders that discover an owner by identity accept an optional same-primary `ownerLookupPdo` for mutations inside an older Host snapshot. The main PDO retains all locks, writes, and transaction control.

@@ -11,6 +11,7 @@ use Maatify\Product\Common\Enum\ProductDeletedStateEnum;
 use Maatify\Product\Common\Exception\ProductBusinessRuleException;
 use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
 use Maatify\Product\Common\Exception\ProductStorageFailureFactory;
+use Maatify\Product\Common\Validation\TextInputRules;
 use Maatify\Product\Product\DTO\ProductConfigurationSnapshotDTO;
 use Maatify\Product\Product\Repository\ProductConfigurationRepositoryInterface;
 use Maatify\Product\Product\Service\ProductConfigurationValidator;
@@ -24,6 +25,7 @@ use Maatify\Product\Variant\Management\Command\UpdateVariantIdentifiersCommand;
 use Maatify\Product\Variant\Management\Criteria\VariantListCriteriaDTO;
 use Maatify\Product\Variant\Repository\VariantCommandRepositoryInterface;
 use Maatify\Product\Variant\Repository\VariantQueryReaderInterface;
+use Maatify\Product\Variant\ValueObject\VariantIdentifierChange;
 use Maatify\SharedCommon\Contracts\ClockInterface;
 
 /**
@@ -54,16 +56,46 @@ final readonly class VariantManagementService implements VariantManagementServic
     ): VariantDTO {
         self::requirePositive($variantId, 'variantId');
         $variant = $this->reader->findById($variantId);
-        $matches = $variant !== null && match ($deletedState) {
-            ProductDeletedStateEnum::NON_DELETED => $variant->deletedAt === null,
-            ProductDeletedStateEnum::DELETED_ONLY => $variant->deletedAt !== null,
-            ProductDeletedStateEnum::INCLUDE_DELETED => true,
-        };
-        if ($variant === null || !$matches) {
+        if ($variant === null || !self::matchesDeletedState($variant, $deletedState)) {
             throw VariantNotFoundException::withId($variantId);
         }
 
         return $variant;
+    }
+
+    public function getBySkuForManagement(
+        string $sku,
+        ProductDeletedStateEnum $deletedState = ProductDeletedStateEnum::NON_DELETED,
+    ): VariantDTO {
+        TextInputRules::requiredText($sku, 'sku', VariantIdentifierChange::MAX_LENGTH);
+        $variant = $this->reader->findBySku($sku);
+        if ($variant === null || !self::matchesDeletedState($variant, $deletedState)) {
+            throw VariantNotFoundException::withSku($sku);
+        }
+
+        return $variant;
+    }
+
+    public function getByBarcodeForManagement(
+        string $barcode,
+        ProductDeletedStateEnum $deletedState = ProductDeletedStateEnum::NON_DELETED,
+    ): VariantDTO {
+        TextInputRules::requiredText($barcode, 'barcode', VariantIdentifierChange::MAX_LENGTH);
+        $variant = $this->reader->findByBarcode($barcode);
+        if ($variant === null || !self::matchesDeletedState($variant, $deletedState)) {
+            throw VariantNotFoundException::withBarcode($barcode);
+        }
+
+        return $variant;
+    }
+
+    private static function matchesDeletedState(VariantDTO $variant, ProductDeletedStateEnum $deletedState): bool
+    {
+        return match ($deletedState) {
+            ProductDeletedStateEnum::NON_DELETED => $variant->deletedAt === null,
+            ProductDeletedStateEnum::DELETED_ONLY => $variant->deletedAt !== null,
+            ProductDeletedStateEnum::INCLUDE_DELETED => true,
+        };
     }
 
     public function listByProductIdForManagement(

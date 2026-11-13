@@ -42,6 +42,21 @@ final class VariantIdentifiersTest extends RuntimeTestCase
         self::assertSame([' SKU-1 ', '000123'], $this->identifiersOf($b->variantId), 'A cleared value is released.');
     }
 
+    public function testManagementCanFindVariantsByTheirSecondaryIdentifiers(): void
+    {
+        $created = $this->namedProduct('LOOKUP');
+        $service = $this->variantManagementService();
+        $service->updateIdentifiers(self::change($created->variantId, VariantIdentifierChange::set('SKU-1'), VariantIdentifierChange::set('000123')));
+        self::assertSame($created->variantId, $service->getBySkuForManagement('sku-1')->id);
+        self::assertSame($created->variantId, $service->getByBarcodeForManagement('000123')->id);
+        $this->assertThrows(VariantNotFoundException::class, fn() => $service->getByBarcodeForManagement('123'));
+        $this->assertThrows(\Maatify\Product\Common\Exception\ProductInvalidArgumentException::class, fn() => $service->getBySkuForManagement('  '));
+
+        $this->productManagementService()->softDelete($created->productId);
+        self::assertSame($created->variantId, $service->getBySkuForManagement('SKU-1')->id);
+        $this->assertThrows(VariantNotFoundException::class, fn() => $service->getBySkuForManagement('SKU-1', ProductDeletedStateEnum::DELETED_ONLY));
+    }
+
     public function testAValueHeldByAnotherVariantIsATypedConflict(): void
     {
         $a = $this->namedProduct('A');
@@ -65,6 +80,10 @@ final class VariantIdentifiersTest extends RuntimeTestCase
         $this->assertThrows(VariantBarcodeAlreadyExistsException::class, fn() => $service->updateIdentifiers(self::change($b->variantId, VariantIdentifierChange::unchanged(), VariantIdentifierChange::set('111'))));
         $this->assertThrows(ProductBusinessRuleException::class, fn() => $service->updateIdentifiers(self::change($a->variantId, VariantIdentifierChange::clear(), VariantIdentifierChange::clear())), 'A soft-deleted Variant accepts only restore.');
         self::assertSame('SKU-A', $service->getByIdForManagement($a->variantId, ProductDeletedStateEnum::DELETED_ONLY)->sku);
+        $this->assertThrows(VariantNotFoundException::class, fn() => $service->getBySkuForManagement('SKU-A'));
+        $this->assertThrows(VariantNotFoundException::class, fn() => $service->getByBarcodeForManagement('111'));
+        self::assertSame($a->variantId, $service->getBySkuForManagement('sku-a', ProductDeletedStateEnum::DELETED_ONLY)->id);
+        self::assertSame($a->variantId, $service->getByBarcodeForManagement('111', ProductDeletedStateEnum::INCLUDE_DELETED)->id);
     }
 
     public function testTheConflictIsClassifiedByTheViolatedKeyNotByTheValue(): void

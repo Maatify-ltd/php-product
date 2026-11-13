@@ -23,6 +23,12 @@ interface VariantQueryReaderInterface
      */
     public function findById(int $variantId): ?VariantDTO;
 
+    /** Finds the Variant by SKU under the database collation, regardless of status or deletion. */
+    public function findBySku(string $sku): ?VariantDTO;
+
+    /** Finds the Variant by barcode under the database collation, regardless of status or deletion. */
+    public function findByBarcode(string $barcode): ?VariantDTO;
+
     /**
      * Finds a Variant only when it is consumer-visible.
      *

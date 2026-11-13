@@ -43,6 +43,32 @@ interface VariantManagementServiceInterface
     ): VariantDTO;
 
     /**
+     * Returns a Variant by SKU under the database collation, filtered by its own deleted state.
+     * Status and Product visibility do not affect the result.
+     *
+     * @param string $sku Valid UTF-8, at most 128 characters, neither empty nor whitespace only. Never trimmed.
+     * @throws ProductInvalidArgumentException When the identifier is invalid.
+     * @throws VariantNotFoundException When no matching Variant has the requested deleted state.
+     */
+    public function getBySkuForManagement(
+        string $sku,
+        ProductDeletedStateEnum $deletedState = ProductDeletedStateEnum::NON_DELETED,
+    ): VariantDTO;
+
+    /**
+     * Returns a Variant by barcode under the database collation, filtered by its own deleted state.
+     * Status and Product visibility do not affect the result.
+     *
+     * @param string $barcode Valid UTF-8, at most 128 characters, neither empty nor whitespace only. Never trimmed.
+     * @throws ProductInvalidArgumentException When the identifier is invalid.
+     * @throws VariantNotFoundException When no matching Variant has the requested deleted state.
+     */
+    public function getByBarcodeForManagement(
+        string $barcode,
+        ProductDeletedStateEnum $deletedState = ProductDeletedStateEnum::NON_DELETED,
+    ): VariantDTO;
+
+    /**
      * Lists the Variants of a Product for management, at most 100, ordered by display order then identity.
      *
      * @throws ProductInvalidArgumentException When the identity is not a positive integer.

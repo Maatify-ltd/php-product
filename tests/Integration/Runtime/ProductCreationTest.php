@@ -160,6 +160,18 @@ final class ProductCreationTest extends RuntimeTestCase
         $consumer->getById($created->productId);
     }
 
+    public function testConsumerCodeLookupRespectsVisibility(): void
+    {
+        $created = $this->namedProduct('VISIBLE-CODE');
+        $consumer = $this->productConsumerService();
+        $this->assertThrows(ProductNotFoundException::class, fn() => $consumer->getByCode('VISIBLE-CODE'));
+        $this->activateProduct($created->productId);
+        self::assertSame($created->productId, $consumer->getByCode('visible-code')->id);
+        $this->assertThrows(ProductInvalidArgumentException::class, fn() => $consumer->getByCode('  '));
+        $this->productManagementService()->softDelete($created->productId);
+        $this->assertThrows(ProductNotFoundException::class, fn() => $consumer->getByCode('VISIBLE-CODE'));
+    }
+
     public function testReadsThrowNotFoundForAnUnknownIdentity(): void
     {
         $service = $this->productManagementService();

@@ -18,6 +18,18 @@ final class VariantNotFoundException extends ResourceNotFoundMaatifyException im
         return new self(sprintf('Variant [%d] was not found.', $variantId));
     }
 
+    /** No Variant with this sku matches the requested management read. */
+    public static function withSku(string $sku): self
+    {
+        return new self(sprintf('Variant with sku "%s" was not found.', $sku));
+    }
+
+    /** No Variant with this barcode matches the requested management read. */
+    public static function withBarcode(string $barcode): self
+    {
+        return new self(sprintf('Variant with barcode "%s" was not found.', $barcode));
+    }
+
     /**
      * @param string $canonical The canonical composition string of the selection.
      */
