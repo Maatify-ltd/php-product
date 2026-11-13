@@ -66,7 +66,7 @@ No version of this package is published to a Composer distribution source yet, s
 }
 ```
 
-This is a trial installation. The consumer root explicitly permits the Product development package and the exact Persistence release candidate.
+This is a trial installation. The consumer root explicitly permits the Product development package and the exact Persistence release candidate. See the [Persistence RC trial plan](docs/verification/CI_GATES.md#persistence-rc-trial-plan) for the verified version and the release hold.
 
 Then install the schema once into your database:
 
@@ -95,7 +95,7 @@ Runnable versions are in [`examples/`](examples/); the walkthroughs are in the [
 
 ## Public Runtime API
 
-This is an overview; the complete inventory and the stable contract are in the [Package Reference](PRODUCT_PACKAGE_REFERENCE.md#implemented-public-api).
+The [Package Reference](PRODUCT_PACKAGE_REFERENCE.md#implemented-public-api) gives the complete Public Runtime API inventory and the current contract for this unreleased package.
 
 | Type | Role |
 |---|---|

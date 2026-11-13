@@ -7,7 +7,7 @@ Use only the documented public contract below. Content visible in the repository
 ## Documentation
 
 - [README](README.md): package overview, requirements, installation, Quick Usage, and Public Runtime API overview.
-- [Package Reference](PRODUCT_PACKAGE_REFERENCE.md): the canonical stable public/runtime/behavioral contract and the complete Public Runtime API inventory.
+- [Package Reference](PRODUCT_PACKAGE_REFERENCE.md): the current public runtime and behavioral contract for the unreleased package, including the complete Public Runtime API inventory.
 - [Usage Guide](docs/guides/USAGE_GUIDE.md): consumer integration workflows and boundaries.
 - [Examples](examples/): maintained examples that consume the documented Public API.
 - [Schema](schema/README.md): what the delivered `schema/product.sql` creates and what it does not enforce.

@@ -20,6 +20,41 @@ composer update --no-interaction --prefer-dist --no-progress
 `composer.lock` is not committed. No credential is stored: every run generates a
 random, run-scoped database password.
 
+## Persistence RC trial plan
+
+The owner approved migrating and testing the successor Persistence package on
+[Draft PR #7](https://github.com/Maatify/php-product/pull/7) while retaining the release
+hold. The trial follows [Package Building §11](../php-engineering-standards/standards/packages/PACKAGE_BUILDING_STANDARD.md#11-shared-ordering-and-pagination-utilities)
+and [Composer §24](../php-engineering-standards/standards/packages/COMPOSER_PACKAGE_STANDARD.md#24-stability-policy)
+at the adopted standards commit `c5d70cbe005fc26c38a7218967efe991194e76d6`.
+
+- **Selection.** The trial pins `maatify/php-persistence` `1.0.0-rc.1` at
+  `34c3b874525d36ae064c162cdd553bc75d18772b`, as recorded by the
+  [published release](https://github.com/Maatify-ltd/php-persistence/releases/tag/v1.0.0-rc.1).
+  The Composer constraint has equal inclusive endpoints, so it admits only this RC.
+  Before selecting another RC, verify the latest published candidate by SemVer
+  precedence and match the release tag, Composer distribution metadata, and source
+  revision. Record the new version and revision and rerun the affected gates.
+- **Installation and validation.** Use the [README path installation](../../README.md#installation)
+  for trial hosts. The consumer root requests the exact Persistence RC and permits
+  the Product path package individually. Both the package and fixture use
+  `minimum-stability: stable` and `prefer-stable: true`. Run the Composer and
+  PHP boundary checks, PHPStan, style, unit and MySQL Integration suites, and
+  `composer verify:consumer`. The Harness checks the resolved version and revision,
+  the absence of the legacy dependency, and the public pagination response from
+  clean Composer roots.
+- **Evidence.** Migration commit `3463f9d` passed two Integration runs in each
+  PHP `8.4.27` / `8.5.12` × MySQL `8.0.16` / `8.0.46` cell (237 tests
+  and 3,364 assertions per run). The Harness passed from two clean roots on
+  PHP `8.4.27` and MySQL `8.0.46`, including the exact dependency identity and
+  all eight usage examples. These are trial verification results.
+- **Exit.** The RC exception ends when a Stable Persistence version is published.
+  Verify the Stable release and its API, update the package and fixture constraints
+  and identity checks, then rerun dependency, runtime and external consumer gates
+  on that revision. Product remains on release hold until the Stable integration
+  is verified, the applicable first-Stable gates pass, and the owner separately
+  authorizes release.
+
 ## Gates
 
 | Gate | Local command | CI job |
