@@ -32,6 +32,9 @@ No version has been released.
 - `ProductFactory` as the framework-agnostic construction entry point, with a `create{X}ManagementService()` for every capability and a `create{X}ConsumerService()` for every capability with a consumer read.
 - Public failures: `ProductCodeAlreadyExistsException`, `ProductNotFoundException`, `ProductInvalidArgumentException`, and `ProductPersistenceException`, all implementing `ProductExceptionInterface`.
 - Consumer documentation: Usage Guide, runnable examples for every capability, and `llms.txt`.
-- MIT `LICENSE`, matching the `license` field in `composer.json`.
 - Approved Contract Inventory in the Package Reference: capability IDs, structural invariants, management and consumer behavior, collation evidence for every text identity, and the compatibility record with `maatify/php-category`.
 - Verification: Unit and real-MySQL Integration suites, including concurrent reconfiguration and concurrent default replacement with separate processes, a Consumer Verification Harness that smoke-executes the examples, and the CI `Final Gate`.
+
+### Changed
+
+- Changed the Product package license from MIT to proprietary. The `LICENSE`, Composer metadata, and README now reflect the proprietary license.
