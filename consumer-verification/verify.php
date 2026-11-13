@@ -167,17 +167,17 @@ foreach (explode(";\n", (string) preg_replace('/^--.*$/m', '', $sql)) as $statem
     }
 }
 
-$options = [
+$pdoOptions = [
     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_EMULATE_PREPARES => false,
 ];
 $base = sprintf('mysql:host=%s;port=%s;charset=utf8mb4', env('PRODUCT_TEST_DB_HOST'), env('PRODUCT_TEST_DB_PORT'));
-$admin = new PDO($base, env('PRODUCT_TEST_DB_USER'), env('PRODUCT_TEST_DB_PASSWORD'), $options);
+$admin = new PDO($base, env('PRODUCT_TEST_DB_USER'), env('PRODUCT_TEST_DB_PASSWORD'), $pdoOptions);
 $database = 'product_consumer_' . bin2hex(random_bytes(6));
 $admin->exec("CREATE DATABASE `{$database}`");
 
 try {
-    $pdo = new PDO($base . ';dbname=' . $database, env('PRODUCT_TEST_DB_USER'), env('PRODUCT_TEST_DB_PASSWORD'), $options);
+    $pdo = new PDO($base . ';dbname=' . $database, env('PRODUCT_TEST_DB_USER'), env('PRODUCT_TEST_DB_PASSWORD'), $pdoOptions);
     $version = $pdo->query('SELECT VERSION()');
     check($version !== false && str_starts_with((string) $version->fetchColumn(), env('PRODUCT_TEST_EXPECTED_VERSION')), 'connected to the expected MySQL version');
 
@@ -332,7 +332,7 @@ try {
     check(!$assignments->getByIdForManagement($first)->isDefault, 'deleting the default promotes nothing');
 
     // The second session commits a new Option after the Host has established its read view.
-    $lookupPdo = new PDO($base . ';dbname=' . $database, env('PRODUCT_TEST_DB_USER'), env('PRODUCT_TEST_DB_PASSWORD'), $options);
+    $lookupPdo = new PDO($base . ';dbname=' . $database, env('PRODUCT_TEST_DB_USER'), env('PRODUCT_TEST_DB_PASSWORD'), $pdoOptions);
     $otherOptions = ProductFactory::createOptionManagementService($lookupPdo, $clock);
     $hostOptions = ProductFactory::createOptionManagementService($pdo, $clock, ownerLookupPdo: $lookupPdo);
     $pdo->exec('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
