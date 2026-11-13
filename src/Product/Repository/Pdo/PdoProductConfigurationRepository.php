@@ -38,7 +38,7 @@ use PDO;
  */
 final readonly class PdoProductConfigurationRepository implements ProductConfigurationRepositoryInterface
 {
-    private const int SNAPSHOT_ID_BATCH_SIZE = 1000;
+    private const int ID_BATCH_SIZE = 1000;
 
     public function __construct(
         private PDO $pdo,
@@ -293,13 +293,14 @@ final readonly class PdoProductConfigurationRepository implements ProductConfigu
      */
     private function updateStatusOf(string $table, array $ids, bool $active, DateTimeImmutable $occurredAt): void
     {
-        if ($ids === []) {
-            return;
+        $status = $active ? 'active' : 'inactive';
+        $updatedAt = $occurredAt->format('Y-m-d H:i:s');
+        foreach (array_chunk($ids, self::ID_BATCH_SIZE) as $batch) {
+            $statement = $this->pdo->prepare(
+                'UPDATE `' . $table . '` SET `status` = ?, `updated_at` = ? WHERE `deleted_at` IS NULL AND `id` IN (' . self::placeholders($batch) . ')',
+            );
+            $statement->execute([$status, $updatedAt, ...$batch]);
         }
-        $statement = $this->pdo->prepare(
-            'UPDATE `' . $table . '` SET `status` = ?, `updated_at` = ? WHERE `deleted_at` IS NULL AND `id` IN (' . self::placeholders($ids) . ')',
-        );
-        $statement->execute([$active ? 'active' : 'inactive', $occurredAt->format('Y-m-d H:i:s'), ...$ids]);
     }
 
     /**
@@ -313,7 +314,7 @@ final readonly class PdoProductConfigurationRepository implements ProductConfigu
     private function compositionsOf(array $variantIds): array
     {
         $compositions = [];
-        foreach (array_chunk($variantIds, self::SNAPSHOT_ID_BATCH_SIZE) as $batch) {
+        foreach (array_chunk($variantIds, self::ID_BATCH_SIZE) as $batch) {
             $statement = $this->pdo->prepare(
                 'SELECT `variant_id`, `option_id`, `option_value_id` FROM `maa_product_variant_option_values` '
                 . 'FORCE INDEX (`uq_maa_product_variant_option_values_variant_option`) WHERE `variant_id` IN ('
@@ -351,7 +352,7 @@ final readonly class PdoProductConfigurationRepository implements ProductConfigu
     private function labelledOwners(string $table, string $ownerColumn, string $identityKey, array $ownerIds): array
     {
         $owners = [];
-        foreach (array_chunk($ownerIds, self::SNAPSHOT_ID_BATCH_SIZE) as $batch) {
+        foreach (array_chunk($ownerIds, self::ID_BATCH_SIZE) as $batch) {
             $statement = $this->pdo->prepare(
                 'SELECT DISTINCT `' . $ownerColumn . '` AS `owner` FROM `' . $table . '` FORCE INDEX (`' . $identityKey . '`) WHERE `'
                 . $ownerColumn . '` IN (' . self::placeholders($batch) . ') AND `deleted_at` IS NULL '

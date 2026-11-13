@@ -50,8 +50,8 @@ final class LargeConfigurationSnapshotTest extends RuntimeTestCase
             $lastValue = (int) self::scalar('SELECT MAX(id) FROM maa_product_option_values');
             $this->labelValue($lastValue, 'Last historical Value');
 
-            $snapshot = (new PdoProductConfigurationRepository(self::$pdo, new ScopedOrderingManager()))
-                ->lockSnapshot($created->productId);
+            $repository = new PdoProductConfigurationRepository(self::$pdo, new ScopedOrderingManager());
+            $snapshot = $repository->lockSnapshot($created->productId);
             self::assertNotNull($snapshot);
             self::assertTrue(self::$pdo->inTransaction());
             self::assertCount(self::HISTORY_SIZE, $snapshot->optionValues);
@@ -62,6 +62,22 @@ final class LargeConfigurationSnapshotTest extends RuntimeTestCase
             $lastVariant = $snapshot->variants[$lastVariantId];
             self::assertCount(1, $lastVariant->composition);
             self::assertSame($lastValue, $lastVariant->composition[0]->optionValueId);
+
+            // Keep one deleted row in the input to verify the bulk update still excludes it.
+            $ids = array_keys($snapshot->variants);
+            unset($snapshot);
+            $this->execute(
+                'UPDATE maa_product_variants SET deleted_at = NULL, status = \'inactive\' WHERE product_id = :product_id AND id <> :deleted_id',
+                ['product_id' => $created->productId, 'deleted_id' => $lastVariantId],
+            );
+            $this->execute('SAVEPOINT before_status_batches');
+            $repository->updateVariantStatus($ids, true, self::laterClock()->now());
+
+            self::assertTrue(self::$pdo->inTransaction());
+            self::assertSame(self::HISTORY_SIZE, self::rowCount('maa_product_variants', "status = 'active' AND updated_at = '" . self::LATER_TS . "'"));
+            self::assertSame(1, self::rowCount('maa_product_variants', "status = 'inactive' AND deleted_at IS NOT NULL"));
+            $this->execute('ROLLBACK TO SAVEPOINT before_status_batches');
+            self::assertSame(0, self::rowCount('maa_product_variants', "status = 'active'"));
         } finally {
             self::$pdo->rollBack();
         }
