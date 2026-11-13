@@ -472,7 +472,7 @@ Examples of composition safety:
 
 ##### `CFG-01` Product reconfiguration (Management command, atomic)
 
-`ProductManagementServiceInterface::reconfigure(ReconfigureProductCommand $command): ProductReconfigurationResultDTO`. The only way to change the active Option set or the active Variant set, and the only way to create non-empty Variants. It is a Product-local atomic operation, never a sequence of ordinary Option calls (A§4.5, A§5.4, A§6.5).
+`ProductManagementServiceInterface::reconfigure(ReconfigureProductCommand $command): ProductReconfigurationResultDTO`. Applies a complete target configuration atomically for one Product. This command changes the active Option set and is the only way to create Variants with non-empty compositions (A§4.5, A§5.4, A§6.5). Individual Variant status changes, soft deletion, and restoration can also change which existing Variants are active and non-deleted, subject to the configuration invariants in `VAR-02` through `VAR-04`.
 
 The editor reads `getConfigurationRevision($productId)` **before** loading its configuration and keeps that value as the command's required positive `expectedRevision`. Do not fetch a new revision for an already prepared target. The Product must exist and be non-deleted to read its revision. Under the Product lock, a mismatch raises `ProductConfigurationRevisionConflictException` before any configuration write. Reload the revision and configuration before applying the user's changes again.
 
