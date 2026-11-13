@@ -66,7 +66,7 @@ No version of this package is published to a Composer distribution source yet, s
 }
 ```
 
-This is a trial installation. The consumer root explicitly permits the Product development package and the exact Persistence release candidate. See the [Persistence RC trial plan](docs/verification/CI_GATES.md#persistence-rc-trial-plan) for the verified version and the release hold.
+This is a trial installation. See [License](#license) to request written authorization before use. The consumer root explicitly permits the Product development package and the exact Persistence release candidate. See the [Persistence RC trial plan](docs/verification/CI_GATES.md#persistence-rc-trial-plan) for the verified version and the release hold.
 
 Then install the schema once into your database:
 
@@ -171,7 +171,12 @@ composer verify:consumer    # needs Docker with the Compose plugin
 
 ## License
 
-This package is proprietary. See [LICENSE](LICENSE) for the license terms and licensing contact.
+This package is proprietary. Request a free license from
+[support@maatify.dev](mailto:support@maatify.dev) before using it. Include your
+organization name, if applicable, and an email address for the person who should
+receive security advisories and critical update notices. Maatify Ltd. uses those
+details to administer licenses and send those notices. See [LICENSE](LICENSE)
+for the terms.
 
 ## Author
 
