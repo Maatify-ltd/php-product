@@ -31,6 +31,7 @@ bash scripts/ci/check-artifact-contents.sh "$(git rev-parse HEAD)"
 The check generates Git and Composer archives from a clean checkout of that SHA.
 It compares the distributed runtime, schema, examples, and required consumer
 documents against the commit, and rejects unexpected paths and private keys.
+The Composer Validate job also runs this check and records the checked-out SHA.
 Record the command result with the candidate SHA. This is the structural part of
 Release Artifact Verification under [CI Workflow §2.5](../php-engineering-standards/standards/packages/CI_WORKFLOW_STANDARD.md#25-release-artifact-verification).
 Once an exact release target is approved, the qualification also needs review of

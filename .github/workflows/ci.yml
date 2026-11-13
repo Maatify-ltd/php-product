@@ -39,6 +39,8 @@ jobs:
         run: composer validate --strict
       - name: Verify PHP Constraint Boundaries
         run: bash scripts/ci/check-php-constraint.sh
+      - name: Verify Git and Composer Archive Contents
+        run: bash scripts/ci/check-artifact-contents.sh "$(git rev-parse HEAD)"
 
   php-syntax:
     name: PHP Syntax Check
