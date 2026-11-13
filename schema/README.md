@@ -23,6 +23,13 @@ ALTER TABLE `maa_product_products`
     ADD CONSTRAINT `chk_maa_product_products_configuration_revision` CHECK (`configuration_revision` > 0);
 ```
 
+The Image Assignment scope key also changed after the earlier trial snapshots.
+Use a fresh schema for trial databases that can be rebuilt. For a trial database
+that must retain data, pause Product writes and reconcile equivalent scopes
+(including duplicate defaults and ordering positions) before replacing the
+generated scope columns and their indexes with the definitions in `product.sql`.
+Apply the schema and application updates together.
+
 ## Requirements
 
 - MySQL `8.0.16` or later. The minimum is part of the storage contract because

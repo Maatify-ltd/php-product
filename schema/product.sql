@@ -405,7 +405,7 @@ CREATE TABLE `maa_product_image_assignments`
     `role_id_identity`       BIGINT UNSIGNED GENERATED ALWAYS AS (COALESCE(`role_id`, 0)) STORED COMMENT 'Generated uniqueness key mapping NULL Role to one database value',
     `language_code_identity` VARCHAR(16) GENERATED ALWAYS AS (COALESCE(`language_code`, '')) STORED COMMENT 'Generated uniqueness key mapping NULL language to one database value',
     `platform_identity`      VARCHAR(255) GENERATED ALWAYS AS (COALESCE(`platform`, '')) STORED COMMENT 'Generated uniqueness key mapping NULL platform to one database value',
-    `ordering_scope`         VARCHAR(192) CHARACTER SET ascii COLLATE ascii_bin GENERATED ALWAYS AS (
+    `ordering_scope`         VARCHAR(200) CHARACTER SET ascii COLLATE ascii_bin GENERATED ALWAYS AS (
         CONCAT('P', `product_id`, '|', COALESCE(`variant_id`, 0), '|', COALESCE(SHA2(TRIM(TRAILING WEIGHT_STRING(_utf8mb4' ' COLLATE utf8mb4_unicode_ci) FROM WEIGHT_STRING(`language_code` COLLATE utf8mb4_unicode_ci)), 256), 'N'), '|', COALESCE(SHA2(TRIM(TRAILING WEIGHT_STRING(_utf8mb4' ' COLLATE utf8mb4_unicode_ci) FROM WEIGHT_STRING(`platform` COLLATE utf8mb4_unicode_ci)), 256), 'N'), '|', COALESCE(`role_id`, 0))
     ) STORED COMMENT 'Generated exact scope from MySQL collation weights for ordering and default uniqueness',
     `is_default`             TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Explicit default marker within the exact target and scope; zero or one active default is allowed; never auto-promoted',
@@ -413,7 +413,7 @@ CREATE TABLE `maa_product_image_assignments`
     `created_at`             DATETIME NOT NULL COMMENT 'Host Clock timestamp assigned by the Product application when the assignment is created',
     `updated_at`             DATETIME NOT NULL COMMENT 'Host Clock timestamp assigned by the Product application on ordering, default mutation, soft delete, or restore',
     `deleted_at`             DATETIME NULL COMMENT 'Host Clock timestamp assigned by the Product application on soft delete; NULL means not deleted',
-    `default_scope_identity` VARCHAR(192) CHARACTER SET ascii COLLATE ascii_bin GENERATED ALWAYS AS (
+    `default_scope_identity` VARCHAR(200) CHARACTER SET ascii COLLATE ascii_bin GENERATED ALWAYS AS (
         CASE
             WHEN `is_default` = 1 AND `deleted_at` IS NULL THEN `ordering_scope`
             ELSE NULL

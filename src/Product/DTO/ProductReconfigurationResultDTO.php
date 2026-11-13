@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Maatify\Product\Product\DTO;
 
 use JsonSerializable;
+use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
 
 /**
  * The deterministic identities a Product reconfiguration produced or changed, so the Host can
@@ -34,7 +35,24 @@ final readonly class ProductReconfigurationResultDTO implements JsonSerializable
         public array $deactivatedOptionIds,
         public array $activatedOptionValueIds,
         public array $deactivatedOptionValueIds,
-    ) {}
+    ) {
+        foreach ([
+            'createdVariantIds' => $createdVariantIds,
+            'reactivatedVariantIds' => $reactivatedVariantIds,
+            'restoredVariantIds' => $restoredVariantIds,
+            'deactivatedVariantIds' => $deactivatedVariantIds,
+            'activatedOptionIds' => $activatedOptionIds,
+            'deactivatedOptionIds' => $deactivatedOptionIds,
+            'activatedOptionValueIds' => $activatedOptionValueIds,
+            'deactivatedOptionValueIds' => $deactivatedOptionValueIds,
+        ] as $field => $ids) {
+            foreach ($ids as $id) {
+                if ($id < 1) {
+                    throw ProductInvalidArgumentException::nonPositiveId($field);
+                }
+            }
+        }
+    }
 
     /**
      * @return array{

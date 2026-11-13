@@ -40,6 +40,12 @@ final readonly class ImageAssignmentDTO implements JsonSerializable
         if ($mediaAssetId < 1) {
             throw ProductInvalidArgumentException::nonPositiveId('mediaAssetId');
         }
+        if ($variantId !== null && $variantId < 1) {
+            throw ProductInvalidArgumentException::nonPositiveId('variantId');
+        }
+        if ($roleId !== null && $roleId < 1) {
+            throw ProductInvalidArgumentException::nonPositiveId('roleId');
+        }
         if ($displayOrder < 1) {
             throw ProductInvalidArgumentException::invalidDisplayOrder($displayOrder);
         }
