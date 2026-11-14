@@ -12,7 +12,7 @@
 
 [![Maatify Ecosystem](https://img.shields.io/badge/Maatify-Ecosystem-blueviolet)](https://github.com/Maatify)
 
-[![Usage Guide](https://img.shields.io/badge/Docs-Usage%20Guide-informational)](docs/guides/USAGE_GUIDE.md) [![Examples](https://img.shields.io/badge/Docs-Examples-informational)](examples/) [![Package Reference](https://img.shields.io/badge/Docs-Package%20Reference-informational)](PRODUCT_PACKAGE_REFERENCE.md) [![Changelog](https://img.shields.io/badge/Docs-Changelog-informational)](CHANGELOG.md) [![Security Policy](https://img.shields.io/badge/Docs-Security%20Policy-informational)](SECURITY.md) [![Contributing Guide](https://img.shields.io/badge/Docs-Contributing%20Guide-informational)](https://github.com/Maatify-ltd/php-product/blob/c853504edf9837b7cc987cdd25c2cc0c850c4393/CONTRIBUTING.md)
+[![Usage Guide](https://img.shields.io/badge/Docs-Usage%20Guide-informational)](docs/guides/USAGE_GUIDE.md) [![Examples](https://img.shields.io/badge/Docs-Examples-informational)](examples/) [![Package Reference](https://img.shields.io/badge/Docs-Package%20Reference-informational)](PRODUCT_PACKAGE_REFERENCE.md) [![Changelog](https://img.shields.io/badge/Docs-Changelog-informational)](CHANGELOG.md) [![Security Policy](https://img.shields.io/badge/Docs-Security%20Policy-informational)](SECURITY.md) [![Contributing Guide](https://img.shields.io/badge/Docs-Contributing%20Guide-informational)](https://github.com/Maatify-ltd/php-product/blob/main/CONTRIBUTING.md)
 
 Framework-agnostic PHP library for managing Products, Variants, and configurable catalogs on MySQL.
 
