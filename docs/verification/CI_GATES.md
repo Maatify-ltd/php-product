@@ -52,8 +52,9 @@ The exact RC and the checks for changing it are listed below.
   Before selecting another RC, verify the latest published candidate by SemVer
   precedence and match the release tag, Composer distribution metadata, and source
   revision. Record the new version and revision and rerun the affected gates.
-- **Checkout installation and validation.** Run `composer verify:consumer` from
-  the checkout. The [Consumer Harness Composer template](../../consumer-verification/composer.json.template)
+- **Checkout installation and validation.** From the root of the repository
+  checkout, run `composer verify:consumer`. The
+  [Consumer Harness Composer template](https://github.com/Maatify-ltd/php-product/blob/main/consumer-verification/composer.json.template)
   defines the `path` repository that the Harness points to the checkout. The consumer
   root requests the exact Persistence RC and permits the Product path package
   individually. Both the package and fixture use
