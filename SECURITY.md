@@ -5,7 +5,7 @@
 
 ## Supported versions
 
-This artifact targets `maatify/php-product:1.0.0-rc.1`. Publication state at qualification is unpublished. There is no supported Stable release line.
+Release candidate [`maatify/php-product:1.0.0-rc.1`](https://packagist.org/packages/maatify/php-product#v1.0.0-rc.1) is published on Packagist. There is no supported Stable release line.
 
 ## Reporting a vulnerability
 

@@ -52,23 +52,24 @@ The exact RC and the checks for changing it are listed below.
   Before selecting another RC, verify the latest published candidate by SemVer
   precedence and match the release tag, Composer distribution metadata, and source
   revision. Record the new version and revision and rerun the affected gates.
-- **Installation and validation.** Use the [README path installation](../../README.md#installation)
-  for trial hosts. The consumer root requests the exact Persistence RC and permits
-  the Product path package individually. Both the package and fixture use
+- **Checkout installation and validation.** From the root of the repository
+  checkout, run `composer verify:consumer`. The
+  [Consumer Harness Composer template](https://github.com/Maatify-ltd/php-product/blob/main/consumer-verification/composer.json.template)
+  defines the `path` repository that the Harness points to the checkout. The consumer
+  root requests the exact Persistence RC and permits the Product path package
+  individually. Both the package and fixture use
   `minimum-stability: stable` and `prefer-stable: true`. Run the Composer and
-  PHP boundary checks, PHPStan, style, unit and MySQL Integration suites, and
-  `composer verify:consumer`. The Harness checks the resolved version and revision,
-  the absence of the legacy dependency, and the public pagination response from
+  PHP boundary checks, PHPStan, style, unit and MySQL Integration suites. The Harness checks the
+  resolved version and revision, the absence of the legacy dependency, and the public pagination response from
   clean Composer roots.
 - **Exit.** The RC exception ends when a Stable Persistence version is published.
   Verify the Stable release and its API, update the package and fixture constraints
   and identity checks, then rerun dependency, runtime and external consumer gates
   on that revision. Product Stable requires the compatible Stable Persistence
   integration, the first-Stable gates, and separate owner release authorization.
-- **First Product RC.** The target is `maatify/php-product:1.0.0-rc.1` on Packagist,
-  with the exact Persistence RC above. The release-qualified Product commit must
-  be recorded before tagging. After publication, install both exact versions in
-  a clean external Composer root using the [README command](../../README.md#installation).
+- **Published Product RC.** Install `maatify/php-product:1.0.0-rc.1` and the exact
+  Persistence RC above from Packagist in a clean external Composer root using
+  the [README install command](../../README.md#installation).
   Verify the actual distribution install and match its source reference and
   contents to the qualified artifact. Run the Consumer Harness against that
   installed Product RC.

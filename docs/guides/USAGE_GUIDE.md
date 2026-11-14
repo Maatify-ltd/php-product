@@ -2,7 +2,7 @@
 
 This guide shows how a Host application consumes `maatify/php-product`. The technical contract (the complete Public Runtime API and its guarantees) is owned by the [Package Reference](../../PRODUCT_PACKAGE_REFERENCE.md); this guide does not redefine it. Runnable code is in [`examples/`](../../examples/).
 
-This guide applies to `maatify/php-product:1.0.0-rc.1`. See the [README installation section](../../README.md#installation) for the exact install target and checkout instructions. This guide covers every public capability: Product creation, lifecycle, and reconfiguration; Variant reads, composition resolution, identifiers, and lifecycle; Options and Option Values; Product, Option, and Option Value Content; Image Roles and Image Assignments; ordering; management lists, search, and pagination; and the consumer reads.
+This guide applies to `maatify/php-product:1.0.0-rc.1`. See the [README installation section](../../README.md#installation) for the exact Composer install command. This guide covers every public capability: Product creation, lifecycle, and reconfiguration; Variant reads, composition resolution, identifiers, and lifecycle; Options and Option Values; Product, Option, and Option Value Content; Image Roles and Image Assignments; ordering; management lists, search, and pagination; and the consumer reads.
 
 ## Fit
 
@@ -208,6 +208,22 @@ $result = $products->reconfigure(new ReconfigureProductCommand(
     ],
 ));
 // $result->createdVariantIds, $result->deactivatedVariantIds (the empty-composition Variant)
+```
+
+The successful path from saving a configuration to resolving a shopper's selection
+assumes the Product is visible to consumers.
+
+```mermaid
+flowchart LR
+    subgraph M["Management"]
+        A["Prepare labelled Options and Values"] --> B["Save the configuration with reconfigure()"]
+    end
+    subgraph C["Storefront"]
+        D["Read visible Options and Values"] --> E["Shopper selects one Value per Option"]
+        E --> F["resolveByComposition()"]
+        F --> G["Matching visible Variant"]
+    end
+    B --> D
 ```
 
 ## 8. Resolve a composition
