@@ -65,12 +65,13 @@ The exact RC and the checks for changing it are listed below.
   and identity checks, then rerun dependency, runtime and external consumer gates
   on that revision. Product Stable requires the compatible Stable Persistence
   integration, the first-Stable gates, and separate owner release authorization.
-- **First Product RC.** Publishing a Product RC with a Persistence RC dependency
-  requires a separate owner-approved release plan for that candidate. Record the exact Product
-  and Persistence versions, their source identities, the Composer distribution
-  channel and the consumer root's package-specific stability requirements.
-  Qualify the candidate artifact before publication, then verify installation
-  and run the Consumer Harness against the exact published Product RC.
+- **First Product RC.** The target is `maatify/php-product:1.0.0-rc.1` on Packagist,
+  with the exact Persistence RC above. The release-qualified Product commit must
+  be recorded before tagging. After publication, install both exact versions in
+  a clean external Composer root using the [README command](../../README.md#installation).
+  Verify the actual distribution install and match its source reference and
+  contents to the qualified artifact. Run the Consumer Harness against that
+  installed Product RC.
 
 ## Gates
 

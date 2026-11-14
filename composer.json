@@ -1,10 +1,12 @@
 {
     "name": "maatify/php-product",
-    "description": "PHP library for Product, Variant, Option, and Product image-assignment identity, with a MySQL-backed schema.",
+    "description": "Framework-agnostic PHP library for managing Products, Variants, and configurable catalogs on MySQL.",
     "keywords": [
         "product",
         "variant",
         "php",
+        "mysql",
+        "catalog",
         "maatify"
     ],
     "homepage": "https://github.com/Maatify-ltd/php-product",
