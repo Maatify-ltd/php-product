@@ -2,7 +2,7 @@
 
 This guide shows how a Host application consumes `maatify/php-product`. The technical contract (the complete Public Runtime API and its guarantees) is owned by the [Package Reference](../../PRODUCT_PACKAGE_REFERENCE.md); this guide does not redefine it. Runnable code is in [`examples/`](../../examples/).
 
-The package is in development and no version is published. This guide covers every public capability: Product creation, lifecycle, and reconfiguration; Variant reads, composition resolution, identifiers, and lifecycle; Options and Option Values; Product, Option, and Option Value Content; Image Roles and Image Assignments; ordering; management lists, search, and pagination; and the consumer reads.
+This guide applies to `maatify/php-product:1.0.0-rc.1`. See the [README installation section](../../README.md#installation) for the exact install target and checkout instructions. This guide covers every public capability: Product creation, lifecycle, and reconfiguration; Variant reads, composition resolution, identifiers, and lifecycle; Options and Option Values; Product, Option, and Option Value Content; Image Roles and Image Assignments; ordering; management lists, search, and pagination; and the consumer reads.
 
 ## Fit
 

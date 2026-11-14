@@ -8,7 +8,7 @@
   <img alt="Maatify.dev" src="https://www.maatify.dev/company-profile/maatify_logo_dark.svg">
 </picture>
 
-[![Status](https://img.shields.io/badge/Status-Development-blue)](README.md) [![PHP](https://img.shields.io/badge/PHP-%3E%3D8.4.27%20%3C8.5.0%20%7C%7C%20%3E%3D8.5.12%20%3C8.6.0-8892BF)](composer.json) [![License](https://img.shields.io/badge/License-Proprietary-green)](LICENSE) [![PHPStan Level Max](https://img.shields.io/badge/PHPStan-Level%20Max-brightgreen)](https://github.com/Maatify-ltd/php-product/actions/runs/43544696773)
+[![Release target: 1.0.0-rc.1](https://img.shields.io/badge/Release%20target-1.0.0--rc.1-blue)](#installation) [![PHP](https://img.shields.io/badge/PHP-%3E%3D8.4.27%20%3C8.5.0%20%7C%7C%20%3E%3D8.5.12%20%3C8.6.0-8892BF)](composer.json) [![License](https://img.shields.io/badge/License-Proprietary-green)](LICENSE) [![PHPStan Level Max](https://img.shields.io/badge/PHPStan-Level%20Max-brightgreen)](https://github.com/Maatify-ltd/php-product/actions/runs/43544696773)
 
 [![Maatify Ecosystem](https://img.shields.io/badge/Maatify-Ecosystem-blueviolet)](https://github.com/Maatify)
 
@@ -34,7 +34,7 @@ Framework-agnostic PHP library for managing Products, Variants, and configurable
 
 ## Installation
 
-This tree prepares Product release candidate `1.0.0-rc.1`. Publication state at qualification is unpublished. Once this exact version is available on Packagist, install it in the consumer project:
+This artifact targets `maatify/php-product:1.0.0-rc.1`. At qualification, this release candidate is unpublished. Once this exact version is available on Packagist, install it in the consumer project:
 
 ```bash
 composer require maatify/php-product:1.0.0-rc.1 maatify/php-persistence:1.0.0-rc.1
