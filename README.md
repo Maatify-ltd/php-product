@@ -8,9 +8,9 @@
   <img alt="Maatify.dev" src="https://www.maatify.dev/company-profile/maatify_logo_dark.svg">
 </picture>
 
-[![Release target: 1.0.0-rc.1](https://img.shields.io/badge/Release%20target-1.0.0--rc.1-blue)](#installation) [![PHP](https://img.shields.io/badge/PHP-%3E%3D8.4.27%20%3C8.5.0%20%7C%7C%20%3E%3D8.5.12%20%3C8.6.0-8892BF)](composer.json) [![License](https://img.shields.io/badge/License-Proprietary-green)](LICENSE) [![PHPStan Level Max](https://img.shields.io/badge/PHPStan-Level%20Max-brightgreen)](https://github.com/Maatify-ltd/php-product/actions/runs/43544696773)
+[![Status: Release Candidate](https://img.shields.io/badge/Status-Release%20Candidate-blue)](#installation) [![Version: 1.0.0-rc.1](https://img.shields.io/badge/Version-1.0.0--rc.1-blue)](https://packagist.org/packages/maatify/php-product#v1.0.0-rc.1) [![PHP](https://img.shields.io/badge/PHP-%3E%3D8.4.27%20%3C8.5.0%20%7C%7C%20%3E%3D8.5.12%20%3C8.6.0-8892BF)](composer.json) [![License](https://img.shields.io/badge/License-Proprietary-green)](LICENSE) [![PHPStan Level Max](https://img.shields.io/badge/PHPStan-Level%20Max-brightgreen)](https://github.com/Maatify-ltd/php-product/actions/runs/43544696773)
 
-[![Maatify Ecosystem](https://img.shields.io/badge/Maatify-Ecosystem-blueviolet)](https://github.com/Maatify)
+[![Packagist](https://img.shields.io/badge/Registry-Packagist-orange)](https://packagist.org/packages/maatify/php-product) [![Monthly Downloads](https://img.shields.io/packagist/dm/maatify/php-product)](https://packagist.org/packages/maatify/php-product/stats) [![Total Downloads](https://img.shields.io/packagist/dt/maatify/php-product)](https://packagist.org/packages/maatify/php-product/stats) [![Maatify Ecosystem](https://img.shields.io/badge/Maatify-Ecosystem-blueviolet)](https://github.com/Maatify)
 
 [![Usage Guide](https://img.shields.io/badge/Docs-Usage%20Guide-informational)](docs/guides/USAGE_GUIDE.md) [![Examples](https://img.shields.io/badge/Docs-Examples-informational)](examples/) [![Package Reference](https://img.shields.io/badge/Docs-Package%20Reference-informational)](PRODUCT_PACKAGE_REFERENCE.md) [![Changelog](https://img.shields.io/badge/Docs-Changelog-informational)](CHANGELOG.md) [![Security Policy](https://img.shields.io/badge/Docs-Security%20Policy-informational)](SECURITY.md) [![Contributing Guide](https://img.shields.io/badge/Docs-Contributing%20Guide-informational)](https://github.com/Maatify-ltd/php-product/blob/main/CONTRIBUTING.md)
 
@@ -34,33 +34,13 @@ Framework-agnostic PHP library for managing Products, Variants, and configurable
 
 ## Installation
 
-This artifact targets `maatify/php-product:1.0.0-rc.1`. At qualification, this release candidate is unpublished. Once this exact version is available on Packagist, install it in the consumer project:
+Product release candidate [`1.0.0-rc.1`](https://packagist.org/packages/maatify/php-product#v1.0.0-rc.1) is available on Packagist. Install the exact Product and Persistence release candidates in the consumer project:
 
 ```bash
 composer require maatify/php-product:1.0.0-rc.1 maatify/php-persistence:1.0.0-rc.1
 ```
 
 Keep `minimum-stability: stable` and permit these exact pre-release versions in the consumer root. See [License](#license) for the free license required before use.
-
-For checkout testing before publication, configure a Composer path repository:
-
-```json
-{
-    "repositories": [
-        {
-            "type": "path",
-            "url": "/path/to/php-product",
-            "options": { "symlink": false }
-        }
-    ],
-    "require": {
-        "maatify/php-product": "*@dev",
-        "maatify/php-persistence": ">=1.0.0-rc.1 <=1.0.0-rc.1"
-    },
-    "minimum-stability": "stable",
-    "prefer-stable": true
-}
-```
 
 Then install the schema once into your database:
 
