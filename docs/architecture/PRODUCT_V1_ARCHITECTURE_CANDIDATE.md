@@ -321,7 +321,7 @@ The Product package does not create orders or decide how an order snapshot is re
 
 Product owns Product/Variant image-role metadata and image-assignment relations, but never owns Media Asset storage, upload, processing, URL resolution, or Media Asset lifecycle. This capability is Product-owned and independent of `maatify/php-category`'s Category Image Role registry and Category Image Assignments. Their role IDs are separate namespaces; Product must not consume or persist Category `role_id` values.
 
-The capability is named Image Role and Image Assignment, persisted as `maa_product_image_roles` and `maa_product_image_assignments`, with the explicit default marker `is_default` and the generated `default_scope_identity` (§11.4). Single-record reads follow the package read pair: `getById` is the consumer read and returns only a consumer-visible record, and `getByIdForManagement` is the management read, which ignores status and filters only by soft-deletion state. Image Roles and Image Assignments are read one by one through `getByIdForManagement`; consumers read assignments only through the exact-scope read (§12).
+The capability is named Image Role and Image Assignment, persisted as `maa_product_image_roles` and `maa_product_image_assignments`, with the explicit default marker `is_default` and the generated `default_scope_identity` (§11.4). Management reads individual Image Roles and Image Assignments through `getByIdForManagement()`, using the requested soft-deletion filter regardless of status. Consumers read visible Image Assignments for one exact scope through `listVisibleByExactScope()` or `paginateVisibleByExactScope()` (§12).
 
 ### 9.1 Media Asset ID interoperability
 
@@ -475,7 +475,8 @@ Image default replacement locks the owning Product/Variant target scope and uses
 ## 12. Query Semantics
 
 - Management reads can explicitly filter status and deleted state. Consumer reads cannot request deleted records or bypass inactive Product/Variant/Option visibility rules.
-- Every unpaginated consumer or management list is bounded to at most 100 records. Large management lists use the shared `maatify/php-persistence` pagination API (`PageRequest`/`PageResultDTO`) when applicable; do not implement a package-local competing pagination engine.
+- Unpaginated Consumer and Management lists return at most 100 records. Management pagination and the four Consumer page reads use the shared `maatify/php-persistence` API (`PageRequest` and `PageResultDTO`).
+- Consumer pagination covers Variants (`paginateByProductId()`), Options (`paginateVisibleByProductId()`), Option Values (`paginateVisibleByOptionId()`), and exact-scope Image Assignments (`paginateVisibleByExactScope()`). Each page holds at most 100 records. Pages and counts use the corresponding list's visibility rules, and pages keep its ascending `display_order, id` order.
 - All `display_order` positions are positive and managed through the shared `maatify/php-persistence` Ordering API where applicable. Ordering is scope-specific and deterministic, ending with a stable unique key (`display_order, id`).
 - Content reads are exact and strictly differentiate between three distinct query intentions in the typed criteria contract:
   1. **Exact-language query:** Explicitly requests content for a specific non-NULL `language_code` (e.g. `'ar'`). Returns only content records for that exact language. If none exists, returns no match; never automatically falls back to unlocalized (`NULL`) content or another language.
