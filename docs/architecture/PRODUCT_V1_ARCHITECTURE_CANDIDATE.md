@@ -6,8 +6,6 @@
 **Document path:** `docs/architecture/PRODUCT_V1_ARCHITECTURE_CANDIDATE.md`<br>
 **Architecture type:** Standalone, reusable, host-agnostic Composer package  
 **Scope:** Product identity, variants, variant-defining options and values, product content, and product-owned image assignments  
-**Review date:** 2026-10-11  
-**Review basis:** Current `maatify/php-category` package reference, usage guide, SQL schema, and the Product repository's currently pinned standards manifest.
 
 ## 1. Executive Decision
 
@@ -26,13 +24,11 @@ The core identity model is:
 
 This is a deliberate redesign of parts of the historical Catalog V1 specification. The previous Product Base Price plus Option Value adjustment equation is not the required V1 pricing contract. The Catalog integration layer and the Pricing contract must be updated consistently before integrated sellability is accepted.
 
-### 1.1 Review status and approval boundary
+### 1.1 Contract and verification
 
-This document has been reviewed against the current Category package contract and the applicable Product repository standards references. The review tightened several previously under-specified areas: content identity and exact locale reads, composite foreign-key enforcement for Variant composition and image-assignment targets, mutation serialization, active Option Value coverage, status casing, and the persistence design (§11).
-
-This document itself adds no SQL DDL, migrations, or persistence implementation. The Owner approved it as the architecture contract for Product V1 under [`DEC-007`](../decisions/DEC-007-product-v1-implementation-start-authorization.md). The pre-implementation standards applicability re-evaluation required by that decision was completed on 2026-10-12 and is recorded in `STANDARDS_MANIFEST.md`: package-owned SQL persistence and manually maintained PHP are applicable, so the conditional persistence requirements of the Package Building Standard, and the persistence-conditioned requirements of the CI Workflow, Testing, Composer Package, and Library Presentation Standards, apply to the implementation.
-
-Owner approval authorizes the start of implementation within the approved scope; it is not evidence of implementation, schema execution, or test success, and it does not authorize Pricing or Inventory libraries, full Catalog integration, a Product-to-Category relationship inside either core library, merge, release, or publish. No Product SQL schema or PHP implementation has been executed or validated by this review.
+The architecture applies to the Product package. The [Package Reference](../../PRODUCT_PACKAGE_REFERENCE.md)
+describes the public runtime contract, and [CI and local verification](../verification/CI_GATES.md)
+describes how to verify the implementation.
 
 ## 2. Design Principles
 
@@ -325,7 +321,7 @@ The Product package does not create orders or decide how an order snapshot is re
 
 Product owns Product/Variant image-role metadata and image-assignment relations, but never owns Media Asset storage, upload, processing, URL resolution, or Media Asset lifecycle. This capability is Product-owned and independent of `maatify/php-category`'s Category Image Role registry and Category Image Assignments. Their role IDs are separate namespaces; Product must not consume or persist Category `role_id` values.
 
-The capability is named Image Role and Image Assignment, persisted as `maa_product_image_roles` and `maa_product_image_assignments`, with the explicit default marker `is_default` and the generated `default_scope_identity` (§11.4). Single-record reads follow the package read pair: `getById` is the consumer read and returns only a consumer-visible record, and `getByIdForManagement` is the management read, which ignores status and filters only by soft-deletion state. Image Roles and Image Assignments are read one by one through `getByIdForManagement`; consumers read assignments only through the exact-scope read (§12).
+The capability is named Image Role and Image Assignment, persisted as `maa_product_image_roles` and `maa_product_image_assignments`, with the explicit default marker `is_default` and the generated `default_scope_identity` (§11.4). Management reads individual Image Roles and Image Assignments through `getByIdForManagement()`, using the requested soft-deletion filter regardless of status. Consumers read visible Image Assignments for one exact scope through `listVisibleByExactScope()` or `paginateVisibleByExactScope()` (§12).
 
 ### 9.1 Media Asset ID interoperability
 
@@ -479,7 +475,8 @@ Image default replacement locks the owning Product/Variant target scope and uses
 ## 12. Query Semantics
 
 - Management reads can explicitly filter status and deleted state. Consumer reads cannot request deleted records or bypass inactive Product/Variant/Option visibility rules.
-- Every unpaginated consumer or management list is bounded to at most 100 records. Large management lists use the shared `maatify/php-persistence` pagination API (`PageRequest`/`PageResultDTO`) when applicable; do not implement a package-local competing pagination engine.
+- Unpaginated Consumer and Management lists return at most 100 records. Management pagination and the four Consumer page reads use the shared `maatify/php-persistence` API (`PageRequest` and `PageResultDTO`).
+- Consumer pagination covers Variants (`paginateByProductId()`), Options (`paginateVisibleByProductId()`), Option Values (`paginateVisibleByOptionId()`), and exact-scope Image Assignments (`paginateVisibleByExactScope()`). Each page holds at most 100 records. Pages and counts use the corresponding list's visibility rules, and pages keep its ascending `display_order, id` order.
 - All `display_order` positions are positive and managed through the shared `maatify/php-persistence` Ordering API where applicable. Ordering is scope-specific and deterministic, ending with a stable unique key (`display_order, id`).
 - Content reads are exact and strictly differentiate between three distinct query intentions in the typed criteria contract:
   1. **Exact-language query:** Explicitly requests content for a specific non-NULL `language_code` (e.g. `'ar'`). Returns only content records for that exact language. If none exists, returns no match; never automatically falls back to unlocalized (`NULL`) content or another language.
@@ -646,57 +643,21 @@ The following decisions are the approved Product-local contract (`DEC-007`). The
 
 The Executor MUST stop and report a blocker rather than inventing a different public contract if: an applicable canonical engineering standard conflicts with a resolved decision; implementation of the published shared transaction contract is impossible; a MySQL invariant cannot be enforced safely at the declared supported database version; or the actual repository baseline/runtime materially differs from assumptions in the execution brief. Cross-domain integration follow-ups in §18 do not block implementation of Product-local behavior, but they do block any claim that the full Catalog is integrated.
 
-## 20. Owner Decision Gates Before Implementation
+## 20. Active Product V1 decisions
 
-The following are not merely implementation details. The Owner MUST explicitly approve or resolve them before the Executor starts Product implementation:
-
-1. **Pricing subject redesign — Approved by Owner (`DEC-001`):** Variant-Addressed Pricing Boundary has been formally approved by the Owner on 2026-10-11 in [`DEC-001`](../decisions/DEC-001-product-variant-pricing.md). The approved decision is:
-   > تعتمد Product V1 الـVariant بوصفه وحدة التسعير المرجعية لكل وحدة قابلة للبيع. لا تملك Product Library أسعارًا أو معادلات لتعديلات الأسعار. تتولى مكتبة Pricing المستقلة تعريف الأسعار وقوائمها وسياقاتها وسياسات حلّ السعر المناسب للـVariant. ولا يحدث fallback تلقائي إلى سعر Product عند غياب سعر الـVariant.
-
-   This replaces the previous recommendation with the approved decision. Reconciling the `php-pricing` contract and Catalog umbrella rules remains required before integrated sellability can be accepted; Product implementation alone cannot claim Catalog sellability integration.
-2. **Inventory cardinality redesign — Approved by Owner (`DEC-002`):** Optional Inventory Tracking Boundary has been formally approved by the Owner on 2026-10-11 in [`DEC-002`](../decisions/DEC-002-optional-inventory-tracking.md). The approved decision is:
-   > تعتمد Product V1 عدم امتلاك بيانات المخزون أو التوافر، وعدم اشتراط وجود سجل Inventory لكل Variant. ويُسمح بوحدات البيع التي لا تحتاج إلى تتبّع كمية بالعمل دون سجل مخزون محلي، مع بقاء مسؤولية إدارة المخزون والتوافر ضمن النطاق المستقل المختص.
-
-   This replaces the previous recommendation with the approved decision. Sellable units that do not require quantity tracking may operate without a local inventory record, while inventory and availability management remain within the independent specialized domain. Approving the changed Catalog orchestration contract remains a separate integration milestone.
-3. **Single namespace limitation — Approved by Owner (`DEC-003`):** Product Identity Namespace Boundary has been formally approved by the Owner on 2026-10-11 in [`DEC-003`](../decisions/DEC-003-product-identity-namespace.md). The approved decision is:
-   > تعتمد Product V1 مساحة هوية واحدة لكل مجموعة جداول Product منشورة. يكون `product_id` هوية المنتج الداخلية المرجعية، ويكون `Product.code` فريدًا داخل مساحة الهوية هذه.
-   >
-   > لا تنشئ Product V1 كيانًا مستقلًا باسم Catalog، ولا تضيف `catalog_id` أو `tenant_id` إلى نموذج المنتج لمجرد احتمال الاحتياج المستقبلي. ولا تدعم V1 مساحات هوية مستقلة متعددة للمنتجات داخل مجموعة الجداول نفسها.
-   >
-   > تظل علاقة المنتج بالأقسام، وإتاحة المنتجات والأقسام حسب الواجهة أو الجمهور، وطريقة تنظيم العرض مسؤوليات خارج المكتبتين الأساسيتين Product وCategory. ويمكن للتطبيق المستهلك إضافة هذه القدرات عند الحاجة، دون فرض إعداداتها على التطبيقات التي تستخدم النموذج الأساسي البسيط.
-   >
-   > إذا ظهر مستقبلًا احتياج إلى مساحات هوية مستقلة تشترك في مجموعة الجداول نفسها، فيلزم اتخاذ قرار معماري منسق قبل تغيير مخطط البيانات أو الادعاء بدعم هذا السيناريو.
-
-   This replaces the previous recommendation with the approved decision. V1 assumes one Product identity namespace per deployed set of Product tables and does not speculatively add `catalog_id`, tenant, or store scope columns. Relations to categories, multi-interface or audience availability, and presentation organization remain outside the core Product and Category libraries. If an independent multi-namespace shared-table requirement emerges in the future, a coordinated architectural decision is required prior to changing schema or claiming support.
-4. **Content scoping — Approved by Owner (`DEC-004`):** Language-Only Product Content Scope has been formally approved by the Owner on 2026-10-11 in [`DEC-004`](../decisions/DEC-004-language-only-product-content-scope.md). The approved decision is:
-   > يعتمد محتوى Product وOption وOption Value في V1 هوية قائمة على اللغة فقط، مع دعم المحتوى غير المترجم عبر language_code = NULL، ودون fallback تلقائي. ولا يدعم المحتوى الأساسي اختلاف النص حسب الواجهة أو القناة في V1. ويظل أي احتياج لمحتوى خاص بالمنصة أو الواجهة مسؤولية امتداد مستقل أو قرار معماري لاحق.
-
-   This replaces the previous recommendation with the approved decision. Core Product, Option, and Option Value content relies strictly on language-based identity, supporting unlocalized content via `language_code = NULL`, with no automatic language fallback. Core V1 content does not support textual divergence across interfaces, channels, or platforms. Any requirement for platform- or interface-specific content remains the responsibility of an independent extension or a future architectural decision, while preserving the distinction between core Content and optional extensions such as Content Fields without copying Category extensions into Product.
-5. **Shared Media identity — Approved by Owner (`DEC-005`):** Shared Media Asset Identity Contract has been formally approved by the Owner on 2026-10-12 in [`DEC-005`](../decisions/DEC-005-shared-media-asset-identity.md). The approved decision is:
-   > أعتمد في Product V1 استخدام عقد هوية Media Asset المتوافق مع Category: تكون `media_asset_id` هوية خارجية يملكها الـHost، عددية وموجبة، وتُخزّن كـ `BIGINT UNSIGNED` مع فرض شرط الإيجابية والتحقق من القيمة قبل تحويلها إلى نوع PHP المدعوم. تتوافق حدود الإدخال والإخراج مع العقد العام الحالي لـCategory، بما في ذلك قبول `int|string` عند الإدخال حيث يسمح العقد، وإخراج الهوية كعدد صحيح.
-   >
-   > لا تملك Product تخزين Media Asset أو دورة حياته، ولا تنشئ مفتاحًا أجنبيًا أو JOIN إلى مخزن الـMedia. وتظل هويات Product Media Roles منفصلة تمامًا عن هويات Category Image Roles.
-   >
-   > أي حاجة مستقبلية إلى UUID أو هوية نصية تتطلب قرارًا منسقًا يغيّر عقد الحزمتين، أو خريطة تحويل يملكها الـHost؛ ولا يجوز تغيير نوع الهوية في Product وحدها.
-
-   This replaces the previous recommendation with the approved decision. `media_asset_id` is an external, Host-owned identity persisted as `BIGINT UNSIGNED > 0` with no foreign key or JOIN to Media Asset storage. Public PHP identity values are integers, and input normalization conforms to Category's `CategoryIdDTO` contract (accepting `int|string`, requiring positive values, and rejecting signs, whitespace, leading zeroes, decimal notation, scientific notation, malformed representations, and values exceeding `PHP_INT_MAX` before casting). Product owns neither media storage nor its upload, processing, URL resolution, or lifecycle. Product Image Role IDs remain in a separate namespace from Category Image Role IDs. Any future UUID/string identity requires a coordinated decision changing both package contracts or an explicit Host-owned mapping. The quotation keeps the Owner's original wording ("Product Media Roles"); the capability is named Product Image Roles and Image Assignments (§9).
-6. **`Product.display_order` retention or exclusion in V1 — Approved by Owner (`DEC-006`):** Product Ordering Boundary has been formally approved by the Owner on 2026-10-12 in [`DEC-006`](../decisions/DEC-006-product-ordering-boundary.md). The Owner's exact verbatim response was:
-   > اعتمد
-
-   in direct approval of the recommendation to exclude package-wide `Product.display_order` from Product V1, preserve Product's independence from Category with mapping remaining outside both core libraries, persist ordering on the mapping relationship scoped by `category_id` using the stable `maatify/php-persistence` scoped-ordering API where applicable, avoid introducing a new integration package solely by assumption, and allow consumers to select different read/presentation sorts without treating that as Product-owned persistent ordering.
-
-   This replaces the previous recommendation with the approved decision. Package-wide `display_order` is excluded from `maa_product_products`, and its dedicated consumer-listing index is removed. Scoped ordering for other entities and relationships where ordering is meaningful (`maa_product_options`, `maa_product_option_values`, `maa_product_variants`, and `maa_product_image_assignments`) is preserved.
-
-All six Owner Decision Gates (`DEC-001` through `DEC-006`) are formally resolved under Owner authority. On 2026-10-12 the Owner approved this document as the architecture contract and authorized the start of implementation within the local Product scope, bound by `DEC-001` through `DEC-006`, under [`DEC-007`](../decisions/DEC-007-product-v1-implementation-start-authorization.md). That authorization is subject to the completed standards applicability re-evaluation recorded in `STANDARDS_MANIFEST.md`, and it does not authorize merge, release, or publish.
+| Decision | Applies to Product V1 |
+|---|---|
+| [DEC-001](../decisions/DEC-001-product-variant-pricing.md) | Pricing resolves against the Variant. The Pricing domain owns prices and price resolution. |
+| [DEC-002](../decisions/DEC-002-optional-inventory-tracking.md) | Inventory owns stock and availability. A Variant can operate without an inventory record when quantity tracking is unnecessary. |
+| [DEC-003](../decisions/DEC-003-product-identity-namespace.md) | Each deployed Product table set has one identity namespace. Product codes are unique within it. Category mapping and audience-specific presentation belong to the Host or an integration layer. |
+| [DEC-004](../decisions/DEC-004-language-only-product-content-scope.md) | Core Product, Option, and Option Value Content uses exact language identity, including `NULL` for unlocalized Content. The Host owns language fallback and channel-specific presentation. |
+| [DEC-005](../decisions/DEC-005-shared-media-asset-identity.md) | The Host owns Media Assets. Product references their positive integer identities and maintains a separate namespace for its Image Roles. |
+| [DEC-006](../decisions/DEC-006-product-ordering-boundary.md) | Product owns scoped ordering for Variants, Options, Option Values, and Image Assignments. Category placement and ordering belong to the mapping relationship. |
+| [DEC-007](../decisions/DEC-007-product-v1-implementation-start-authorization.md) | This architecture governs Product V1 within the package boundary and the applicable standards recorded in the manifest. |
 
 ## 21. Source Inputs and Authority
 
-This architecture was prepared from the supplied Catalog documents and deliberately redesigned where a more reusable Product package contract is recommended. Current-source review evidence on 2026-10-11 includes `maatify/php-category` `CATEGORY_PACKAGE_REFERENCE.md` blob `c177e8957786220335692b9cdf78a5b3dad64dee`, `docs/USAGE_GUIDE.md` blob `e397014cf80a7d8fc49d3238d4c46501c8b72eec`, and `schema/category.sql` blob `8b8c0f552d0df5a2513046312d1da2de93c04019`. The Product repository's current `STANDARDS_MANIFEST.md` is blob `fb09995840c495645f821899e19631e38ed4fb32`; the current `PACKAGE_BUILDING_STANDARD.md` is blob `1475bb006eefe9e1ef9a6973f6664c3d0690dc2c`. The manifest, as it stood when this review was prepared, recorded that conditional SQL persistence requirements were not activated because the repository had no package-owned database behavior. After the Owner approved implementation, the formal applicability re-evaluation was completed on 2026-10-12 and the current manifest records those requirements as activated (`DEC-007`). This is the approved contract, not a released one. Its source inputs:
-
-- `CATALOG_PACKAGE_ARCHITECTURE.md` — package-level composition, domain ownership, and cross-domain orchestration.
-- `Catalog_V1_Architecture_Locked.pdf` — historical Product/Variant/Option model and original Catalog V1 schema.
-- `CATALOG_V1_ARCHITECTURE.md` — Category-package boundary and Catalog integration status.
-- Current `maatify/php-category` `CATEGORY_PACKAGE_REFERENCE.md`, current consumer usage contract, and `schema/category.sql` — actual reusable package contracts used to reconcile language identity, Media Asset ID type, status/deletion, Clock, ordering, and dependency boundaries.
-- Current `Maatify-ltd/php-product` repository governance and pinned Composer Package standards.
-
-This is the Owner-approved V1 architecture contract, not evidence of implementation, tests, release readiness, or a released contract. The `CANDIDATE` filename is kept so existing references stay valid.
+The [decision index](../decisions/DECISIONS_INDEX.md) lists the approved Product decisions
+and the architecture sections they govern. The
+[standards manifest](../php-engineering-standards/STANDARDS_MANIFEST.md) identifies the
+engineering standards applicable to this package.

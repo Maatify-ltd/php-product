@@ -42,11 +42,8 @@ mode from the approved Composer channel in a clean external root under §2.6.
 
 ## Persistence RC trial plan
 
-The owner approved migrating and testing the successor Persistence package on
-[Draft PR #7](https://github.com/Maatify-ltd/php-product/pull/7) while retaining the release
-hold. The trial follows [Package Building §11](../php-engineering-standards/standards/packages/PACKAGE_BUILDING_STANDARD.md#11-shared-ordering-and-pagination-utilities)
-and [Composer §24](../php-engineering-standards/standards/packages/COMPOSER_PACKAGE_STANDARD.md#24-stability-policy)
-at the adopted standards commit `c5d70cbe005fc26c38a7218967efe991194e76d6`.
+The development checkout uses the successor `maatify/php-persistence` package.
+The exact RC and the checks for changing it are listed below.
 
 - **Selection.** The trial pins `maatify/php-persistence` `1.0.0-rc.1` at
   `34c3b874525d36ae064c162cdd553bc75d18772b`, as recorded by the
@@ -63,20 +60,13 @@ at the adopted standards commit `c5d70cbe005fc26c38a7218967efe991194e76d6`.
   `composer verify:consumer`. The Harness checks the resolved version and revision,
   the absence of the legacy dependency, and the public pagination response from
   clean Composer roots.
-- **Evidence.** Migration commit `3463f9d` passed two Integration runs in each
-  PHP `8.4.27` / `8.5.12` × MySQL `8.0.16` / `8.0.46` cell (237 tests
-  and 3,364 assertions per run). The Harness passed from two clean roots on
-  PHP `8.4.27` and MySQL `8.0.46`, including the exact dependency identity and
-  all eight usage examples. These are trial verification results.
 - **Exit.** The RC exception ends when a Stable Persistence version is published.
   Verify the Stable release and its API, update the package and fixture constraints
   and identity checks, then rerun dependency, runtime and external consumer gates
   on that revision. Product Stable requires the compatible Stable Persistence
   integration, the first-Stable gates, and separate owner release authorization.
-- **First Product RC.** The current owner hold remains in force. This plan authorizes
-  testing the dependency on the Draft PR only. Publishing a Product RC while it
-  depends on a Persistence RC requires a separate owner-approved release plan
-  that explicitly changes the hold for that candidate. Record the exact Product
+- **First Product RC.** Publishing a Product RC with a Persistence RC dependency
+  requires a separate owner-approved release plan for that candidate. Record the exact Product
   and Persistence versions, their source identities, the Composer distribution
   channel and the consumer root's package-specific stability requirements.
   Qualify the candidate artifact before publication, then verify installation
@@ -238,51 +228,6 @@ hard line break); one space, three or more, a tab, or a whitespace-only line fai
 `test-whitespace-gate.sh` proves, in a throwaway repository, that each defect is
 rejected and that clean and hard-break files are accepted.
 
-## Configuration revision and performance trial
-
-Real MySQL integration tests use separate editor connections. The second editor retains a
-`REPEATABLE READ` snapshot while the first commits a different target. The second save raises
-`ProductConfigurationRevisionConflictException`, keeps the Host transaction open, and leaves the
-first target unchanged. Tests also cover racing writers, revision invalidation by an Option
-creation, and rolling back the revision with a Host transaction.
-
-A local synthetic trial used PHP 8.4.27 and MySQL 8.0.46 with `REPEATABLE READ`. Each fixture
-had one active Option and Value plus the soft-deleted history below. Each row summarizes
-200 warm resolution calls, 25 reconfigurations to the same target, and 15 same-Product writer
-races. PHP memory is the maximum additional peak during resolution.
-
-| Historical Options / Values | Resolution p95 | PHP peak extra | Reconfigure p95 | Resolution p95 with writer holding locks | Stale writer p95 with 50 ms Host hold |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| 0 / 0 | 21.5 ms | 84.8 KiB | 27.7 ms | 20.1 ms | 130.0 ms |
-| 20 / 400 | 20.6 ms | 317.1 KiB | 45.9 ms | 30.0 ms | 105.8 ms |
-| 100 / 5,000 | 48.4 ms | 3,412.5 KiB | 156.4 ms | 54.1 ms | 190.4 ms |
-
-MySQL `performance_schema.data_lock_waits` showed the stale writer waiting in all 45 races.
-The reader resolved the committed Variant before the lock holder committed in every race.
-The stale writer timings include the artificial Host hold, the intervening resolution call,
-and the stale check. The lab shared a machine with other test jobs. These results show the
-cost of historical Options and Values in this fixture. Production capacity, multiple active
-Options, historical Variant compositions, and lock contention between different Products
-were outside this measurement.
-
-## Composition resolution before and after
-
-The baseline at `5329dab` and the optimized reader used the same MySQL 8.0.46 instance,
-PHP 8.4.27, and Product with four active Options and one selected Value per Option.
-Each version ran twice at each history size, with 20 warmup calls and 200 measured calls
-per run. Every call returned the same expected Variant. The table shows the range of
-per-run p95 values and the maximum additional PHP memory peak.
-
-| Deleted Options / Values | Baseline p95 | Optimized p95 | Baseline PHP peak extra | Optimized PHP peak extra |
-| --- | ---: | ---: | ---: | ---: |
-| 0 / 0 | 8.6–11.3 ms | 7.9–11.0 ms | 87.5 KiB | 86 KiB |
-| 20 / 1,000 | 16.9–25.2 ms | 6.9–9.3 ms | 712.8 KiB | 86 KiB |
-| 100 / 5,000 | 26.8–29.6 ms | 6.4–7.0 ms | 3,457.1 KiB | 86 KiB |
-
-The optimized validation reads active, non-deleted Option IDs and only the requested
-active, non-deleted Value IDs with their owners. These synthetic timings cover resolution
-without competing writes.
-
 ## Current limits
 
 Not covered, and not claimed:
@@ -303,8 +248,8 @@ Not covered, and not claimed:
 - Release Artifact Verification and Published Artifact Verification: release-time gates, not
   applicable before a release target exists.
 
-**Branch protection: in force.** The repository ruleset `main-final-gate` (enforcement `active`, no bypass actors) targets
-the default branch `main`. GitHub reports it through `GET /repos/Maatify-ltd/php-product/rules/branches/main`: pull request
-required, the stable `Final Gate` job (GitHub Actions) required with the branch up to date, no force push, and no deletion.
-This was read back from GitHub after creation; it is repository configuration, not part of the checked-out tree, so it is
-re-verified with that command rather than by a CI job.
+To verify the live branch protection and the required Final Gate, run:
+
+```bash
+gh api repos/Maatify-ltd/php-product/rules/branches/main
+```
