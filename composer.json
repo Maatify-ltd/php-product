@@ -1,0 +1,88 @@
+{
+    "name": "maatify/php-product",
+    "description": "PHP library for Product, Variant, Option, and Product image-assignment identity, with a MySQL-backed schema.",
+    "keywords": [
+        "product",
+        "variant",
+        "php",
+        "maatify"
+    ],
+    "homepage": "https://github.com/Maatify-ltd/php-product",
+    "type": "library",
+    "license": "proprietary",
+    "authors": [
+        {
+            "name": "Maatify",
+            "email": "support@maatify.dev",
+            "homepage": "https://maatify.dev"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/Maatify-ltd/php-product/issues",
+        "source": "https://github.com/Maatify-ltd/php-product"
+    },
+    "autoload": {
+        "psr-4": {
+            "Maatify\\Product\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Maatify\\Product\\Tests\\": "tests/"
+        }
+    },
+    "require": {
+        "ext-mbstring": "*",
+        "ext-pdo": "*",
+        "ext-pdo_mysql": "*",
+        "maatify/exceptions": "^1.0",
+        "maatify/php-persistence": ">=1.0.0-rc.1 <=1.0.0-rc.1",
+        "maatify/shared-common": "^1.0",
+        "php": ">=8.4.27 <8.5.0 || >=8.5.12 <8.6.0"
+    },
+    "require-dev": {
+        "php-cs-fixer/shim": "^3.95",
+        "phpstan/phpstan": "^2.0",
+        "phpunit/phpunit": "^11.5"
+    },
+    "scripts": {
+        "analyse": "phpstan analyse --level=max --memory-limit=512M",
+        "format": "php-cs-fixer fix --config=.php-cs-fixer.dist.php",
+        "format:check": [
+            "php-cs-fixer check --config=.php-cs-fixer.dist.php",
+            "@php scripts/ci/check-per-cs-31-delta.php"
+        ],
+        "test": [
+            "@test:unit",
+            "@test:integration"
+        ],
+        "test:unit": "phpunit --testsuite Unit",
+        "test:integration": "bash scripts/ci/run-integration.sh",
+        "verify:consumer": "bash scripts/ci/run-consumer-verification.sh"
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true,
+        "platform": {
+            "php": "8.4.27"
+        },
+        "policy": {
+            "advisories": {
+                "block": true,
+                "audit": "fail"
+            },
+            "malware": {
+                "block": true,
+                "block-scope": "all",
+                "audit": "fail"
+            },
+            "abandoned": {
+                "block": false,
+                "audit": "fail"
+            }
+        },
+        "allow-plugins": false
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

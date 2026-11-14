@@ -38,7 +38,7 @@ The Owner's exact words, as received in that message:
 
 The items below are the Lead's reading of the Owner's words together with the approved architecture document. They are not quoted from the Owner.
 
-1. **Approved architecture reference:** `docs/architecture/PRODUCT_V1_ARCHITECTURE_CANDIDATE.md` as it stood at `main` commit `cdbefe7d4296d29292f051f2f7db52b79cb40d62`.
+1. **Approved architecture reference:** `docs/architecture/PRODUCT_V1_ARCHITECTURE_CANDIDATE.md`, approved at `main` commit `cdbefe7d4296d29292f051f2f7db52b79cb40d62` and maintained in place before the first release, including the Owner decisions of 2026-10-14 recorded in `Maatify/php-product#7` (comment 6161032003).
 2. **Implementation start:** Authorized within that document's scope, bound by `DEC-001` through `DEC-006`, which remain `ACTIVE`.
 3. **Pre-implementation gate:** The approved document itself (§1.1, §11, §21) requires a formal standards applicability re-evaluation before any PHP or SQL implementation. Its recorded outcome is in `STANDARDS_MANIFEST.md`.
 4. **Scope boundaries:** The approved document keeps Pricing, Inventory, Supplier, Category mapping, and full Catalog integration outside Product V1 (§3.2, §10, §18). This record does not extend the approval to them.

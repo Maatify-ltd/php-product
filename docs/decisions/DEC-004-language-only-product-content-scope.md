@@ -64,7 +64,7 @@ The project Owner formally approved the following decision on 2026-10-11:
 
 - Implementation of `php-product` V1 must strictly adhere to this schema and query contract (language-only scoping, NULL unlocalized identity support, no automatic fallback, and no platform columns in core content tables).
 - The Host Application or Catalog orchestration layer is responsible for providing any required interface fallback or presentation resolution chains.
-- The architecture candidate document (`docs/architecture/PRODUCT_V1_ARCHITECTURE_CANDIDATE.md`) remains classified as `Architecture Candidate` until the remaining Owner decision gates (Gates 5 and 6) are resolved.
+- The architecture document (`docs/architecture/PRODUCT_V1_ARCHITECTURE_CANDIDATE.md`) carries this decision in §4.1, §11.2, and §20; the remaining Owner decision gates are resolved by `DEC-005` and `DEC-006`, and the start of implementation is authorized by `DEC-007`.
 
 ---
 
@@ -72,7 +72,7 @@ The project Owner formally approved the following decision on 2026-10-11:
 
 This decision is strictly confined to the content scoping of core Product, Option, and Option Value entities. The following areas remain explicitly out of scope:
 
-- Media Assignment scoping, which retains platform, language, and role dimensions under its dedicated specification.
+- Image Assignment scoping, which retains platform, language, and role dimensions under its dedicated specification.
 - Design or activation of optional Content Fields extensions.
 - Resolution of the Shared Media Asset identity contract (Gate 5).
 - Resolution of the retention or exclusion of `Product.display_order` in V1 (Gate 6).

@@ -1,0 +1,24 @@
+# Verification-time infrastructure only: it provisions the real MySQL engine used
+# by the Integration suite and the Consumer Verification Harness. It is not a
+# runtime dependency of the package. One definition serves every MySQL version
+# through PRODUCT_TEST_MYSQL_VERSION. There is no container_name; every run uses
+# its own Compose project (scripts/ci/run-integration.sh) and disposable tmpfs
+# storage. The port is bound to loopback only, on a dynamic host port, because the
+# PHP test runner stays on the host PHP runtime.
+services:
+  mysql:
+    image: "mysql:${PRODUCT_TEST_MYSQL_VERSION:-8.0.16}"
+    environment:
+      MYSQL_ROOT_PASSWORD: "${PRODUCT_TEST_DB_PASSWORD:?provided by scripts/ci/run-integration.sh}"
+    ports:
+      - "127.0.0.1::3306"
+    tmpfs:
+      - /var/lib/mysql
+    healthcheck:
+      # TCP probe: the image's bootstrap server has networking disabled, so this
+      # only succeeds once the real server accepts connections.
+      test: ["CMD-SHELL", "mysqladmin ping --protocol=tcp -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 3s
+      timeout: 5s
+      retries: 80
+      start_period: 5s

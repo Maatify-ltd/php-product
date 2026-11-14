@@ -7,3 +7,7 @@
 /vendor/
 composer.lock
 .DS_Store
+
+# Static analysis cache
+.phpstan.cache
+.php-cs-fixer.cache

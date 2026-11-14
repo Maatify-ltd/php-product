@@ -5,7 +5,7 @@
 ## Standard Metadata
 
 - **Standard ID:** `std-composer-package`
-- **Standard Version:** `5.0.0`
+- **Standard Version:** `6.0.0`
 - **Standard Version Format:** `MAJOR.MINOR.PATCH`
 
 This document defines the canonical Composer manifest contract represented by `composer.json` for standalone, reusable PHP libraries in the Maatify ecosystem.
@@ -149,7 +149,8 @@ Templates in this Standard use the following placeholders:
 - `{ROOT_NAMESPACE}`: The PSR-4 root namespace without the final separator.
 - `{TEST_NAMESPACE}`: The test namespace root without the final separator; normally `{ROOT_NAMESPACE}\Tests`.
 - `{MINIMUM_PHP_VERSION}`: The minimum supported PHP minor, such as `8.4`.
-- `{MINIMUM_PHP_PATCH_VERSION}`: The root development baseline, such as `8.4.0`.
+- `{PHP_REQUIRE_CONSTRAINT}`: The complete `require.php` constraint resolved under §15.1, such as `>=8.4.27 <8.5.0 || >=8.5.12 <8.6.0`.
+- `{MINIMUM_PHP_PATCH_VERSION}`: The lowest PHP patch version admitted by `{PHP_REQUIRE_CONSTRAINT}` (the security patch floor of the lowest supported minor under §15.1.1), such as `8.4.27`.
 - `{LICENSE_SPDX}`: The approved SPDX license identifier.
 - `{PRIMARY_DOMAIN_KEYWORD}`: The main searchable domain term for the library.
 - `{RUNTIME_EXTENSION_NAME}`: A directly used runtime PHP extension name without the `ext-` prefix.
@@ -548,25 +549,47 @@ A directly used runtime prerequisite MAY be omitted from `require` only through 
 
 ### 15.1 PHP Constraint
 
-The canonical minimum form is:
+The canonical form is:
 
 ```json
-"php": "^{MINIMUM_PHP_VERSION}"
+"php": "{PHP_REQUIRE_CONSTRAINT}"
+```
+
+For a new package that supports exactly the released PHP 8.4 and 8.5 minors, the canonical constraint under the current §15.1.1 floors is:
+
+```json
+"php": ">=8.4.27 <8.5.0 || >=8.5.12 <8.6.0"
 ```
 
 Rules:
 
-- For newly created Maatify PHP libraries/modules governed by the current engineering baseline, the minimum PHP version MUST NOT be lower than PHP 8.4.
-- The canonical new-package Composer constraint is `^8.4` or the equivalent placeholder form resolving to PHP 8.4.
+- For newly created Maatify PHP libraries/modules governed by the current engineering baseline, the minimum PHP minor MUST NOT be lower than PHP 8.4.
 - The minimum MUST be the oldest PHP minor genuinely supported within the permitted baseline/compatibility policy; it MUST NOT allow new work to move below PHP 8.4.
-- Existing already-published packages MUST retain their currently declared PHP compatibility constraint until an approved compatibility/breaking version boundary permits changing it.
-- Existing packages are NOT required to convert an existing `>=...` constraint to caret syntax merely because the new-package canonical form is now `^8.4`.
+- For a new package, the constraint MUST be the exact, per-minor union of one range for every supported minor listed in §15.1.1, each starting at that minor's patch floor and ending below the next minor (for example `>=8.4.27 <8.5.0`), so that no unpatched version of any supported minor is admitted. An equivalent expression with the same admitted set, such as `~8.4.27 || ~8.5.12`, is permitted.
+- A new package MUST NOT use `^8.4`, `^8.4.27`, `~8.4`, `>=8.4`, or any other form that admits a patch version below its minor's floor, or a minor that has no §15.1.1 floor. A caret or open-ended bound on a patch floor, such as `^8.4.27`, is not adequate because it still admits later minors whose floors it does not enforce.
+- Supporting a single minor uses only that minor's range; it is not a requirement to support both.
+- The upper bound of each range is a security-qualification boundary, not a claim of proven incompatibility. A newly released PHP minor is not implicitly security-qualified by an older constraint; it enters the constraint only after §15.1.1 lists its patch floor and the package's CI covers it under `CI_WORKFLOW_STANDARD.md`.
+- Existing already-published packages MUST retain their currently declared PHP compatibility constraint until an approved compatibility/breaking version boundary permits changing it. This Standard does not by itself amend, drop, or declare incompatible any published constraint or previously supported minor. Narrowing such a constraint is a compatibility decision of that package's own release boundary.
+- Existing packages are NOT required to convert an existing `>=...` constraint to another syntax merely because the new-package canonical form changed.
 - The constraint is a public compatibility promise.
-- Every released PHP minor included by the constraint MUST be treated according to `CI_WORKFLOW_STANDARD.md`.
-- The minimum MUST NOT be increased merely because a developer uses a newer local PHP version.
-- An upper bound MUST NOT be added without a demonstrated incompatibility.
+- Every released PHP minor included by the constraint MUST be treated according to `CI_WORKFLOW_STANDARD.md`, including its §7.1 patch-floor verification.
+- Outside §15.1.1's security floors, the minimum MUST NOT be increased merely because a developer uses a newer local PHP version, and a further upper bound MUST NOT be added without a demonstrated incompatibility. A §15.1.1 patch floor is a security requirement, not such a preference.
 - A broad constraint MUST NOT claim versions that are not tested or supportable.
 - README and CI claims MUST match the Composer PHP constraint.
+- The constraint governs PHP interpreter version eligibility only. It does not specify Host runtime, SAPI, server, or `php.ini` configuration, which are outside the Composer manifest contract.
+
+#### 15.1.1 PHP Security Patch Floors
+
+This section is the single canonical source of the per-minor PHP security patch floors for `std-composer-package` and for `std-ci-workflow`, which verifies them. Other Standards and documents MUST reference it and MUST NOT restate a separate minimum.
+
+| PHP minor | Minimum accepted patch | Rejected |
+|---|---|---|
+| 8.4 | 8.4.27 | 8.4.0 through 8.4.26 |
+| 8.5 | 8.5.12 | 8.5.0 through 8.5.11 |
+
+Basis: the official `php.net` security releases PHP 8.4.27 and PHP 8.5.12 published on 21 October 2026. A later advisory that is not accompanied by a released corrected patch does not create a floor and MUST NOT be encoded as one.
+
+A floor changes only by a revision of this Standard backed by an official `php.net` release. A minor absent from the table has no floor and is not security-qualified for new packages under §15.1.
 
 ### 15.2 PHP Extensions
 
@@ -1007,12 +1030,13 @@ The canonical form is:
 
 Rules:
 
-- The value SHOULD represent the minimum supported PHP baseline.
-- It MUST NOT be higher than the declared minimum PHP requirement.
-- It MUST NOT be used to hide an incompatibility.
+- The value MUST be the lowest PHP patch version admitted by the declared `require.php` constraint (for example `8.4.27` for a package supporting 8.4 and 8.5 under §15.1.1), so that root dependency resolution emulates the lowest supported, security-patched interpreter.
+- It MUST be a single concrete version. It MUST NOT be a range or a disjunction, and it MUST NOT be below a §15.1.1 floor for a package governed by that section.
+- It MUST NOT be higher than the lowest admitted version, and MUST NOT be used to hide an incompatibility.
+- It is a root dependency-resolution setting only. It is not the consumer-facing eligibility contract, which is `require.php` under §15.1, and it does not select, certify, or configure the PHP executing in any environment.
 - Fake extension entries SHOULD NOT be added.
 - If an extension must be hidden to test portability, that decision belongs to explicit CI configuration.
-- Because the platform setting can emulate a version different from the executing environment, real platform requirements MUST still be verified under `CI_WORKFLOW_STANDARD.md`.
+- Because the platform setting can emulate a version different from the executing environment, real platform requirements and the actual interpreter patch MUST still be verified under `CI_WORKFLOW_STANDARD.md`, including its §7.1.
 - The setting governs root dependency resolution; it does not force a consumer's PHP runtime.
 
 ### 23.4 `allow-plugins`
@@ -1230,7 +1254,7 @@ This template contains no empty fields and applies when PHP is the only mandator
     }
   },
   "require": {
-    "php": "^{MINIMUM_PHP_VERSION}"
+    "php": "{PHP_REQUIRE_CONSTRAINT}"
   },
   "config": {
     "optimize-autoloader": true,
@@ -1280,7 +1304,7 @@ Add direct mandatory runtime contracts. A prerequisite omitted from `require` is
   "require": {
     "ext-{RUNTIME_EXTENSION_NAME}": "*",
     "{RUNTIME_PACKAGE_NAME}": "{RUNTIME_PACKAGE_CONSTRAINT}",
-    "php": "^{MINIMUM_PHP_VERSION}"
+    "php": "{PHP_REQUIRE_CONSTRAINT}"
   }
 }
 ```
@@ -1418,7 +1442,9 @@ Automated verification of latest dependencies, lowest dependencies, platform req
 - [ ] Scripts contain no credentials.
 - [ ] No unsafe lifecycle hooks exist.
 - [ ] `sort-packages` is enabled.
-- [ ] `platform.php` matches the minimum supported baseline.
+- [ ] `platform.php` is a single concrete version equal to the lowest patch admitted by `require.php`, and is not presented as the consumer eligibility contract.
+- [ ] For a new package, `require.php` admits no patch below the §15.1.1 floor of any supported minor and no minor without a floor (not `^8.4`, `^8.4.27`, or an open-ended bound).
+- [ ] An existing published package's PHP constraint is changed only through its own approved compatibility boundary.
 - [ ] `optimize-autoloader` follows the approved package configuration policy.
 - [ ] Composer plugins are explicitly allowlisted when present.
 - [ ] `config.policy` is used when supported and is not `false`.
@@ -1484,5 +1510,15 @@ Official Composer documentation remains authoritative for Composer mechanics. Th
 
 ### `5.0.0`
 
-- Frozen baseline `4.1.0`, exact artifact blob `d020e3f4b09830338b4a1647851048e02c64252e`, proven by the completed VALID consumer upgrade in Maatify/php-paymob PR #10. Upstream Adoption Commit: `2ea426aee0e6a5265f0c30ced667f21bb7b1d302`; consumer integration commit: `28b790455685b3f7052688d7d20d4b939fd13795`; the consumer-pinned artifact blob is `d020e3f4b09830338b4a1647851048e02c64252e` (exact blob equality PASS).
+- Frozen baseline `4.1.0`, exact artifact blob `d020e3f4b09830338b4a1647851048e02c64252e`, proven by the completed VALID consumer upgrade in a consumer repository (PR #10; identity withheld per `DEC-042`). Upstream Adoption Commit: `2ea426aee0e6a5265f0c30ced667f21bb7b1d302`; consumer integration commit: `28b790455685b3f7052688d7d20d4b939fd13795`; the consumer-pinned artifact blob is `d020e3f4b09830338b4a1647851048e02c64252e` (exact blob equality PASS).
+- Issue #168 (`DEC-042`): consumer-identity neutralization of the preceding frozen-baseline evidence line only; `EDITORIAL / NO_CONTRACT_CHANGE` (Patch), absorbed in the existing Mutable Candidate calculated from the Frozen Version Baseline; no additional bump, freeze, release, or adoption. The artifact blob and commit hashes are unchanged.
 - `NORMATIVE / BREAKING_CONTRACT_CHANGE`: require the Composer-distributed archive to preserve the complete applicable consumer/release-facing artifact set and its exact release identity, including VCS export behavior and resulting archive inspection; existing archive/export exclusions may otherwise omit required documents. Calculated candidate from frozen baseline `4.1.0`: `5.0.0`.
+
+### `6.0.0`
+
+- Frozen Version Baseline `5.0.0`, exact artifact blob `64ce9bc38a87034c5a57df0265f551d083658b32`, proven by completed VALID consumer Adoption (identity withheld per `DEC-042`; upstream Adoption Commit `334c9d5888fd46f9b4624c57e131440c37b840ce`; evidence recorded in Issue #179). The calculation below is made once from this baseline, not from a previous candidate.
+- Cumulative changes since the baseline: (1) Issue #168 (`DEC-042`) consumer-identity neutralization of a Version History evidence line, `EDITORIAL / NO_CONTRACT_CHANGE` (Patch); (2) Issue #181, below. The earlier `5.0.0` entry is retained as historical evidence; the Issue #179 reconciliation below corrects its frozen-status inference.
+- Issue #181 `NORMATIVE / BREAKING_CONTRACT_CHANGE`: new-package `require.php` must exclude, per supported minor, every PHP patch below the §15.1.1 security floor (8.4.27, 8.5.12) and any minor without a floor, replacing the previously canonical `^8.4`; `config.platform.php` is defined as the lowest admitted patch and not the consumer eligibility contract; templates, placeholders, and checklist updated. Previously compliant new-package constraints such as `^8.4` become non-compliant. Existing published packages' declared compatibility is not amended.
+- Version Class: Major (highest impact in the cumulative set) → calculated Mutable Candidate `6.0.0` from Frozen Baseline `5.0.0`; not chained through `5.0.1`. This is a candidate only: no Freeze, Owner Version Finalization, release, or adoption is claimed.
+
+- Issue #179 factual reconciliation (2026-11-04): the historical `5.0.0` entry's statement that Issue #168's editorial edit was absorbed in an existing Mutable Candidate was inaccurate because the qualified `5.0.0` snapshot above was already frozen. The original entry is preserved; neither the neutralization policy nor the frozen artifact is rewritten. This evidence correction is `EDITORIAL / NO_CONTRACT_CHANGE` (Patch class), aggregated with the already-recorded breaking Issue #181 change from Frozen `5.0.0`; the highest cumulative impact remains Major and the Mutable Candidate remains `6.0.0`. The earlier editorial-only proposal `5.0.1` is no longer the cumulative result, and no `6.0.1`, new Freeze, Version Finalization, release, or Adoption is created by this reconciliation.

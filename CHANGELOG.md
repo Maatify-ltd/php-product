@@ -1,0 +1,50 @@
+# Changelog
+
+All notable changes to this package are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
+
+## [Unreleased]
+
+No version has been released.
+
+### Added
+
+- Consumer pagination for visible Variants, Options, Option Values, and exact-scope Image Assignments.
+
+- Build Consumer services from the same `ProductFactory::forHost()` configuration, using the Host connection for reads.
+
+- Consumer Product lookup by code and management Variant lookup by SKU or barcode, with the existing visibility and deleted-state rules.
+
+- `ProductFactory::forHost()` configures Management services together and opens one shared owner-lookup PDO on demand.
+
+- Management builders that discover an owner by identity accept an optional same-primary `ownerLookupPdo` for mutations inside an older Host snapshot. The main PDO retains all locks, writes, and transaction control.
+
+- Product reconfiguration requires the editor’s expected configuration revision. A stale save raises a typed conflict and leaves the newer configuration intact.
+
+- MySQL schema `schema/product.sql`: ten `maa_product_` tables for Product, Variant, Option, Option Value, Content, Image Role, and Image Assignment, with foreign keys, case-sensitive status checks, exact-scope uniqueness, and a database-enforced rule that a soft-deleted Image Assignment is never the default.
+- Separate Management and Consumer contracts for every capability: `{Capability}\Management\Service\*ManagementServiceInterface` for creation, lifecycle, and management reads, and `{Capability}\Consumer\Service\*ConsumerServiceInterface` for the consumer-visible reads, which write nothing; Image Roles have a Management contract only. Commands and management criteria live under `Management\Command` and `Management\Criteria`, consumer criteria under `Consumer\Criteria`, and result DTOs, enums, exceptions, and value objects stay at the capability level.
+- Product creation: `ProductManagementServiceInterface::create()` writes an inactive Product and its single active empty-composition Variant atomically, including inside a Host-owned transaction (operation-local savepoint).
+- Product reads: `ProductConsumerServiceInterface::getById()` (active, not deleted) and `ProductManagementServiceInterface::getByIdForManagement()` with `ProductDeletedStateEnum`.
+- Variant reads: `VariantConsumerServiceInterface` (`getById`, `listByProductId`) and `VariantManagementServiceInterface` (`getByIdForManagement`, `listByProductIdForManagement`), `VariantDTO` with its composition pairs, bounded list criteria, and `VariantNotFoundException`; `ProductFactory::createVariantManagementService()` and `createVariantConsumerService()`. Consumer reads hide every Variant of a Product while an active Value of an active Option is represented by no active valid Variant.
+- Variant composition resolution: `VariantConsumerServiceInterface::resolveByComposition()` with `VariantCompositionCriteriaDTO` and `OptionValueSelection`; a structurally invalid selection is `ProductInvalidArgumentException`, an invisible Product is `ProductNotFoundException`, a valid composition with no visible Variant is `VariantNotFoundException`, and a stored fingerprint that does not match its pairs is `ProductPersistenceException`.
+- Product reconfiguration: `ProductManagementServiceInterface::reconfigure()` with `ReconfigureProductCommand`, `ReconfigureOptionTarget`, `ReconfigureVariantTarget`, and `ProductReconfigurationResultDTO`; one atomic Product-local operation over a complete target state, explicit reuse of historical and soft-deleted Variant identities, the simple/configurable transitions, and `VariantCompositionConflictException`.
+- Lifecycle commands: Product `updateStatus`, `softDelete`, `restore`; Variant `updateStatus`, `softDelete`, `restore`; and `ProductBusinessRuleException` (`FC-INV`) for a soft-deleted row, a soft-deleted owner chain, or an invariant the operation would break.
+- Options and Option Values: `OptionManagementServiceInterface` and `OptionValueManagementServiceInterface` (`create`, `softDelete`, `restore`, `getByIdForManagement`), their commands, DTOs, status enums, and named failures; `ProductFactory::createOptionManagementService()`, `createOptionConsumerService()`, `createOptionValueManagementService()`, and `createOptionValueConsumerService()`.
+- Consumer reads (`OPT-R2`, `OVL-R2`, `IAS-R2`): `OptionConsumerServiceInterface::listVisibleByProductId()`, `OptionValueConsumerServiceInterface::listVisibleByOptionId()`, and `ImageAssignmentConsumerServiceInterface::listVisibleByExactScope()` with `OptionVisibleListCriteriaDTO`, `OptionValueVisibleListCriteriaDTO`, and `ImageAssignmentExactScopeCriteriaDTO`; Options and Values follow the Variant visibility rule from one shared SQL source, and images are read in one exact scope without inheritance or default selection.
+- Management lists, search, and pagination: an unpaginated list (`maxResults` 1 to 100) and a `maatify/php-persistence` page (20 by default, at most 100) for Products, Variants, Options, Option Values, Image Roles, and Image Assignments, with their list criteria and collection DTOs; a literal substring search on the Product code; `getByCodeForManagement()` and `getByKeyForManagement()`; and exact image-assignment criteria (`ImageAssignmentTargetFilter`, `ImageAssignmentRoleFilter`, `ImageAssignmentLanguageFilter`, `ImageAssignmentPlatformFilter`) that keep an omitted dimension distinct from `NULL`. Every unpaginated list limit is bound as an integer parameter.
+- Ordering commands (`VAR-05`, `OPT-05`, `OVL-05`, `IAS-06`): `updateDisplayOrder()` on the Variant, Option, Option Value, and Image Assignment Management services with `UpdateVariantDisplayOrderCommand`, `UpdateOptionDisplayOrderCommand`, `UpdateOptionValueDisplayOrderCommand`, and `UpdateImageAssignmentDisplayOrderCommand`, delegated to the shared `maatify/php-persistence` Ordering API within one scope. A restored Option, Option Value, Variant, or Image Assignment (including a Variant restored by reconfiguration) takes the end of its live scope, because a newer row may hold its old position; this differs from `php-category`.
+- Variant SKU and barcode (`VAR-01`): `VariantManagementServiceInterface::updateIdentifiers()` with `UpdateVariantIdentifiersCommand` and `VariantIdentifierChange` (`unchanged`, `set`, `clear`), `VariantSkuAlreadyExistsException`, and `VariantBarcodeAlreadyExistsException`; values are unique across all Variants under the collation, reserved by soft-deleted Variants, and released when replaced or cleared.
+- Content: `ProductContentManagementServiceInterface`, `OptionContentManagementServiceInterface`, and `OptionValueContentManagementServiceInterface` (`create`, `update`, `softDelete`, `restore`, `getByIdForManagement`, `listForManagement`, `paginateForManagement`) and the matching `*ContentConsumerServiceInterface` (`listVisible`), with their commands, DTOs, list criteria, `ContentLanguageFilter` and `ExactContentLanguage`, and named failures; a `create{Owner}ContentManagementService()` and `create{Owner}ContentConsumerService()` per owner on `ProductFactory`. The `(owner, language)` identity is unique across soft-deleted history, the last required name or label cannot be removed, and reads are exact with no fallback.
+- Image Roles and Image Assignments: `ImageRoleManagementServiceInterface` (`create`, `updateStatus`, `softDelete`, `restore`, `getByIdForManagement`) and `ImageAssignmentManagementServiceInterface` (`create`, `setDefault`, `clearDefault`, `softDelete`, `restore`, `getByIdForManagement`), their commands, DTOs, and named failures; `ProductFactory::createImageRoleManagementService()`, `createImageAssignmentManagementService()`, and `createImageAssignmentConsumerService()`.
+- Standalone Option and Option Value status changes (`OPT-02`, `OVL-02`): `OptionManagementServiceInterface::updateStatus()` and `OptionValueManagementServiceInterface::updateStatus()` lock the Product's whole configuration, reject a soft-deleted row or owner, treat the current status as a no-op, and reject with `ProductBusinessRuleException` any change that would break `INV-01` to `INV-07`, writing nothing.
+- Restore as default (`IAS-07`): `ImageAssignmentManagementServiceInterface::restoreAsDefault()` restores a soft-deleted assignment as the default of its exact scope at the end of the scope's order, under the `setDefault()` preconditions, and raises `ImageAssignmentDefaultConflictException` instead of replacing a live default; a duplicate on the default-scope unique key maps to the same exception.
+- `ProductFactory` as the framework-agnostic construction entry point, with a `create{X}ManagementService()` for every capability and a `create{X}ConsumerService()` for every capability with a consumer read.
+- Public failures: `ProductCodeAlreadyExistsException`, `ProductNotFoundException`, `ProductInvalidArgumentException`, and `ProductPersistenceException`, all implementing `ProductExceptionInterface`.
+- Consumer documentation: Usage Guide, runnable examples for every capability, and `llms.txt`.
+- Approved Contract Inventory in the Package Reference: capability IDs, structural invariants, management and consumer behavior, collation evidence for every text identity, and the compatibility record with `maatify/php-category`.
+- Verification: Unit and real-MySQL Integration suites, including concurrent reconfiguration and concurrent default replacement with separate processes, a Consumer Verification Harness that smoke-executes the examples, and the CI `Final Gate`.
+
+### Changed
+
+- Changed the Product package license from MIT to proprietary. The `LICENSE`, Composer metadata, and README now reflect the proprietary license.

@@ -880,7 +880,7 @@ final class GovernanceContextHelper
             ];
         }
 
-        $stdContent = (string) file_get_contents($fullPath);
+        $stdContent = $this->currentStandardMetadataText((string) file_get_contents($fullPath));
         $idFieldCount = preg_match_all('/^\s*(?:[-*]\s*)?\*{0,2}Standard ID:\*{0,2}\s*(.*?)\s*$/im', $stdContent, $idFields);
         $localStdId = $idFieldCount === 1 ? trim($idFields[1][0], "` \t") : null;
         if ($localStdId === null || !preg_match('/^std-[a-z0-9]+(?:-[a-z0-9]+)*$/', $localStdId)) {
@@ -906,6 +906,57 @@ final class GovernanceContextHelper
             'recorded_version' => $extractedVersion ?? $localStdVersion ?? '',
             'standard_id' => $localStdId,
         ];
+    }
+
+    /**
+     * Excludes fenced examples and explicitly titled ATX version-history sections
+     * from current identity checks. History ends at the next heading of the same
+     * or higher level; headings inside fences cannot open or close that scope.
+     * All other text remains subject to the strict missing/duplicate-field checks.
+     */
+    private function currentStandardMetadataText(string $content): string
+    {
+        $currentLines = [];
+        $historyLevel = null;
+        $fenceCharacter = null;
+        $fenceLength = 0;
+
+        foreach (preg_split('/\r\n|\n|\r/', $content) ?: [] as $line) {
+            if ($fenceCharacter !== null) {
+                $closingFence = '/^ {0,3}' . preg_quote($fenceCharacter, '/') . '{' . $fenceLength . ',}[ \t]*$/';
+                if (preg_match($closingFence, $line) === 1) {
+                    $fenceCharacter = null;
+                }
+                continue;
+            }
+
+            if (preg_match('/^ {0,3}(`{3,}|~{3,})(.*)$/', $line, $fence) === 1
+                && ($fence[1][0] !== '`' || !str_contains($fence[2], '`'))
+            ) {
+                $fenceCharacter = $fence[1][0];
+                $fenceLength = strlen($fence[1]);
+                continue;
+            }
+
+            if (preg_match('/^ {0,3}(#{1,6})(?:[ \t]+|$)(.*)$/', $line, $heading) === 1) {
+                $level = strlen($heading[1]);
+                if ($historyLevel !== null && $level <= $historyLevel) {
+                    $historyLevel = null;
+                }
+                $title = trim((string) preg_replace('/[ \t]+#+[ \t]*$/', '', $heading[2]));
+                if ($historyLevel === null
+                    && preg_match('/^(?:[0-9]+(?:\.[0-9]+)*[.)]?[ \t]+)?(?:Version History|سجل تغييرات المعيار)$/iu', $title) === 1
+                ) {
+                    $historyLevel = $level;
+                }
+            }
+
+            if ($historyLevel === null) {
+                $currentLines[] = $line;
+            }
+        }
+
+        return implode("\n", $currentLines);
     }
 
     private function normalizeResolvedStandardPath(string $path, string $manifestRelPath, bool $relativeLink): ?string

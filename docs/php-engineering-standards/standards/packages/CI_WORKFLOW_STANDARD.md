@@ -3,7 +3,7 @@
 ## Standard Metadata
 
 - **Standard ID:** `std-ci-workflow`
-- **Standard Version:** `5.0.0`
+- **Standard Version:** `6.0.0`
 - **Standard Version Format:** `MAJOR.MINOR.PATCH`
 
 This document outlines the standard CI workflow architecture for reusable Composer artifacts in the Maatify ecosystem. It applies to standalone Composer packages and to an extractable Base Module Artifact Root when the check or service verifies that artifact as a reusable Package. It ensures a consistent, high-quality testing and static analysis baseline without coupling repository-specific values to this Standard.
@@ -244,6 +244,21 @@ Rules:
 * Unit and Regression suites MUST represent the minimum and latest supported versions.
 * Packages owning database/service behavior MUST run applicable deterministic Integration coverage on the minimum and latest supported PHP versions unless the package supports only one PHP minor.
 * Matrix `fail-fast` SHOULD be disabled so all compatibility failures are visible.
+
+### 7.1 PHP Security Patch Floor Verification
+
+The per-minor PHP security patch floors are owned exclusively by [COMPOSER_PACKAGE_STANDARD.md §15.1.1](COMPOSER_PACKAGE_STANDARD.md#1511-php-security-patch-floors). This Standard owns only their CI verification and MUST NOT restate or redefine them. This section concerns PHP interpreter version eligibility only; it does not impose Host, SAPI, server, or `php.ini` configuration.
+
+Rules:
+
+* For every claimed supported PHP minor that has a floor, every CI job that executes the package on that minor MUST verify, after PHP setup and before running package checks, the actual installed interpreter patch (for example from `PHP_VERSION_ID`) against that minor's floor, and MUST fail closed when it is lower or cannot be determined.
+* The actual installed patch MUST be recorded in the job output. A matrix label, a `php-version` setup input such as `8.4`, or the job name is not evidence of the installed patch.
+* A passing test suite on an interpreter below its minor's floor MUST NOT count as verification of that minor and MUST NOT be accepted as package acceptance.
+* CI MUST run `composer validate --strict` and `composer check-platform-reqs` under §5. Platform verification MUST NOT rely on `config.platform.php`, `--ignore-platform-reqs`, or any other emulated or ignored platform setting as evidence of the real interpreter.
+* For a package governed by COMPOSER_PACKAGE_STANDARD.md §15.1.1, CI MUST include a deterministic constraint-boundary verification of its declared `require.php`, using Composer's own constraint semantics, with a local invocation under §2.1. For every supported minor it MUST prove that the minor's floor is accepted and the patch immediately below that floor is rejected, and it MUST prove that the first patch of the next minor without a floor is rejected.
+* Negative boundary cases MUST be proven by simulating the version through the constraint parser or an equivalent non-executing mechanism. CI MUST NOT require running, installing, or provisioning an interpreter below a floor to prove rejection.
+* A minor absent from §15.1.1 has no numeric floor and no gate under this section; this section does not retroactively change an existing package's declared compatibility.
+* A change to a §15.1.1 floor takes effect for CI only through a revision of the Standards; a repository MUST NOT lower or waive a floor through workflow configuration.
 
 ## 8. Mandatory Baseline Quality Checks
 
@@ -493,6 +508,8 @@ Any applicable reusable Composer artifact in the Maatify ecosystem MUST verify t
 * [ ] minimum supported PHP is tested
 * [ ] latest supported PHP is tested
 * [ ] every currently released PHP minor covered by the declared constraint is tested or has an explicit documented architectural exception
+* [ ] every job on a PHP minor that has a floor verifies and records the actual installed PHP patch and fails closed below that floor, without relying on matrix labels or setup inputs
+* [ ] for a package governed by Composer §15.1.1, a deterministic constraint-boundary check proves each supported minor's floor accepted, the patch below it rejected, and the next unqualified minor rejected, without executing a vulnerable interpreter
 * [ ] workflow files pass linting when workflows exist
 * [ ] every externally sourced GitHub Action and external reusable workflow is pinned to an immutable full commit SHA
 * [ ] downloaded CI tools and validators use a documented integrity-verifiable installation policy where downloaded tools exist
@@ -518,5 +535,15 @@ Any applicable reusable Composer artifact in the Maatify ecosystem MUST verify t
 
 ### `5.0.0`
 
-- Frozen baseline `4.0.0`, artifact blob `81f63475c89a1e85790acfaef885a25049518399` (Maatify/php-paymob completed VALID upgrade; upstream commit `2ea426aee0e6a5265f0c30ced667f21bb7b1d302`).
+- Frozen baseline `4.0.0`, artifact blob `81f63475c89a1e85790acfaef885a25049518399` (a consumer repository's completed VALID upgrade, identity withheld per `DEC-042`; upstream commit `2ea426aee0e6a5265f0c30ced667f21bb7b1d302`).
+- Issue #168 (`DEC-042`): consumer-identity neutralization of the preceding frozen-baseline evidence line only; `EDITORIAL / NO_CONTRACT_CHANGE` (Patch), absorbed in the existing Mutable Candidate calculated from the Frozen Version Baseline; no additional bump, freeze, release, or adoption. The artifact blob and commit hashes are unchanged.
 - `NORMATIVE / BREAKING_CONTRACT_CHANGE`: add exact-SHA Release Artifact Verification before release authorization and post-publication Published Artifact Verification as distinct release/distribution integrity gates; preserve separate runtime Consumer Verification evidence.
+
+### `6.0.0`
+
+- Frozen Version Baseline `5.0.0`, exact artifact blob `74e499519da522f0f1719c6370c58c2a4eef15a3`, proven by completed VALID consumer Adoption (identity withheld per `DEC-042`; upstream Adoption Commit `334c9d5888fd46f9b4624c57e131440c37b840ce`; evidence recorded in Issue #179). The calculation below is made once from this baseline, not from a previous candidate.
+- Cumulative changes since the baseline: (1) Issue #168 (`DEC-042`) consumer-identity neutralization of a Version History evidence line, `EDITORIAL / NO_CONTRACT_CHANGE` (Patch); (2) Issue #181, below. The earlier `5.0.0` entry is retained as historical evidence; the Issue #179 reconciliation below corrects its frozen-status inference.
+- Issue #181 `NORMATIVE / BREAKING_CONTRACT_CHANGE`: require fail-closed verification and recording of the actual installed PHP patch against the Composer Standard §15.1.1 per-minor floor, rejection of below-floor interpreters, and deterministic non-executing constraint-boundary verification (§7.1 and checklist). CI that previously passed on any patch of a supported minor can become non-compliant.
+- Version Class: Major (highest impact in the cumulative set) → calculated Mutable Candidate `6.0.0` from Frozen Baseline `5.0.0`; not chained through `5.0.1`. This is a candidate only: no Freeze, Owner Version Finalization, release, or adoption is claimed.
+
+- Issue #179 factual reconciliation (2026-11-04): the historical `5.0.0` entry's statement that Issue #168's editorial edit was absorbed in an existing Mutable Candidate was inaccurate because the qualified `5.0.0` snapshot above was already frozen. The original entry is preserved; neither the neutralization policy nor the frozen artifact is rewritten. This evidence correction is `EDITORIAL / NO_CONTRACT_CHANGE` (Patch class), aggregated with the already-recorded breaking Issue #181 change from Frozen `5.0.0`; the highest cumulative impact remains Major and the Mutable Candidate remains `6.0.0`. The earlier editorial-only proposal `5.0.1` is no longer the cumulative result, and no `6.0.1`, new Freeze, Version Finalization, release, or Adoption is created by this reconciliation.

@@ -1,0 +1,17 @@
+# Maatify Product (maatify/php-product)
+
+> Framework-agnostic PHP library for Product and Variant identity on MySQL: Product creation, lifecycle, and atomic reconfiguration; Variant reads, composition resolution, and lifecycle; Options and Option Values with validated status changes, Product/Option/Option Value Content, Image Roles, and Image Assignments with explicit default operations including restore-as-default; management lists, search, pagination, ordering, and exact consumer reads, exposed through separate Management and Consumer contracts per capability; and a MySQL schema. In development; no version is published.
+
+Use only the documented public contract below. Content visible in the repository is not a supported consumer contract: do not rely on `src/` internals, undocumented classes or methods, tests, fixtures, or contributor and standards files. If the documentation does not support a claim, do not infer it from implementation details.
+
+## Documentation
+
+- [README](README.md): package overview, requirements, installation, Quick Usage, and Public Runtime API overview.
+- [Package Reference](PRODUCT_PACKAGE_REFERENCE.md): the current public runtime and behavioral contract for the unreleased package, including the complete Public Runtime API inventory.
+- [Usage Guide](docs/guides/USAGE_GUIDE.md): consumer integration workflows and boundaries.
+- [Examples](examples/): maintained examples that consume the documented Public API.
+- [Schema](schema/README.md): what the delivered `schema/product.sql` creates and what it does not enforce.
+
+## Release and support
+
+- [CHANGELOG](CHANGELOG.md): release history.

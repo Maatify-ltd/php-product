@@ -1,0 +1,32 @@
+{
+    "name": "consumer-verification/maatify-php-product",
+    "description": "External consumer fixture for maatify/php-product.",
+    "license": "proprietary",
+    "type": "project",
+    "repositories": [
+        {
+            "type": "path",
+            "url": "__PACKAGE_ROOT__",
+            "options": {
+                "symlink": false
+            }
+        }
+    ],
+    "require": {
+        "ext-mbstring": "*",
+        "ext-pdo": "*",
+        "ext-pdo_mysql": "*",
+        "maatify/php-persistence": ">=1.0.0-rc.1 <=1.0.0-rc.1",
+        "maatify/php-product": "*@dev",
+        "maatify/shared-common": "^1.0"
+    },
+    "config": {
+        "allow-plugins": false,
+        "platform": {
+            "php": "8.4.27"
+        },
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

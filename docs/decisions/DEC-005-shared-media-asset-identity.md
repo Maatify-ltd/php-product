@@ -14,7 +14,7 @@
 
 ## Context
 
-During the architectural design and specification of `Product V1` ([`docs/architecture/PRODUCT_V1_ARCHITECTURE_CANDIDATE.md`](../architecture/PRODUCT_V1_ARCHITECTURE_CANDIDATE.md)), the identity contract and boundaries for media asset assignments (`maa_product_media_assignments`) required formal definition. Earlier draft concepts considered arbitrary opaque string or UUID identifiers for external media assets.
+During the architectural design and specification of `Product V1` ([`docs/architecture/PRODUCT_V1_ARCHITECTURE_CANDIDATE.md`](../architecture/PRODUCT_V1_ARCHITECTURE_CANDIDATE.md)), the identity contract and boundaries for image assignments of external Media Assets (`maa_product_image_assignments`) required formal definition. Earlier draft concepts considered arbitrary opaque string or UUID identifiers for external media assets.
 
 However, in the broader Maatify catalog ecosystem, `Maatify/php-category` already defines an established public contract and relational schema for media assignments (`maa_category_category_image_assignments`). In that contract, `media_asset_id` represents an external, Host-owned scalar identity persisted as `BIGINT UNSIGNED`, exposed at the PHP boundary as a native integer, and normalized at the input boundary through `CategoryIdDTO` to accept positive integers and canonical decimal digit strings bounded by `PHP_INT_MAX`.
 
@@ -63,7 +63,7 @@ The project Owner formally approved the following decision on 2026-10-12:
    - The PHP layer explicitly does not claim to accept the entire unsigned 64-bit integer range (`0` to `2^64 - 1`). The supported PHP integer range bounded by `PHP_INT_MAX` remains binding.
 5. **No Ownership of Media Storage or Lifecycle:** `php-product` owns neither Media Asset file storage nor its upload, processing, resizing, transcoding, URL resolution, or lifecycle deletion. Product only owns the relational assignment linking a Product or Variant target to the external `media_asset_id` within an exact assignment scope.
 6. **No External Foreign Keys or JOINs:** Product persistence maintains no foreign key constraint (`FOREIGN KEY`) referencing external media storage, and execution queries perform no SQL `JOIN` operations against external media tables.
-7. **Strict Namespace Separation for Media Roles:** Product owns its own Media Role registry (`maa_product_media_roles`), completely separate from Category Image Roles (`maa_category_category_image_roles`). Product Media Role IDs (`role_id`) and Category Image Role IDs occupy independent namespaces and must never be interchanged or cross-assigned.
+7. **Strict Namespace Separation for Image Roles:** Product owns its own Image Role registry (`maa_product_image_roles`), completely separate from Category Image Roles (`maa_category_category_image_roles`). Product Image Role IDs (`role_id`) and Category Image Role IDs occupy independent namespaces and must never be interchanged or cross-assigned.
 8. **Coordinated Evolution Policy:** Any future requirement for UUID or string-based media identities requires either a coordinated architectural decision updating both package contracts (`php-category` and `php-product`) synchronously, or an explicit translation mapping owned by the Host application. Unilateral alteration of the media identity type in Product alone is strictly prohibited.
 
 ---
@@ -85,7 +85,7 @@ No speculative assumptions or unverified guarantees beyond this existing contrac
 1. **Catalog Ecosystem Interoperability:** When a Host application uses the same Media Asset identity across both packages, a compatible identity representation (`int` in PHP, `BIGINT UNSIGNED` in SQL, matching the Category contract) simplifies integration and reduces the need for conversion caused by type mismatch.
 2. **Defensive Input Validation and Overflow Prevention:** Replicating the Category `CategoryIdDTO` validation rules provides robust protection against malformed input, scientific notation, sign manipulation, and 64-bit integer overflow truncation before values reach domain logic or persistence.
 3. **Domain Decoupling:** Decoupling Product from media storage, binary assets, and URL generation allows `php-product` to remain a pure, focused commerce domain package, adaptable to any storage infrastructure (local filesystem, cloud buckets, or external digital asset management systems).
-4. **Namespace Integrity for Roles:** Product media roles serve product-specific classification needs (e.g., gallery, packaging, specifications) that are distinct from category taxonomy display roles. Separate namespaces prevent cross-domain coupling and protect role key governance.
+4. **Namespace Integrity for Roles:** Product Image Roles serve product-specific classification needs (e.g., gallery, packaging, specifications) that are distinct from category taxonomy display roles. Separate namespaces prevent cross-domain coupling and protect role key governance.
 
 ---
 
@@ -96,15 +96,15 @@ No speculative assumptions or unverified guarantees beyond this existing contrac
 - A compatible Media Asset identity representation across `php-product` and `php-category` simplifies Host integration when the Host uses the same Media Asset identity in both packages; it does not guarantee direct integration in every case.
 - Robust boundary validation that rejects malformed, negative, or overflowing identifiers before integer casting.
 - No external foreign key from Product tables to Media Asset storage, so Product schema does not depend on how the Host stores media; preserving Media Asset identities, or a Host-owned mapping, remains the Host's responsibility when media data is migrated.
-- Strict namespace boundaries between Product Media Roles and Category Image Roles.
+- Strict namespace boundaries between Product Image Roles and Category Image Roles.
 
 ### Follow-up Requirements
 
-- Any future implementation of `php-product` media assignment commands, DTOs, and persistence must strictly implement this contract.
-- The candidate architecture document ([`docs/architecture/PRODUCT_V1_ARCHITECTURE_CANDIDATE.md`](../architecture/PRODUCT_V1_ARCHITECTURE_CANDIDATE.md)) §9.1 and §20 Gate 5 must reflect Owner approval under `DEC-005`.
-- Gate 6 (`Product.display_order` retention or exclusion in V1) remains unresolved and pending an explicit Owner decision.
-- The candidate architecture document retains its `CANDIDATE` classification. This decision does not authorize runtime PHP implementation, SQL migrations, or database behavior, and does not claim full Catalog integration.
-- Standards applicability must be formally re-evaluated under canonical standards governance before any persistence implementation begins.
+- The `php-product` Image Assignment commands, DTOs, and persistence implement this contract.
+- The architecture document ([`docs/architecture/PRODUCT_V1_ARCHITECTURE_CANDIDATE.md`](../architecture/PRODUCT_V1_ARCHITECTURE_CANDIDATE.md)) §9.1 and §20 Gate 5 carry this decision.
+- Gate 6 (`Product.display_order` retention or exclusion in V1) is resolved by [`DEC-006`](DEC-006-product-ordering-boundary.md).
+- This decision itself does not authorize runtime PHP implementation, SQL migrations, or database behavior, and does not claim full Catalog integration; the start of implementation is authorized by [`DEC-007`](DEC-007-product-v1-implementation-start-authorization.md).
+- The standards applicability re-evaluation required before persistence implementation is recorded in `STANDARDS_MANIFEST.md`.
 
 ---
 
@@ -113,7 +113,7 @@ No speculative assumptions or unverified guarantees beyond this existing contrac
 This decision is strictly bounded to the shared media asset identity contract for Product V1. The following areas are explicitly non-goals and out of scope:
 
 - Product ownership of media file storage, binary uploading, transcoding, thumbnail generation, CDN delivery, or URL resolution.
-- Defining or hardcoding standard business meanings for Product Media Roles (roles remain Host-defined).
+- Defining or hardcoding standard business meanings for Product Image Roles (roles remain Host-defined).
 - Interchanging or sharing role identifiers between Product and Category packages.
 - Resolving Owner Decision Gate 6 (`Product.display_order`).
 - Implementing runtime PHP code, classes, interfaces, traits, or exceptions.

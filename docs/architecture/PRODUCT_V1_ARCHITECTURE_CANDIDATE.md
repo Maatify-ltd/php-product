@@ -1,11 +1,11 @@
 # Product Package V1 Architecture
 
-**Status:** Owner-approved architecture contract for Product V1 implementation (`DEC-007`, 2026-10-12), approved at `main` commit `cdbefe7d4296d29292f051f2f7db52b79cb40d62`. Implementation is authorized only within the local Product scope defined here.<br>
+**Status:** Owner-approved architecture contract for Product V1, approved under [`DEC-007`](../decisions/DEC-007-product-v1-implementation-start-authorization.md) (2026-10-12) and maintained in place before the first release: the decisions it carries are kept current in this text. Implementation is authorized only within the local Product scope defined here.<br>
 **Package:** `maatify/php-product`  
-**Repository:** `Maatify/php-product`  
+**Repository:** `Maatify-ltd/php-product`<br>
 **Document path:** `docs/architecture/PRODUCT_V1_ARCHITECTURE_CANDIDATE.md`<br>
 **Architecture type:** Standalone, reusable, host-agnostic Composer package  
-**Scope:** Product identity, variants, variant-defining options and values, product content, and product-owned media assignments  
+**Scope:** Product identity, variants, variant-defining options and values, product content, and product-owned image assignments  
 **Review date:** 2026-10-11  
 **Review basis:** Current `maatify/php-category` package reference, usage guide, SQL schema, and the Product repository's currently pinned standards manifest.
 
@@ -28,9 +28,9 @@ This is a deliberate redesign of parts of the historical Catalog V1 specificatio
 
 ### 1.1 Review status and approval boundary
 
-This document has been reviewed against the current Category package contract and the applicable Product repository standards references. The review tightened several previously under-specified areas: content identity and exact locale reads, composite foreign-key enforcement for Variant composition and media targets, mutation serialization, active Option Value coverage, status casing, and the candidate persistence design proposed for future implementation.
+This document has been reviewed against the current Category package contract and the applicable Product repository standards references. The review tightened several previously under-specified areas: content identity and exact locale reads, composite foreign-key enforcement for Variant composition and image-assignment targets, mutation serialization, active Option Value coverage, status casing, and the persistence design (§11).
 
-This document itself adds no SQL DDL, migrations, or persistence implementation. The Owner approved it as the architecture contract for Product V1 under [`DEC-007`](../decisions/DEC-007-product-v1-implementation-start-authorization.md). The pre-implementation standards applicability re-evaluation required by that decision was completed on 2026-10-12 and is recorded in `STANDARDS_MANIFEST.md`: package-owned SQL persistence and manually maintained PHP are now applicable, so the conditional persistence requirements of the Package Building Standard, and the persistence-conditioned requirements of the CI Workflow, Testing, Composer Package, and Library Presentation Standards, apply to the implementation.
+This document itself adds no SQL DDL, migrations, or persistence implementation. The Owner approved it as the architecture contract for Product V1 under [`DEC-007`](../decisions/DEC-007-product-v1-implementation-start-authorization.md). The pre-implementation standards applicability re-evaluation required by that decision was completed on 2026-10-12 and is recorded in `STANDARDS_MANIFEST.md`: package-owned SQL persistence and manually maintained PHP are applicable, so the conditional persistence requirements of the Package Building Standard, and the persistence-conditioned requirements of the CI Workflow, Testing, Composer Package, and Library Presentation Standards, apply to the implementation.
 
 Owner approval authorizes the start of implementation within the approved scope; it is not evidence of implementation, schema execution, or test success, and it does not authorize Pricing or Inventory libraries, full Catalog integration, a Product-to-Category relationship inside either core library, merge, release, or publish. No Product SQL schema or PHP implementation has been executed or validated by this review.
 
@@ -53,7 +53,7 @@ Owner approval authorizes the start of implementation within the approved scope;
 
 - Product identity and lifecycle.
 - Product content records (name, short description, description), with optional localization and no implicit locale fallback.
-- Product-owned Media Role registry and Product/Variant Media Assignments, scoped independently of Category Media Roles and referencing external Media Asset identities.
+- Product-owned Image Role registry and Product/Variant Image Assignments, scoped independently of Category Image Roles and referencing external Media Asset identities.
 - Variant identity and lifecycle.
 - Product Options and Option Values that define selectable variants.
 - Immutable Variant-to-Option-Value composition.
@@ -209,10 +209,10 @@ The contract enforces these exact behaviors:
 
 - Status values are exactly lowercase `active` or `inactive`. Every status-bearing table must enforce exact casing in MySQL (for example, a binary comparison in `CHECK`); a case-insensitive table collation alone is not sufficient. Public mutations use typed status enums.
 - `deleted_at IS NULL` means the row is not soft-deleted. Status and deletion are separate dimensions. Runtime hard-delete is not used for normal lifecycle operations.
-- Product creation defaults to `inactive`; its initial empty-composition Variant is `active`. New Options and Option Values default to `inactive`. Product Media Roles default to `active`, matching Category Image Role creation semantics. Reconfiguration may explicitly activate prepared Options, Values, and replacement Variants in one transaction.
+- Product creation defaults to `inactive`; its initial empty-composition Variant is `active`. New Options and Option Values default to `inactive`. Product Image Roles default to `active`, matching Category Image Role creation semantics. Reconfiguration may explicitly activate prepared Options, Values, and replacement Variants in one transaction.
 - Restore reuses the same identity and preserves the saved `status`; it MUST validate the restored state. Restoring a saved `inactive` row never activates it. Status changes on a soft-deleted row are not a substitute for restore; restore first, then issue an explicit status mutation where allowed.
 - No automatic cascading soft-delete changes child status or `deleted_at`. Parent visibility suppresses child consumer visibility without rewriting child state.
-- Re-adding a soft-deleted logical identity restores/reuses that identity; it never inserts a second row to bypass the identity key.
+- Re-adding a soft-deleted logical identity never restores it implicitly and never inserts a second row to bypass the identity key: create fails with a typed conflict that identifies the existing identity, and the only way back is an explicit restore, which reuses the original identity and revalidates the invariants. This applies to every family that keeps identity across soft-deleted history: Product code, Option and Option Value codes, the Image Role key, Content identity, Variant composition, Variant SKU and barcode, and Image Assignment identity.
 
 ### 6.2 Product structural validity
 
@@ -244,8 +244,9 @@ Historical inactive Variants may refer to now-inactive/deleted Options or Values
 - Every Content record must have a usable non-empty `name`/label. A localized Content record is not required for every supported language. Product activation needs at least one non-deleted Product Content name in any language or in the unlocalized (`NULL`) record. That does **not** promise that a name exists for every requested locale; the Host owns language availability and fallback policy.
 - Product, Option, and Option Value Content uses `language_code VARCHAR(16) NULL`. `NULL` means unlocalized content; a non-NULL value is content for that exact language. Empty and whitespace-only non-NULL language codes are invalid. Product performs no locale normalization, semantic language validation, or implicit fallback; the Host owns those policies.
 - The immutable Content identity is `(owner_id, language_code)`, and only the content fields may change through a record-ID update. The owner and language identity cannot be edited in place. The identity remains unique even after soft deletion, including the single NULL-language row; re-addition requires explicit restoration of the original record.
-- A content mutation, status mutation, restore, reconfiguration, or media operation that changes an aggregate invariant must be serialized with the relevant Product row lock. Read-before-write checks without transaction/locking and database uniqueness are not sufficient under concurrent writers.
+- A content mutation, status mutation, restore, reconfiguration, or image-assignment operation that changes an aggregate invariant must be serialized with the relevant Product row lock. Read-before-write checks without transaction/locking and database uniqueness are not sufficient under concurrent writers.
 - An Option/Value status mutation that would invalidate an active configuration must be rejected unless included in the dedicated atomic Product reconfiguration. A Product may not commit a partial active Option set or a Variant with missing/extra Values.
+- Option and Option Value each have a standalone status mutation (`updateStatus`). It locks the Product graph, rejects a soft-deleted row or a soft-deleted owner as a business-rule failure, treats a request for the current status as a no-op with no write, and validates the complete configuration with the new status, rejecting any result that breaks a structural invariant (§6.2, §6.5). Changing the active set atomically remains the dedicated reconfiguration operation.
 
 ### 6.5 Mutation-time invariants
 
@@ -320,9 +321,11 @@ An order line references `variant_id` and stores its own purchase-time snapshot 
 
 The Product package does not create orders or decide how an order snapshot is retained.
 
-## 9. Media Roles and Assignments
+## 9. Image Roles and Assignments
 
-Product owns Product/Variant media-role metadata and media-assignment relations, but never owns Media Asset storage, upload, processing, URL resolution, or Media Asset lifecycle. This capability is Product-owned and independent of `maatify/category`'s Category Image Role registry and Category Image Assignments. Their role IDs are separate namespaces; Product must not consume or persist Category `role_id` values.
+Product owns Product/Variant image-role metadata and image-assignment relations, but never owns Media Asset storage, upload, processing, URL resolution, or Media Asset lifecycle. This capability is Product-owned and independent of `maatify/php-category`'s Category Image Role registry and Category Image Assignments. Their role IDs are separate namespaces; Product must not consume or persist Category `role_id` values.
+
+The capability is named Image Role and Image Assignment, persisted as `maa_product_image_roles` and `maa_product_image_assignments`, with the explicit default marker `is_default` and the generated `default_scope_identity` (§11.4). Single-record reads follow the package read pair: `getById` is the consumer read and returns only a consumer-visible record, and `getByIdForManagement` is the management read, which ignores status and filters only by soft-deletion state. Image Roles and Image Assignments are read one by one through `getByIdForManagement`; consumers read assignments only through the exact-scope read (§12).
 
 ### 9.1 Media Asset ID interoperability
 
@@ -332,51 +335,51 @@ Input normalization conforms to Category's `CategoryIdDTO` boundary contract: co
 
 This formally replaces the earlier draft's arbitrary opaque string ID. The Category package currently persists `media_asset_id` as `BIGINT UNSIGNED` and exposes the assignment identity as an integer; using one shared numeric ID prevents Product and Category from referring to the same Host Media Asset under incompatible IDs. If a future Host requires UUID/string Media IDs, the Owner must approve a coordinated contract migration for both packages or introduce an explicit Host-owned mapping; the Executor must not silently reintroduce string IDs into Product alone.
 
-### 9.2 Product Media Roles
+### 9.2 Product Image Roles
 
-Product owns a small `Product Media Role` registry because Product media roles qualify Product/Variant assignments and must not depend on Category. The Host defines role meanings and UI/presentation policy; Product ships no seeded roles and does not decide that a role means `hero`, `gallery`, `swatch`, or any other business meaning.
+Product owns a small `Product Image Role` registry because Product image roles qualify Product/Variant assignments and must not depend on Category. The Host defines role meanings and UI/presentation policy; Product ships no seeded roles and does not decide that a role means `hero`, `gallery`, `swatch`, or any other business meaning.
 
 - `role_key` is required, non-empty after trimming, limited to 100 characters, immutable, unique within the Product package role namespace, and remains reserved after soft deletion. Use the same `utf8mb4_unicode_ci` identifier comparison as the current Category schema; do not implement a different PHP-only case-folding rule.
 - Role lifecycle uses the exact lowercase values `active` and `inactive`, independently of `deleted_at`. Enforce the exact values through a typed enum and a case-sensitive database constraint. Restore preserves the same Role identity and status.
-- A new role-scoped assignment requires an active, non-deleted Product Media Role. Existing role-scoped assignments are omitted from consumer reads while their Role is inactive or deleted, but remain available to management reads.
-- NULL `role_id` is the exact generic/unclassified role scope, not a fallback request. Product Media Role IDs must never be treated as Category Image Role IDs.
+- A new role-scoped assignment requires an active, non-deleted Product Image Role. Existing role-scoped assignments are omitted from consumer reads while their Role is inactive or deleted, but remain available to management reads.
+- NULL `role_id` is the exact generic/unclassified role scope, not a fallback request. Product Image Role IDs must never be treated as Category Image Role IDs.
 
 ### 9.3 Assignment target and scope
 
-An assignment targets exactly one of: the Product itself (`variant_id = NULL`), or one Variant belonging to that Product (concrete `variant_id`). Its logical data includes assignment ID, `product_id`, nullable `variant_id`, `media_asset_id`, nullable `role_id`, nullable `language_code`, nullable `platform`, `is_primary`, `display_order`, timestamps, and `deleted_at`.
+An assignment targets exactly one of: the Product itself (`variant_id = NULL`), or one Variant belonging to that Product (concrete `variant_id`). Its logical data includes assignment ID, `product_id`, nullable `variant_id`, `media_asset_id`, nullable `role_id`, nullable `language_code`, nullable `platform`, `is_default`, `display_order`, timestamps, and `deleted_at`.
 
-Internal relational integrity for `maa_product_media_assignments` is explicitly closed as follows:
-- `product_id` MUST have an independent foreign key referencing `maa_product_products(id)` with `ON DELETE RESTRICT` and `ON UPDATE RESTRICT`. This enforces that every media assignment row—whether Product-level or Variant-level—is strictly anchored to a valid, existing Product identity in the database. A Product-level assignment for a non-existent Product is rejected at the database level.
+Internal relational integrity for `maa_product_image_assignments` is explicitly closed as follows:
+- `product_id` MUST have an independent foreign key referencing `maa_product_products(id)` with `ON DELETE RESTRICT` and `ON UPDATE RESTRICT`. This enforces that every image assignment row—whether Product-level or Variant-level—is strictly anchored to a valid, existing Product identity in the database. A Product-level assignment for a non-existent Product is rejected at the database level.
 - When `variant_id` is present (non-NULL), a composite foreign key on `(variant_id, product_id)` referencing `maa_product_variants(id, product_id)` with `ON DELETE RESTRICT` and `ON UPDATE RESTRICT` proves that the referenced Variant belongs to the exact same Product. A Variant belonging to a different Product cannot be used in an assignment.
 - `variant_id = NULL` is valid only to represent a Product-level target. Setting `variant_id = NULL` does not exempt the row from Product identity validation; the independent `product_id` foreign key always enforces that the Product exists.
-- Media Asset constraints (`BIGINT UNSIGNED > 0` with no external FK), Product Media Role references (internal FK to `maa_product_media_roles(id)` when `role_id` is non-NULL), exact role/language/platform scope dimensions, historical immutable identity, and at most one active primary per exact target scope continue unchanged without external foreign keys.
+- Media Asset constraints (`BIGINT UNSIGNED > 0` with no external FK), Product Image Role references (internal FK to `maa_product_image_roles(id)` when `role_id` is non-NULL), exact role/language/platform scope dimensions, historical immutable identity, and at most one active default per exact target scope continue unchanged without external foreign keys.
 
 `role_id`, `language_code`, and `platform` are exact scope dimensions. NULL means exact NULL, never “all roles”, “all languages”, or “all platforms”. Exact means no fallback; non-NULL string equality follows the shared `utf8mb4_unicode_ci` schema collation, like the corresponding Category fields. Empty non-NULL language/platform strings are invalid. `language_code` uses the same storage contract as Category (`VARCHAR(16)` maximum); `platform` uses `VARCHAR(255)` maximum, also matching Category. The Host validates semantic language/platform support and owns display/fallback policy. No platform enum is hardcoded.
 
-The immutable assignment identity is `(target kind, target identity, media_asset_id, role_id, language_code, platform)`, including soft-deleted history. Enforce `media_asset_id > 0`, positive non-NULL `role_id` and `variant_id`, `is_primary IN (0, 1)`, positive `display_order`, language length/blank checks matching Category, and platform length/blank checks matching Category. Reserve the NULL-sentinel values in CHECK constraints so generated identities cannot collide with valid stored values. The same Media Asset may be assigned to a different target or exact scope. Re-adding the same logical assignment restores/reuses its original identity rather than creating a replacement row. A deleted or inactive role never changes the identity dimensions. Product/Variant consumer reads MUST also require the target Product and (for a Variant target) the Variant to be active and non-deleted; an inactive/deleted ancestor target suppresses the assignment without mutating it.
+The immutable assignment identity is `(target kind, target identity, media_asset_id, role_id, language_code, platform)`, including soft-deleted history. Enforce `media_asset_id > 0`, positive non-NULL `role_id` and `variant_id`, `is_default IN (0, 1)`, positive `display_order`, language length/blank checks matching Category, and platform length/blank checks matching Category. Reserve the NULL-sentinel values in CHECK constraints so generated identities cannot collide with valid stored values. The same Media Asset may be assigned to a different target or exact scope. Re-adding the same logical assignment never creates a replacement row and never restores it implicitly: create fails with a typed conflict that identifies the existing identity, and the explicit restore is the only way back. A deleted or inactive role never changes the identity dimensions. Product/Variant consumer reads MUST also require the target Product and (for a Variant target) the Variant to be active and non-deleted; an inactive/deleted ancestor target suppresses the assignment without mutating it.
 
-### 9.4 Primary and ordering behavior
+### 9.4 Default and ordering behavior
 
-- Each exact `(target, role_id, language_code, platform)` scope allows zero or one active primary assignment. Primary is independent of `display_order`; deleting or clearing the current primary does not automatically select or promote another assignment. A new primary is selected only through the explicit atomic replacement operation below.
-- Setting a primary assignment is an explicit atomic replacement within its exact `(target, role_id, language_code, platform)` scope: clear the previous primary in that scope and set the requested assignment as primary in the same transaction. It must be protected by database-enforced uniqueness plus transaction/target-scope locking. A nullable-scope uniqueness rule must not rely on a plain MySQL UNIQUE key that permits multiple NULLs.
-- Soft-deleting a primary assignment clears its primary status and does not promote another assignment; restoring it leaves it non-primary. Restore as primary is a separate explicit command and fails if another primary exists in that exact scope.
-- Ordering is independent for each exact target and role/language/platform scope. Use the shared `maatify/persistence` Ordering API where its public contract applies; lists sort deterministically by `display_order, id`. Positions are positive and managed by the application, not supplied by database defaults.
+- Each exact `(target, role_id, language_code, platform)` scope allows zero or one active default assignment. Default is independent of `display_order`; deleting or clearing the current default does not automatically select or promote another assignment. A new default is selected only through the explicit atomic replacement operation below.
+- Setting a default assignment is an explicit atomic replacement within its exact `(target, role_id, language_code, platform)` scope: clear the previous default in that scope and set the requested assignment as default in the same transaction. It must be protected by database-enforced uniqueness plus transaction/target-scope locking. A nullable-scope uniqueness rule must not rely on a plain MySQL UNIQUE key that permits multiple NULLs.
+- Soft-deleting a default assignment clears its default status and does not promote another assignment; restoring it leaves it non-default. Restore as default is a separate explicit command (`restoreAsDefault`): it restores a soft-deleted assignment and makes it the default of its exact scope in the same operation, and it fails with a typed conflict if that exact scope already has a live default. Setting a live assignment as default is the explicit set-default operation (`setDefault`), which replaces any current default atomically.
+- Ordering is independent for each exact target and role/language/platform scope. Use the shared `maatify/php-persistence` Ordering API where its public contract applies; lists sort deterministically by `display_order, id`. Positions are positive and managed by the application, not supplied by database defaults. A restored assignment takes the next position at the end of its live exact scope, in the same operation that restores it; soft deletion does not compact positions. This deliberately differs from `maatify/php-category`, which keeps the original position, because a newer row may already hold it.
 - Duplicate target/asset/scope identities, including historical rows and concurrent attempts, must be blocked by database-enforced identity keys. The application must not rely on read-before-write as the integrity mechanism.
-- Product-level media does not implicitly become Variant-level media, and Variant media does not replace Product-level media.
+- Product-level image assignments do not implicitly become Variant-level assignments, and Variant assignments do not replace Product-level assignments.
 - Product never uploads, deletes, transforms, resolves, or checks the external Media Asset itself.
 
 ## 10. Category, Catalog, and Host Boundaries
 
-`php-product` does not depend on `maatify/category` and does not own a Product-to-Category relation. The Catalog/Host integration layer owns the mapping between `category_id` and `product_id`. Per `DEC-006`, package-wide `Product.display_order` is excluded from Product V1. When category-product mapping is implemented, ordering is persisted on the mapping relationship scoped by `category_id`, using the stable `maatify/persistence` scoped-ordering API where applicable. Consuming applications may select different read/presentation sort orders without treating that as Product-owned persistent ordering. A new integration package is not introduced solely by assumption; consuming applications may own this integration directly until a demonstrated cross-project contract warrants a reusable package.
+`php-product` does not depend on `maatify/php-category` and does not own a Product-to-Category relation. The Catalog/Host integration layer owns the mapping between `category_id` and `product_id`. Per `DEC-006`, package-wide `Product.display_order` is excluded from Product V1. When category-product mapping is implemented, ordering is persisted on the mapping relationship scoped by `category_id`, using the stable `maatify/php-persistence` scoped-ordering API where applicable. Consuming applications may select different read/presentation sort orders without treating that as Product-owned persistent ordering. A new integration package is not introduced solely by assumption; consuming applications may own this integration directly until a demonstrated cross-project contract warrants a reusable package.
 
 The package contracts are deliberately aligned where the same concepts cross package boundaries:
 
 - **Media Asset identity:** Product and Category use the same positive integer Media Asset ID contract; each package owns its own target-to-asset assignment table and internal role registry. Neither package adds an external Media FK or calls the other package.
 - **Localized content:** Product/Option/Option Value content uses nullable `language_code` with `NULL` as exact unlocalized content, a maximum length of 16 for non-NULL language codes, no implicit fallback, and Host-owned semantic locale policy, matching Category's content contract.
 - **Status/lifecycle:** `active|inactive` status remains distinct from `deleted_at`; normal mutations use soft deletion, do not cascade child state, and restore the original identity only after revalidating invariants.
-- **Timestamps and ordering:** Product uses the Host-supplied `ClockInterface`, does not normalize timezone independently from the Host clock, and does not use DB timestamp defaults. Positive scoped `display_order` values are assigned through `maatify/persistence` ordering capabilities where applicable. The Host supplies locale, presentation, and semantic Media/Platform policy.
+- **Timestamps and ordering:** Product uses the Host-supplied `ClockInterface`, does not normalize timezone independently from the Host clock, and does not use DB timestamp defaults. Positive scoped `display_order` values are assigned through `maatify/php-persistence` ordering capabilities where applicable. The Host supplies locale, presentation, and semantic Media/Platform policy.
 
-These alignments are package-contract compatibility decisions, not runtime dependencies or cross-package foreign keys. The Product Media Role registry is independent of Category's similarly named registry because each package owns roles for its own assignment target and lifecycle.
+These alignments are package-contract compatibility decisions, not runtime dependencies or cross-package foreign keys. The Product Image Role registry is independent of Category's similarly named registry because each package owns roles for its own assignment target and lifecycle.
 
 The Product package does not introduce a first-class Catalog/Tenant/Store entity in V1. The V1 deployment contract is one Product identity namespace per deployed set of Product tables. Multiple isolated Catalogs sharing the same Product tables and reusing Product codes are explicitly unsupported in V1. Do not invent `catalog_id`, tenant, store, or channel scope during implementation.
 
@@ -396,13 +399,15 @@ The following is the approved schema contract that implementation must preserve.
 | `maa_product_option_value_contents` | Option Value labels | `id` PK; `option_value_id`; nullable language and generated identity; one row per Value/language including NULL and deleted history; non-empty name/label |
 | `maa_product_variants` | Sellable-unit identity | `id` PK; internal `product_id`; immutable `composition_fingerprint CHAR(64)` unique with Product across all history; nullable `sku` and `barcode` strings up to 128 characters, each unique while assigned; exact status; positive order; unique `(id, product_id)` candidate key for composite FKs |
 | `maa_product_variant_option_values` | Immutable composition pairs | `id` PK; `product_id`, `variant_id`, `option_id`, `option_value_id`; unique `(variant_id, option_id)`; composite FK `(variant_id, product_id)` to `maa_product_variants(id, product_id)`; composite FK `(option_id, product_id)` to `maa_product_options(id, product_id)`; composite FK `(option_value_id, option_id)` to `maa_product_option_values(id, option_id)`; composition rows have no independent update/delete lifecycle |
-| `maa_product_media_roles` | Product-owned role registry | `id` PK; `role_key VARCHAR(100)` unique/immutable across deleted history under `utf8mb4_unicode_ci`; exact status; separate namespace from Category roles |
-| `maa_product_media_assignments` | Product/Variant media links | `id` PK; `product_id` (independent FK to `maa_product_products(id)` RESTRICT); nullable `variant_id`; composite FK `(variant_id, product_id)` to `maa_product_variants(id, product_id)` RESTRICT when `variant_id` is non-NULL (`variant_id = NULL` represents Product-level target only); positive external `media_asset_id BIGINT UNSIGNED` (no external FK); nullable exact role/language/platform scope; internal FK to Product Media Role when `role_id` is non-NULL; generated NULL-safe identity/ordering/primary keys; target/asset/scope identity unique across deleted history; at most one active primary per exact target scope |
+| `maa_product_image_roles` | Product-owned role registry | `id` PK; `role_key VARCHAR(100)` unique/immutable across deleted history under `utf8mb4_unicode_ci`; exact status; separate namespace from Category roles |
+| `maa_product_image_assignments` | Product/Variant media links | `id` PK; `product_id` (independent FK to `maa_product_products(id)` RESTRICT); nullable `variant_id`; composite FK `(variant_id, product_id)` to `maa_product_variants(id, product_id)` RESTRICT when `variant_id` is non-NULL (`variant_id = NULL` represents Product-level target only); positive external `media_asset_id BIGINT UNSIGNED` (no external FK); nullable exact role/language/platform scope; internal FK to Product Image Role when `role_id` is non-NULL; generated NULL-safe identity/ordering/primary keys; target/asset/scope identity unique across deleted history; at most one active default per exact target scope |
 
 ### 11.1 Required relational integrity
 
 - Every physical table has `PRIMARY KEY (id)`, suitable indexes and meaningful column `COMMENT`s as required by the Package Building Standard. SQL assets live under the package-root `schema/`; provide `schema/README.md`. Use table prefix `maa_product_`. Product/Option/Option Value codes and role keys must reject empty or whitespace-only values through application validation plus compatible DDL checks; optional SKU/barcode values must be `NULL` or non-empty strings.
 - Internal foreign keys use `ON DELETE RESTRICT` and `ON UPDATE RESTRICT`; no automatic cascade. No FK or JOIN crosses into Category, Pricing, Inventory, Supplier, Orders, Customer/Account Type, or Media Storage.
+- A soft-deleted Image Assignment is never the default: `CHECK (deleted_at IS NULL OR is_default = 0)` on `maa_product_image_assignments` is the final database guard of that rule.
+- The schema defines no triggers and no routines. Identity stability (§4.1) is an application contract: no package write path updates an identity column and no service method replaces one. The database does not stop an `UPDATE` of an identity column issued outside the package; such writes are the Host's responsibility, and identity corrections use an explicit migration or replacement process.
 - Explicit candidate keys and composite relational integrity:
   - `maa_product_variants` defines candidate key `UNIQUE (id, product_id)` to serve as the referenced target for Variant-to-Product composite relationships.
   - `maa_product_options` defines candidate key `UNIQUE (id, product_id)` as the explicit composite candidate/reference key for an Option within a Product.
@@ -412,13 +417,13 @@ The following is the approved schema contract that implementation must preserve.
     2. `(option_id, product_id)` references `maa_product_options(id, product_id)`, proving the Option belongs to the same Product.
     3. `(option_value_id, option_id)` references `maa_product_option_values(id, option_id)`, proving the Option Value belongs to the referenced Option.
   - The existence of a `PRIMARY KEY (id)` on each table alone is structurally insufficient to enforce aggregate consistency across related child rows and does NOT replace the composite candidate and reference keys specified in this contract. Aggregate relational integrity MUST be enforced at the database schema level; the package MUST NOT rely solely on application-level PHP validation or prior read-before-write checks.
-- `maa_product_media_assignments` relational integrity:
+- `maa_product_image_assignments` relational integrity:
   - `product_id` MUST have an independent foreign key referencing `maa_product_products(id)` with `ON DELETE RESTRICT` and `ON UPDATE RESTRICT`. This guarantees that every assignment row—whether Product-level or Variant-level—is strictly bound to a valid, existing Product identity in the database. A Product-level assignment for a non-existent Product is rejected at the database level.
   - When `variant_id` is non-NULL, a composite foreign key on `(variant_id, product_id)` referencing `maa_product_variants(id, product_id)` with `ON DELETE RESTRICT` and `ON UPDATE RESTRICT` proves that the referenced Variant belongs to the exact same Product. Assigning a Variant belonging to a different Product is rejected by the database.
   - Setting `variant_id = NULL` is valid exclusively to represent a Product-level target; it never exempts the assignment row from valid Product identity, which remains guaranteed by the independent `product_id` foreign key.
-  - Media Asset constraints, Product Media Role reference, exact scope dimensions, historical immutable identity, and single active primary uniqueness continue unchanged.
+  - Media Asset constraints, Product Image Role reference, exact scope dimensions, historical immutable identity, and single active default uniqueness continue unchanged.
 - Composition fingerprint is `SHA-256` of the canonical UTF-8 string defined in §5.3, stored as lowercase 64-character hexadecimal. Enforce `UNIQUE(product_id, composition_fingerprint)` across all Variant history; do not include `deleted_at` in this key. A digest match must be confirmed against actual canonical composition pairs before treating it as a duplicate.
-- Product code, Option code, Option Value code, media role key, and media assignment logical identity remain reserved across soft deletion. Do not add `deleted_at` into these unique identity keys. Add explicit required/non-empty checks and API validation to code/role identifiers; never treat whitespace-only identifiers as valid. Current SKU/barcode values remain reserved while assigned; each is `NULL` or a non-empty string, and clearing/replacing an identifier releases its previous value.
+- Product code, Option code, Option Value code, image role key, and image assignment logical identity remain reserved across soft deletion. Do not add `deleted_at` into these unique identity keys. Add explicit required/non-empty checks and API validation to code/role identifiers; never treat whitespace-only identifiers as valid. Current SKU/barcode values remain reserved while assigned; each is `NULL` or a non-empty string, and clearing/replacing an identifier releases its previous value.
 
 ### 11.2 Translation/Content identity: Category comparison
 
@@ -435,22 +440,22 @@ The Content tables use their domain fields (`name`, optional descriptions, or la
 
 ### 11.3 Schema defaults, status casing, and timestamps
 
-- Proposed runtime baseline: PHP `^8.4`, `ext-pdo`, `ext-pdo_mysql`, and `ext-mbstring`, matching the current Category/runtime ecosystem where these requirements are actually used. Composer constraints and shared-package minimum versions must be confirmed against the exact current public APIs during implementation preparation; do not declare unused extensions merely for symmetry.
+- Runtime baseline: PHP `>=8.4.27 <8.5.0 || >=8.5.12 <8.6.0`, `ext-pdo`, `ext-pdo_mysql`, and `ext-mbstring`, matching the current Category/runtime ecosystem where these requirements are actually used. Composer constraints and shared-package minimum versions follow the exact public APIs the package uses; no extension is declared merely for symmetry.
 - InnoDB, `utf8mb4`, and the approved package collation; `BIGINT UNSIGNED` package-owned IDs and Media Asset IDs; MySQL `8.0.16+` with PDO MySQL is the only claimed database runtime for V1 because enforced `CHECK` constraints are part of the contract.
 - All `status` constraints must reject uppercase or mixed-case variants in the database itself (e.g. `CHECK (BINARY status IN (BINARY 'active', BINARY 'inactive'))`); relying on a case-insensitive table collation is invalid. This is intentionally stricter than the current Category taxonomy status check; Category Image Role uses exact binary status enforcement.
 - `created_at`, `updated_at`, and `deleted_at` are assigned by the application from the Host-injected `ClockInterface`. Do not add `DEFAULT CURRENT_TIMESTAMP`, `ON UPDATE CURRENT_TIMESTAMP`, or package-owned timezone normalization. Document the public timestamp representation explicitly and preserve the injected Host Clock semantics; do not claim UTC normalization when none is performed.
-- For entities and relationships with persistent ordering (`maa_product_options`, `maa_product_option_values`, `maa_product_variants`, and `maa_product_media_assignments`), `display_order` is positive and managed by the shared `maatify/persistence` Ordering API where its public API applies. Do not accept `display_order` in Create/Update Commands; use a separate typed ordering command. Lists end with deterministic `display_order, id`. Per `DEC-006`, package-wide `display_order` is excluded from `Product` itself.
+- For entities and relationships with persistent ordering (`maa_product_options`, `maa_product_option_values`, `maa_product_variants`, and `maa_product_image_assignments`), `display_order` is positive and managed by the shared `maatify/php-persistence` Ordering API where its public API applies. Do not accept `display_order` in Create/Update Commands; use a separate typed ordering command. Lists end with deterministic `display_order, id`. Restoring a soft-deleted ordered row places it at the end of its live scope: its position is the shared Ordering API's next position, computed under the operation's locks and written in the same operation that clears `deleted_at`; soft deletion does not compact positions. Per `DEC-006`, package-wide `display_order` is excluded from `Product` itself.
 - Runtime hard delete is not used for normal lifecycle operations. Content, role, and assignment soft deletion and restore use application-managed timestamps. The immutable composition relation has no independent soft-delete/update API; its lifecycle follows the Variant.
 - Validate `media_asset_id` using the same canonical positive integer boundary as Category: integer or canonical decimal string where permitted by the Category-compatible contract, rejecting zero, negatives, signs, whitespace, leading-zero/non-canonical strings, malformed values, and values outside PHP's supported integer range before casting. Persist as `BIGINT UNSIGNED`; never create an external Media FK.
 - Use direct PDO, not an ORM or external query builder. Database/runtime behavior must follow the current pinned Package Building Standard and real MySQL integration tests.
 
-### 11.4 Nullable scope keys and primary uniqueness
+### 11.4 Nullable scope keys and default uniqueness
 
-For media assignments, ordinary MySQL UNIQUE keys containing NULL do not guarantee the required identity. Provide stored generated identity columns for nullable `variant_id`, `role_id`, `language_code`, and `platform` (using reserved sentinels that CHECK constraints make impossible as real values), and use them in the target/asset/scope UNIQUE key. The identity key excludes `deleted_at` and remains stable across history.
+For image assignments, ordinary MySQL UNIQUE keys containing NULL do not guarantee the required identity. Provide stored generated identity columns for nullable `variant_id`, `role_id`, `language_code`, and `platform` (using reserved sentinels that CHECK constraints make impossible as real values), and use them in the target/asset/scope UNIQUE key. The identity key excludes `deleted_at` and remains stable across history.
 
-Generate deterministic exact-scope keys with unambiguous, length-prefixed encoding for the target kind/identity, role, language, and platform. The scope must distinguish Product-level target from Variant-level target and distinguish NULL from every accepted non-NULL value. Use that same scope contract for ordering and primary uniqueness.
+Generate deterministic exact-scope keys using the target and role identities and MySQL collation weights with trailing pad weights removed for language and platform. The scope must distinguish Product-level target from Variant-level target and distinguish NULL from every accepted non-NULL value. Use that same scope contract for ordering and default uniqueness.
 
-A generated conditional `primary_scope_identity` participates in a UNIQUE key only when `is_primary = 1 AND deleted_at IS NULL`; otherwise it is NULL. `is_primary` is `0|1` only. Setting a new primary clears the previous primary in that exact target scope and sets the requested row in the same transaction. The DB unique key is the final concurrency defense; transaction locking is also mandatory. Clearing/soft-deleting a primary never auto-promotes another row; restore leaves it non-primary. Restore-as-primary is a separate explicit operation and conflicts if that exact scope already has a primary.
+A generated conditional `default_scope_identity` participates in a UNIQUE key only when `is_default = 1 AND deleted_at IS NULL`; otherwise it is NULL. `is_default` is `0|1` only. Setting a new default clears the previous default in that exact target scope and sets the requested row in the same transaction. The DB unique key is the final concurrency defense; transaction locking is also mandatory. Clearing/soft-deleting a default never auto-promotes another row; restore leaves it non-default. Restore-as-default is a separate explicit operation (`restoreAsDefault`) and conflicts if that exact scope already has a live default. Setting a live assignment as default is the separate explicit set-default operation, which replaces any current default atomically.
 
 ### 11.5 Index requirements
 
@@ -460,8 +465,8 @@ Review actual queries and add, at minimum, indexes for:
 - Options per Product and Values per Option: owner/status/deleted/order/id;
 - Variants per Product: `product_id/status/deleted_at/display_order/id` and unique `(product_id, composition_fingerprint)`;
 - Composition joins by `(variant_id, option_id)` and by Value/Option where queried;
-- Media roles by status/deleted/key/id and unique immutable `role_key`;
-- Media assignment target listing, stable target/asset/scope identity, exact ordering scope, and conditional primary-scope uniqueness.
+- Image roles by status/deleted/key/id and unique immutable `role_key`;
+- Image assignment target listing, stable target/asset/scope identity, exact ordering scope, and conditional default-scope uniqueness.
 
 Do not add unused indexes merely because they appear in this outline; prove indexes against actual query plans and all restore/concurrency invariants.
 
@@ -469,13 +474,13 @@ Do not add unused indexes merely because they appear in this outline; prove inde
 
 Every Product mutation that can affect Product content validity, Option/Value activation, Variant composition/status, or configuration must serialize on the Product row (or a formally equivalent package-owned aggregate lock) before checking state and applying writes. This protects postconditions from concurrent operations that would each pass a read-before-write check but collectively break the Product. Use the approved shared transaction/locking contract where applicable.
 
-Media primary replacement locks the owning Product/Variant target scope and uses the database unique key as the final guard. Use a stable lock order across Product, Variant, Role, and assignment rows to reduce deadlocks; retry only where the canonical transaction contract explicitly permits it. All multi-table Product mutations are atomic locally, and the package must not commit or roll back an outer transaction it does not own.
+Image default replacement locks the owning Product/Variant target scope and uses the database unique key as the final guard. Use a stable lock order across Product, Variant, Role, and assignment rows to reduce deadlocks; retry only where the canonical transaction contract explicitly permits it. All multi-table Product mutations are atomic locally, and the package must not commit or roll back an outer transaction it does not own.
 
 ## 12. Query Semantics
 
 - Management reads can explicitly filter status and deleted state. Consumer reads cannot request deleted records or bypass inactive Product/Variant/Option visibility rules.
-- Every unpaginated consumer or management list is bounded to at most 100 records. Large management lists use the shared `maatify/persistence` pagination API (`PageRequest`/`PageResult`) when applicable; do not implement a package-local competing pagination engine.
-- All `display_order` positions are positive and managed through the shared `maatify/persistence` Ordering API where applicable. Ordering is scope-specific and deterministic, ending with a stable unique key (`display_order, id`).
+- Every unpaginated consumer or management list is bounded to at most 100 records. Large management lists use the shared `maatify/php-persistence` pagination API (`PageRequest`/`PageResultDTO`) when applicable; do not implement a package-local competing pagination engine.
+- All `display_order` positions are positive and managed through the shared `maatify/php-persistence` Ordering API where applicable. Ordering is scope-specific and deterministic, ending with a stable unique key (`display_order, id`).
 - Content reads are exact and strictly differentiate between three distinct query intentions in the typed criteria contract:
   1. **Exact-language query:** Explicitly requests content for a specific non-NULL `language_code` (e.g. `'ar'`). Returns only content records for that exact language. If none exists, returns no match; never automatically falls back to unlocalized (`NULL`) content or another language.
   2. **Exact unlocalized query:** Explicitly requests unlocalized content (`language_code IS NULL`). Returns only the unlocalized content record. If none exists, never falls back to any localized record.
@@ -492,11 +497,13 @@ Media primary replacement locks the owning Product/Variant target scope and uses
   - If no matching active, valid Variant exists, the query fails closed with a documented typed result or throws a documented typed domain exception conforming to `maatify/exceptions`.
   - For simple Products, empty composition is the internal identity resolution mechanism, returning the single active empty-composition Variant when active and viewable.
   - The Host Application owns storefront UI controls, facet navigation, user input collection, and presentation flow; the Product package owns verifying whether the selected composition constitutes an existing, active, structurally valid Variant.
-- Media consumer reads require exact target/role/language/platform scope and hide assignments whose Product, target Variant, or Role is inactive/deleted. Product queries do not claim “in stock” or “sellable” because they do not query Inventory or Pricing.
+- Image assignment consumer reads require exact target/role/language/platform scope and hide assignments whose Product, target Variant, or Role is inactive/deleted. Product queries do not claim “in stock” or “sellable” because they do not query Inventory or Pricing.
 
 ## 13. Public API and Package Topology
 
-Use the canonical Package Building topology rules: `Domain → Capability → Responsibility`, choosing only responsibilities that actually exist. `php-product` is one domain; Product, Variant, Option, Option Value, Media Role, and Media Assignment may be separate capabilities if the public contract and implementation justify the split. Do not create empty or ceremonial layers.
+Use the canonical Package Building topology rules: `Domain → Capability → Responsibility`, choosing only responsibilities that actually exist. `php-product` is one domain; Product, Variant, Option, Option Value, Image Role, and Image Assignment may be separate capabilities if the public contract and implementation justify the split. Do not create empty or ceremonial layers.
+
+Management and consumption are distinct use cases, so each capability exposes a separate Management contract and Consumer contract inside the Capability (Package Building §5 and §15): `{Capability}/Management/{Command,Criteria,Service}/` and `{Capability}/Consumer/{Criteria,Service}/`. Types shared by both sides (result DTOs, enums, exceptions, the repository, and value objects) stay at the Capability level. A capability without a consumer read, such as Image Role, has a Management side only. The factory constructs each side separately (`create{X}ManagementService` and `create{X}ConsumerService`).
 
 The public API should expose typed commands, criteria, DTOs/results, enums/value objects, repository/service contracts, PDO adapters, and a thin factory/facade where it improves consumer discovery. Every interface, enum, DTO, and exception must follow the naming suffix conventions in the active Package Building Standard. Public APIs must not expose SQL rows or associative arrays as domain contracts. Specifically:
 - Variant composition resolution is exposed via a typed query interface (e.g. `ResolveVariantByCompositionQueryInterface`) accepting typed criteria and returning a typed result or domain exception, never accepting raw arrays.
@@ -506,13 +513,13 @@ Use ecosystem shared packages rather than package-local duplicates when required
 
 - `maatify/exceptions` for owned exceptions, using the approved hierarchy.
 - `maatify/shared-common` for `ClockInterface` when the package requires a clock.
-- `maatify/persistence` for supported pagination/order-management/transaction capabilities where its public API is applicable.
+- `maatify/php-persistence` for supported pagination/order-management/transaction capabilities where its public API is applicable.
 
 The Operational Read / Reporting classification required by Package Building Standard §15 (In Scope) and its read-contract boundaries are recorded in the root `PRODUCT_PACKAGE_REFERENCE.md`. Exact public class/method inventory must be documented in that same file; this architecture document under `docs/architecture/` supports that reference and must not become a competing Package Reference.
 
 ## 14. Transaction and Replacement Boundaries
 
-All multi-table Product mutations are atomic locally. Cross-domain orchestration is owned by the Host/Catalog coordinator. The package must cooperate with the approved shared transaction contract and must not commit an outer transaction owned by the Host. Mutations that can affect aggregate invariants acquire the Product aggregate lock before reading the current configuration; media-primary operations serialize on the owning target/scope and use DB uniqueness as a final guard.
+All multi-table Product mutations are atomic locally. Cross-domain orchestration is owned by the Host/Catalog coordinator. The package must cooperate with the approved shared transaction contract and must not commit an outer transaction owned by the Host. Mutations that can affect aggregate invariants acquire the Product aggregate lock before reading the current configuration; image-assignment default operations serialize on the owning target/scope and use DB uniqueness as a final guard.
 
 Variant replacement is a cross-domain risk boundary because external Pricing, Inventory, Supplier, and order records may reference existing Variant IDs. The Product package owns local composition validity and produces deterministic old/new identities. The Host/Catalog coordinator owns the whole workflow, including whether external records are transferred, recreated, preserved, or left unavailable.
 
@@ -538,7 +545,7 @@ The following historical decisions are not carried forward as Product package re
 - Product activation does not require a Base Price or Inventory row.
 - `force_out_of_stock` is not a Product property; availability/fulfilment policy belongs outside Product.
 - Product-to-Category mapping remains outside the Product package.
-- The `is_default` persistence field is omitted in favor of derived simple/configurable selection behavior.
+- The historical default-selection field on Variant/Product (`is_default` in the Catalog V1 schema) is omitted in favor of derived simple/configurable selection behavior. This is unrelated to the `is_default` marker of Image Assignments (§9.4).
 
 These changes require the Catalog umbrella document and the Pricing integration contract to be reconciled. Do not implement the old pricing equation or mandatory inventory coupling merely because they appear in the historical PDF.
 
@@ -577,11 +584,11 @@ Implementation acceptance must include, at minimum:
 - No Product dependency or schema FK exists for Pricing, Inventory, Supplier, Customer Account Type, Category, Order, or Media storage.
 - No price, quantity, account-type, supplier credential, or physical storage field is placed in Product-owned tables.
 - Product remains valid when Pricing or Inventory data does not exist; Catalog sellability is tested separately in integration tests.
-- Product Media Roles and assignments match the role/lifecycle/exact-scope model described in §9; external `media_asset_id` uses the same positive integer contract as `maatify/php-category`, without a cross-package FK. Assignment uniqueness, atomic primary replacement, positive ordering, restore conflicts, and concurrency are verified against real MySQL.
-- Verify Media Assignments relational integrity at the database layer:
-  - Database rejects Product-level media assignment (`variant_id = NULL`) referencing a non-existent `product_id` via the independent foreign key.
-  - Database rejects Variant-level media assignment referencing a `variant_id` belonging to a different Product via the composite foreign key `(variant_id, product_id)`.
-  - Database rejects Variant-level media assignment referencing a non-existent `variant_id`.
+- Product Image Roles and assignments match the role/lifecycle/exact-scope model described in §9; external `media_asset_id` uses the same positive integer contract as `maatify/php-category`, without a cross-package FK. Assignment uniqueness, atomic default replacement, positive ordering, restore conflicts, and concurrency are verified against real MySQL.
+- Verify Image Assignments relational integrity at the database layer:
+  - Database rejects Product-level image assignment (`variant_id = NULL`) referencing a non-existent `product_id` via the independent foreign key.
+  - Database rejects Variant-level image assignment referencing a `variant_id` belonging to a different Product via the composite foreign key `(variant_id, product_id)`.
+  - Database rejects Variant-level image assignment referencing a non-existent `variant_id`.
 - Verify Product/Option/Option Value Content query and lifecycle semantics:
   - Exact-language queries return only records matching that specific non-NULL language code, with no fallback to `NULL` or another language.
   - Exact unlocalized queries return only records where `language_code IS NULL`, with no fallback to localized records.
@@ -590,12 +597,12 @@ Implementation acceptance must include, at minimum:
   - Database rejects duplicate unlocalized (`NULL`) records for the same owner entity via generated NULL-safe identity column.
   - Database and application reject re-creating a content identity (including `NULL`) that exists in soft-deleted history, requiring explicit restore instead.
   - Rejection of empty or whitespace-only language codes; Host owns semantic language validation and fallback policy.
-- Verify Host `ClockInterface` timestamp behavior and shared `maatify/persistence` ordering/pagination behavior; no product-local duplicate Ordering/Pagination engine.
+- Verify Host `ClockInterface` timestamp behavior and shared `maatify/php-persistence` ordering/pagination behavior; no product-local duplicate Ordering/Pagination engine.
 - Verify Product and Category use the same Host Media Asset ID value when assigning the same asset, and never reuse each other's role IDs.
 - Verify composite FKs and candidate keys reject invalid relational graphs at the database layer:
   - Candidate keys exist: `UNIQUE (id, product_id)` on `maa_product_variants`, `UNIQUE (id, product_id)` on `maa_product_options`, and `UNIQUE (id, option_id)` on `maa_product_option_values`.
   - Composite FKs in `maa_product_variant_option_values` reject cross-Product Variant/Option combinations and mismatched Option Values; PK on `id` alone does not replace these composite FKs.
-- Use real concurrent MySQL transactions to prove Product aggregate locking prevents invalid state races, primary replacement remains single-primary, and duplicate historical identity/composition attempts fail deterministically.
+- Use real concurrent MySQL transactions to prove Product aggregate locking prevents invalid state races, default replacement remains single-default, and duplicate historical identity/composition attempts fail deterministically.
 
 ### Package quality
 - `composer validate --strict` and optimized autoload validation pass.
@@ -616,7 +623,7 @@ Before claiming Catalog V1 is fully integrated, the Owner/Lead must review and r
 5. Catalog sellability rule: Product validity + applicable price + fulfilment/availability, without storing cross-domain state inside Product.
 6. V1's one Product identity namespace per deployed set of Product tables is an explicit limit. If a single Pricing/Inventory store will accept Variant IDs from multiple independent Product table sets, the integration contract must include a collision-free source namespace owned by the Host/Catalog/Pricing boundary; this is not encoded inside Product V1 and must be resolved before that multi-source integration. Do not invent tenant/Catalog columns locally.
 7. The Host/Media adapter must supply the same positive integer Media Asset identity used by `maatify/php-category`; Product stores it as `BIGINT UNSIGNED` with no external FK. A future UUID/string media identity needs a coordinated contract change, not a Product-only conversion.
-8. Product-owned media-role identities and Category-owned image-role identities are separate; cross-use of role IDs is prohibited. Product media exact scope includes role, nullable language, and nullable platform, with NULL treated as an exact value and no implicit fallback.
+8. Product-owned image-role identities and Category-owned image-role identities are separate; cross-use of role IDs is prohibited. Product image-assignment exact scope includes role, nullable language, and nullable platform, with NULL treated as an exact value and no implicit fallback.
 
 These are integration decisions, not reasons to put foreign-domain ownership inside `php-product`.
 
@@ -624,18 +631,18 @@ These are integration decisions, not reasons to put foreign-domain ownership ins
 
 The following decisions are the approved Product-local contract (`DEC-007`). These decisions MUST NOT be silently reopened by the Executor:
 
-- Product owns Product, Variant, variant-defining Options/Values, optionally localized Content, Product Media Roles, and Product/Variant media assignments only.
+- Product owns Product, Variant, variant-defining Options/Values, optionally localized Content, Product Image Roles, and Product/Variant image assignments only.
 - Product configurations remain structurally valid on every committed mutation, independent of Product visibility status; active Option Values under active Options are represented by at least one active valid Variant.
 - Product/Option/Option Value Content uses exact nullable-language identity and the Category-compatible NULL-safe uniqueness pattern; language fallback is always Host-owned.
 - Composite FKs enforce same-Product and same-Option composition; a set of independent single-column FKs is insufficient.
-- Aggregate mutations serialize through a Product lock; primary media mutations use target-scope locking and DB uniqueness.
+- Aggregate mutations serialize through a Product lock; default image-assignment mutations use target-scope locking and DB uniqueness.
 - Every Product receives one empty-composition Variant at creation; Product starts inactive. Reconfiguration is a dedicated atomic Product-local operation.
 - Active Variant composition exactly equals the set of active Product Options, with one active Value per Option and no extra values.
 - Canonical V1 composition fingerprint and uniqueness across all history are defined in §5.3.
 - Variant ID is canonical for sellable-unit integration. SKU/barcode are optional mutable secondary identifiers.
 - Product has no package-owned slug, no product pricing, no inventory state/row requirement, no supplier data, and no account-type field.
 - V1 has one Product identity namespace per deployed set of Product tables; no multi-Catalog/tenant abstraction is included.
-- Media Asset references use the shared positive integer ID contract documented in §9.1 and approved under [`DEC-005`](../decisions/DEC-005-shared-media-asset-identity.md), aligned with `maatify/php-category`; Product Media Role IDs remain Product-owned and are never Category Role IDs.
+- Media Asset references use the shared positive integer ID contract documented in §9.1 and approved under [`DEC-005`](../decisions/DEC-005-shared-media-asset-identity.md), aligned with `maatify/php-category`; Product Image Role IDs remain Product-owned and are never Category Role IDs.
 
 The Executor MUST stop and report a blocker rather than inventing a different public contract if: an applicable canonical engineering standard conflicts with a resolved decision; implementation of the published shared transaction contract is impossible; a MySQL invariant cannot be enforced safely at the declared supported database version; or the actual repository baseline/runtime materially differs from assumptions in the execution brief. Cross-domain integration follow-ups in §18 do not block implementation of Product-local behavior, but they do block any claim that the full Catalog is integrated.
 
@@ -672,24 +679,24 @@ The following are not merely implementation details. The Owner MUST explicitly a
    >
    > أي حاجة مستقبلية إلى UUID أو هوية نصية تتطلب قرارًا منسقًا يغيّر عقد الحزمتين، أو خريطة تحويل يملكها الـHost؛ ولا يجوز تغيير نوع الهوية في Product وحدها.
 
-   This replaces the previous recommendation with the approved decision. `media_asset_id` is an external, Host-owned identity persisted as `BIGINT UNSIGNED > 0` with no foreign key or JOIN to Media Asset storage. Public PHP identity values are integers, and input normalization conforms to Category's `CategoryIdDTO` contract (accepting `int|string`, requiring positive values, and rejecting signs, whitespace, leading zeroes, decimal notation, scientific notation, malformed representations, and values exceeding `PHP_INT_MAX` before casting). Product owns neither media storage nor its upload, processing, URL resolution, or lifecycle. Product Media Role IDs remain in a separate namespace from Category Image Role IDs. Any future UUID/string identity requires a coordinated decision changing both package contracts or an explicit Host-owned mapping.
+   This replaces the previous recommendation with the approved decision. `media_asset_id` is an external, Host-owned identity persisted as `BIGINT UNSIGNED > 0` with no foreign key or JOIN to Media Asset storage. Public PHP identity values are integers, and input normalization conforms to Category's `CategoryIdDTO` contract (accepting `int|string`, requiring positive values, and rejecting signs, whitespace, leading zeroes, decimal notation, scientific notation, malformed representations, and values exceeding `PHP_INT_MAX` before casting). Product owns neither media storage nor its upload, processing, URL resolution, or lifecycle. Product Image Role IDs remain in a separate namespace from Category Image Role IDs. Any future UUID/string identity requires a coordinated decision changing both package contracts or an explicit Host-owned mapping. The quotation keeps the Owner's original wording ("Product Media Roles"); the capability is named Product Image Roles and Image Assignments (§9).
 6. **`Product.display_order` retention or exclusion in V1 — Approved by Owner (`DEC-006`):** Product Ordering Boundary has been formally approved by the Owner on 2026-10-12 in [`DEC-006`](../decisions/DEC-006-product-ordering-boundary.md). The Owner's exact verbatim response was:
    > اعتمد
 
-   in direct approval of the recommendation to exclude package-wide `Product.display_order` from Product V1, preserve Product's independence from Category with mapping remaining outside both core libraries, persist ordering on the mapping relationship scoped by `category_id` using the stable `maatify/persistence` scoped-ordering API where applicable, avoid introducing a new integration package solely by assumption, and allow consumers to select different read/presentation sorts without treating that as Product-owned persistent ordering.
+   in direct approval of the recommendation to exclude package-wide `Product.display_order` from Product V1, preserve Product's independence from Category with mapping remaining outside both core libraries, persist ordering on the mapping relationship scoped by `category_id` using the stable `maatify/php-persistence` scoped-ordering API where applicable, avoid introducing a new integration package solely by assumption, and allow consumers to select different read/presentation sorts without treating that as Product-owned persistent ordering.
 
-   This replaces the previous recommendation with the approved decision. Package-wide `display_order` is excluded from `maa_product_products`, and its dedicated consumer-listing index is removed. Scoped ordering for other entities and relationships where ordering is meaningful (`maa_product_options`, `maa_product_option_values`, `maa_product_variants`, and `maa_product_media_assignments`) is preserved.
+   This replaces the previous recommendation with the approved decision. Package-wide `display_order` is excluded from `maa_product_products`, and its dedicated consumer-listing index is removed. Scoped ordering for other entities and relationships where ordering is meaningful (`maa_product_options`, `maa_product_option_values`, `maa_product_variants`, and `maa_product_image_assignments`) is preserved.
 
 All six Owner Decision Gates (`DEC-001` through `DEC-006`) are formally resolved under Owner authority. On 2026-10-12 the Owner approved this document as the architecture contract and authorized the start of implementation within the local Product scope, bound by `DEC-001` through `DEC-006`, under [`DEC-007`](../decisions/DEC-007-product-v1-implementation-start-authorization.md). That authorization is subject to the completed standards applicability re-evaluation recorded in `STANDARDS_MANIFEST.md`, and it does not authorize merge, release, or publish.
 
 ## 21. Source Inputs and Authority
 
-This architecture was prepared from the supplied Catalog documents and deliberately redesigned where a more reusable Product package contract is recommended. Current-source review evidence on 2026-10-11 includes `maatify/php-category` `CATEGORY_PACKAGE_REFERENCE.md` blob `c177e8957786220335692b9cdf78a5b3dad64dee`, `docs/USAGE_GUIDE.md` blob `e397014cf80a7d8fc49d3238d4c46501c8b72eec`, and `schema/category.sql` blob `8b8c0f552d0df5a2513046312d1da2de93c04019`. The Product repository's current `STANDARDS_MANIFEST.md` is blob `fb09995840c495645f821899e19631e38ed4fb32`; the current `PACKAGE_BUILDING_STANDARD.md` is blob `1475bb006eefe9e1ef9a6973f6664c3d0690dc2c`. The manifest, as it stood when this review was prepared, recorded that conditional SQL persistence requirements were not activated because the repository had no package-owned database behavior. After the Owner approved implementation, the formal applicability re-evaluation was completed on 2026-10-12 and the current manifest records those requirements as activated (`DEC-007`). This is an approved contract, not an implemented or released contract:
+This architecture was prepared from the supplied Catalog documents and deliberately redesigned where a more reusable Product package contract is recommended. Current-source review evidence on 2026-10-11 includes `maatify/php-category` `CATEGORY_PACKAGE_REFERENCE.md` blob `c177e8957786220335692b9cdf78a5b3dad64dee`, `docs/USAGE_GUIDE.md` blob `e397014cf80a7d8fc49d3238d4c46501c8b72eec`, and `schema/category.sql` blob `8b8c0f552d0df5a2513046312d1da2de93c04019`. The Product repository's current `STANDARDS_MANIFEST.md` is blob `fb09995840c495645f821899e19631e38ed4fb32`; the current `PACKAGE_BUILDING_STANDARD.md` is blob `1475bb006eefe9e1ef9a6973f6664c3d0690dc2c`. The manifest, as it stood when this review was prepared, recorded that conditional SQL persistence requirements were not activated because the repository had no package-owned database behavior. After the Owner approved implementation, the formal applicability re-evaluation was completed on 2026-10-12 and the current manifest records those requirements as activated (`DEC-007`). This is the approved contract, not a released one. Its source inputs:
 
 - `CATALOG_PACKAGE_ARCHITECTURE.md` — package-level composition, domain ownership, and cross-domain orchestration.
 - `Catalog_V1_Architecture_Locked.pdf` — historical Product/Variant/Option model and original Catalog V1 schema.
 - `CATALOG_V1_ARCHITECTURE.md` — Category-package boundary and Catalog integration status.
 - Current `maatify/php-category` `CATEGORY_PACKAGE_REFERENCE.md`, current consumer usage contract, and `schema/category.sql` — actual reusable package contracts used to reconcile language identity, Media Asset ID type, status/deletion, Clock, ordering, and dependency boundaries.
-- Current `Maatify/php-product` repository governance and pinned Composer Package standards.
+- Current `Maatify-ltd/php-product` repository governance and pinned Composer Package standards.
 
 This is the Owner-approved V1 architecture contract, not evidence of implementation, tests, release readiness, or a released contract. The `CANDIDATE` filename is kept so existing references stay valid.
