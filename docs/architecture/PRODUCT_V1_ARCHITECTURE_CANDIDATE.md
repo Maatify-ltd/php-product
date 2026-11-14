@@ -6,8 +6,6 @@
 **Document path:** `docs/architecture/PRODUCT_V1_ARCHITECTURE_CANDIDATE.md`<br>
 **Architecture type:** Standalone, reusable, host-agnostic Composer package  
 **Scope:** Product identity, variants, variant-defining options and values, product content, and product-owned image assignments  
-**Review date:** 2026-10-11  
-**Review basis:** Current `maatify/php-category` package reference, usage guide, SQL schema, and the Product repository's currently pinned standards manifest.
 
 ## 1. Executive Decision
 
@@ -26,13 +24,11 @@ The core identity model is:
 
 This is a deliberate redesign of parts of the historical Catalog V1 specification. The previous Product Base Price plus Option Value adjustment equation is not the required V1 pricing contract. The Catalog integration layer and the Pricing contract must be updated consistently before integrated sellability is accepted.
 
-### 1.1 Review status and approval boundary
+### 1.1 Contract and verification
 
-This document has been reviewed against the current Category package contract and the applicable Product repository standards references. The review tightened several previously under-specified areas: content identity and exact locale reads, composite foreign-key enforcement for Variant composition and image-assignment targets, mutation serialization, active Option Value coverage, status casing, and the persistence design (§11).
-
-This document itself adds no SQL DDL, migrations, or persistence implementation. The Owner approved it as the architecture contract for Product V1 under [`DEC-007`](../decisions/DEC-007-product-v1-implementation-start-authorization.md). The pre-implementation standards applicability re-evaluation required by that decision was completed on 2026-10-12 and is recorded in `STANDARDS_MANIFEST.md`: package-owned SQL persistence and manually maintained PHP are applicable, so the conditional persistence requirements of the Package Building Standard, and the persistence-conditioned requirements of the CI Workflow, Testing, Composer Package, and Library Presentation Standards, apply to the implementation.
-
-Owner approval authorizes the start of implementation within the approved scope; it is not evidence of implementation, schema execution, or test success, and it does not authorize Pricing or Inventory libraries, full Catalog integration, a Product-to-Category relationship inside either core library, merge, release, or publish. No Product SQL schema or PHP implementation has been executed or validated by this review.
+The architecture applies to the Product package. The [Package Reference](../../PRODUCT_PACKAGE_REFERENCE.md)
+describes the public runtime contract, and [CI and local verification](../verification/CI_GATES.md)
+describes how to verify the implementation.
 
 ## 2. Design Principles
 
@@ -691,12 +687,7 @@ All six Owner Decision Gates (`DEC-001` through `DEC-006`) are formally resolved
 
 ## 21. Source Inputs and Authority
 
-This architecture was prepared from the supplied Catalog documents and deliberately redesigned where a more reusable Product package contract is recommended. Current-source review evidence on 2026-10-11 includes `maatify/php-category` `CATEGORY_PACKAGE_REFERENCE.md` blob `c177e8957786220335692b9cdf78a5b3dad64dee`, `docs/USAGE_GUIDE.md` blob `e397014cf80a7d8fc49d3238d4c46501c8b72eec`, and `schema/category.sql` blob `8b8c0f552d0df5a2513046312d1da2de93c04019`. The Product repository's current `STANDARDS_MANIFEST.md` is blob `fb09995840c495645f821899e19631e38ed4fb32`; the current `PACKAGE_BUILDING_STANDARD.md` is blob `1475bb006eefe9e1ef9a6973f6664c3d0690dc2c`. The manifest, as it stood when this review was prepared, recorded that conditional SQL persistence requirements were not activated because the repository had no package-owned database behavior. After the Owner approved implementation, the formal applicability re-evaluation was completed on 2026-10-12 and the current manifest records those requirements as activated (`DEC-007`). This is the approved contract, not a released one. Its source inputs:
-
-- `CATALOG_PACKAGE_ARCHITECTURE.md` — package-level composition, domain ownership, and cross-domain orchestration.
-- `Catalog_V1_Architecture_Locked.pdf` — historical Product/Variant/Option model and original Catalog V1 schema.
-- `CATALOG_V1_ARCHITECTURE.md` — Category-package boundary and Catalog integration status.
-- Current `maatify/php-category` `CATEGORY_PACKAGE_REFERENCE.md`, current consumer usage contract, and `schema/category.sql` — actual reusable package contracts used to reconcile language identity, Media Asset ID type, status/deletion, Clock, ordering, and dependency boundaries.
-- Current `Maatify-ltd/php-product` repository governance and pinned Composer Package standards.
-
-This is the Owner-approved V1 architecture contract, not evidence of implementation, tests, release readiness, or a released contract. The `CANDIDATE` filename is kept so existing references stay valid.
+The [decision index](../decisions/DECISIONS_INDEX.md) lists the approved Product decisions
+and the architecture sections they govern. The
+[standards manifest](../php-engineering-standards/STANDARDS_MANIFEST.md) identifies the
+engineering standards applicable to this package.
