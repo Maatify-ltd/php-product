@@ -34,7 +34,15 @@ Framework-agnostic PHP library for managing Products, Variants, and configurable
 
 ## Installation
 
-No version of this package is published to a Composer distribution source yet, so there is no registry install command. Until a release exists, consume a checkout of this repository through a Composer path repository:
+This tree prepares Product release candidate `1.0.0-rc.1`. Publication state at qualification is unpublished. Once this exact version is available on Packagist, install it in the consumer project:
+
+```bash
+composer require maatify/php-product:1.0.0-rc.1 maatify/php-persistence:1.0.0-rc.1
+```
+
+Keep `minimum-stability: stable` and permit these exact pre-release versions in the consumer root. See [License](#license) for the free license required before use.
+
+For checkout testing before publication, configure a Composer path repository:
 
 ```json
 {
@@ -53,8 +61,6 @@ No version of this package is published to a Composer distribution source yet, s
     "prefer-stable": true
 }
 ```
-
-This is a trial installation. See [License](#license) to request written authorization before use. The consumer root explicitly permits the Product development package and the exact Persistence release candidate. See the [Persistence RC trial plan](docs/verification/CI_GATES.md#persistence-rc-trial-plan) for the verified version and the release hold.
 
 Then install the schema once into your database:
 
