@@ -210,6 +210,22 @@ $result = $products->reconfigure(new ReconfigureProductCommand(
 // $result->createdVariantIds, $result->deactivatedVariantIds (the empty-composition Variant)
 ```
 
+The successful path from saving a configuration to resolving a shopper's selection
+assumes the Product is visible to consumers.
+
+```mermaid
+flowchart LR
+    subgraph M["Management"]
+        A["Prepare labelled Options and Values"] --> B["Save the configuration with reconfigure()"]
+    end
+    subgraph C["Storefront"]
+        D["Read visible Options and Values"] --> E["Shopper selects one Value per Option"]
+        E --> F["resolveByComposition()"]
+        F --> G["Matching visible Variant"]
+    end
+    B --> D
+```
+
 ## 8. Resolve a composition
 
 - **Input:** the Product identity and a `VariantCompositionCriteriaDTO` holding the shopper's `OptionValueSelection` pairs, in any order; an empty selection is valid and names a simple Product's Variant.
