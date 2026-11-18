@@ -5,7 +5,7 @@
 ## Standard Metadata
 
 - **Standard ID:** `std-composer-package`
-- **Standard Version:** `6.0.0`
+- **Standard Version:** `7.0.0`
 - **Standard Version Format:** `MAJOR.MINOR.PATCH`
 
 This document defines the canonical Composer manifest contract represented by `composer.json` for standalone, reusable PHP libraries in the Maatify ecosystem.
@@ -124,7 +124,7 @@ Rules for those fields govern the library repository while it is being developed
 4. Development tools MUST NOT be placed in `require`.
 5. Mandatory runtime dependencies MUST NOT be placed only in `require-dev`. Repository verification of an eligible optional prerequisite follows §16 and MUST NOT replace its consumer-facing disclosure.
 6. Metadata MUST be accurate, current, and non-misleading.
-7. The PHP constraint is a public compatibility promise.
+7. The PHP constraint defines public installation eligibility as specified in §15.1.
 8. The production autoload mapping is part of the public runtime contract.
 9. Composer scripts MUST map to real, maintained commands.
 10. Published versions MUST come from VCS tags; as a **Maatify Internal Policy**, the `version` field MUST NOT be committed.
@@ -149,9 +149,9 @@ Templates in this Standard use the following placeholders:
 - `{ROOT_NAMESPACE}`: The PSR-4 root namespace without the final separator.
 - `{TEST_NAMESPACE}`: The test namespace root without the final separator; normally `{ROOT_NAMESPACE}\Tests`.
 - `{MINIMUM_PHP_VERSION}`: The minimum supported PHP minor, such as `8.4`.
-- `{PHP_REQUIRE_CONSTRAINT}`: The complete `require.php` constraint resolved under §15.1, such as `>=8.4.27 <8.5.0 || >=8.5.12 <8.6.0`.
+- `{PHP_REQUIRE_CONSTRAINT}`: The complete `require.php` constraint resolved under §15.1, such as `>=8.4.27 <8.5.0 || >=8.5.12 <9.0.0` for a package with a PHP 8 forward range.
 - `{MINIMUM_PHP_PATCH_VERSION}`: The lowest PHP patch version admitted by `{PHP_REQUIRE_CONSTRAINT}` (the security patch floor of the lowest supported minor under §15.1.1), such as `8.4.27`.
-- `{LICENSE_SPDX}`: The approved SPDX license identifier.
+- `{LICENSE_VALUE}`: The approved Composer license value, including `proprietary` for an approved proprietary license.
 - `{PRIMARY_DOMAIN_KEYWORD}`: The main searchable domain term for the library.
 - `{RUNTIME_EXTENSION_NAME}`: A directly used runtime PHP extension name without the `ext-` prefix.
 - `{RUNTIME_PACKAGE_NAME}`: A direct runtime package in `vendor/package` form.
@@ -392,15 +392,15 @@ Rules:
 The canonical field is:
 
 ```json
-"license": "{LICENSE_SPDX}"
+"license": "{LICENSE_VALUE}"
 ```
 
 Rules:
 
-- The value MUST be a valid approved SPDX identifier or valid Composer license expression.
+- The value MUST be a valid approved SPDX identifier, valid Composer license expression, or Composer’s `proprietary` identifier for an approved proprietary license.
 - It MUST match the repository `LICENSE` file.
-- It MUST match Packagist and GitHub metadata.
-- This Standard does not force one license across all Maatify libraries.
+- For published packages, Packagist license metadata MUST match the package license. GitHub license metadata MUST agree where GitHub identifies a license. GitHub may leave a custom license unclassified.
+- License selection and consumer-facing presentation follow [the Library Presentation Standard](LIBRARY_PRESENTATION_STANDARD.md#25-license-presentation).
 - A license change requires an explicit legal and repository decision.
 
 ---
@@ -555,28 +555,22 @@ The canonical form is:
 "php": "{PHP_REQUIRE_CONSTRAINT}"
 ```
 
-For a new package that supports exactly the released PHP 8.4 and 8.5 minors, the canonical constraint under the current §15.1.1 floors is:
+For a new package supporting PHP 8.4 and 8.5 with forward Composer
+eligibility inside PHP 8, the current floors allow this form:
 
 ```json
-"php": ">=8.4.27 <8.5.0 || >=8.5.12 <8.6.0"
+"php": ">=8.4.27 <8.5.0 || >=8.5.12 <9.0.0"
 ```
 
 Rules:
 
-- For newly created Maatify PHP libraries/modules governed by the current engineering baseline, the minimum PHP minor MUST NOT be lower than PHP 8.4.
-- The minimum MUST be the oldest PHP minor genuinely supported within the permitted baseline/compatibility policy; it MUST NOT allow new work to move below PHP 8.4.
-- For a new package, the constraint MUST be the exact, per-minor union of one range for every supported minor listed in §15.1.1, each starting at that minor's patch floor and ending below the next minor (for example `>=8.4.27 <8.5.0`), so that no unpatched version of any supported minor is admitted. An equivalent expression with the same admitted set, such as `~8.4.27 || ~8.5.12`, is permitted.
-- A new package MUST NOT use `^8.4`, `^8.4.27`, `~8.4`, `>=8.4`, or any other form that admits a patch version below its minor's floor, or a minor that has no §15.1.1 floor. A caret or open-ended bound on a patch floor, such as `^8.4.27`, is not adequate because it still admits later minors whose floors it does not enforce.
-- Supporting a single minor uses only that minor's range; it is not a requirement to support both.
-- The upper bound of each range is a security-qualification boundary, not a claim of proven incompatibility. A newly released PHP minor is not implicitly security-qualified by an older constraint; it enters the constraint only after §15.1.1 lists its patch floor and the package's CI covers it under `CI_WORKFLOW_STANDARD.md`.
-- Existing already-published packages MUST retain their currently declared PHP compatibility constraint until an approved compatibility/breaking version boundary permits changing it. This Standard does not by itself amend, drop, or declare incompatible any published constraint or previously supported minor. Narrowing such a constraint is a compatibility decision of that package's own release boundary.
-- Existing packages are NOT required to convert an existing `>=...` constraint to another syntax merely because the new-package canonical form changed.
-- The constraint is a public compatibility promise.
-- Every released PHP minor included by the constraint MUST be treated according to `CI_WORKFLOW_STANDARD.md`, including its §7.1 patch-floor verification.
-- Outside §15.1.1's security floors, the minimum MUST NOT be increased merely because a developer uses a newer local PHP version, and a further upper bound MUST NOT be added without a demonstrated incompatibility. A §15.1.1 patch floor is a security requirement, not such a preference.
-- A broad constraint MUST NOT claim versions that are not tested or supportable.
-- README and CI claims MUST match the Composer PHP constraint.
-- The constraint governs PHP interpreter version eligibility only. It does not specify Host runtime, SAPI, server, or `php.ini` configuration, which are outside the Composer manifest contract.
+- For new Maatify PHP libraries and modules, the oldest supported minor MUST be genuinely supported and MUST be PHP 8.4 or later.
+- For each admitted minor with a floor in §15.1.1, the constraint MUST reject every patch below that floor. Use separate ranges where necessary to preserve those exclusions. Forms such as `^8.4`, `^8.4.27`, or `>=8.4` do not satisfy the current floors.
+- A package MAY declare forward Composer eligibility within a supported PHP major. A minor's absence from the floor table MUST NOT, on its own, require an upper bound at that minor. A package MAY retain a narrower range for a demonstrated incompatibility or a documented compatibility scope. Forward eligibility does not cross a PHP major boundary without an explicit package compatibility decision.
+- Composer eligibility is the public install-time range. It does not establish security qualification or tested support for a future minor. Once a forward-eligible minor reaches Stable, any subsequent package release admitting it MUST verify it under the CI Workflow Standard. A package MUST verify a minor before claiming it as supported. A PHP prerelease MUST NOT count as production Stable qualification.
+- Existing published packages MUST retain their declared compatibility until their own approved release boundary authorizes a change. This Standard does not rewrite published artifacts or require any particular constraint syntax.
+- Outside security floors, the minimum MUST NOT be raised merely because a developer uses a newer local interpreter. Any bound MUST reflect the package's documented compatibility scope.
+- README and CI MUST distinguish the Composer eligibility range from the minors verified as supported. The constraint governs PHP interpreter eligibility. Host runtime, SAPI, server, and `php.ini` configuration are outside the Composer manifest contract.
 
 #### 15.1.1 PHP Security Patch Floors
 
@@ -589,7 +583,15 @@ This section is the single canonical source of the per-minor PHP security patch 
 
 Basis: the official `php.net` security releases PHP 8.4.27 and PHP 8.5.12 published on 21 October 2026. A later advisory that is not accompanied by a released corrected patch does not create a floor and MUST NOT be encoded as one.
 
-A floor changes only by a revision of this Standard backed by an official `php.net` release. A minor absent from the table has no floor and is not security-qualified for new packages under §15.1.
+A floor changes only by a revision of this Standard backed by an official
+`php.net` release. A minor absent from the table has no canonical numeric
+floor. Its Stable releases may be eligible under §15.1. Before qualifying a
+release on such a minor, verify the actual Stable patch against applicable
+official PHP security advisories and corrected releases for that branch, then
+run the applicable compatibility checks. Record the PHP version and official
+evidence. A higher version number alone does not establish coverage of fixes
+made in an earlier branch. Package evidence does not create or override a
+canonical floor.
 
 ### 15.2 PHP Extensions
 
@@ -1236,7 +1238,7 @@ This template contains no empty fields and applies when PHP is the only mandator
   ],
   "homepage": "https://github.com/Maatify/{REPOSITORY_SLUG}",
   "type": "library",
-  "license": "{LICENSE_SPDX}",
+  "license": "{LICENSE_VALUE}",
   "authors": [
     {
       "name": "Maatify",
@@ -1443,7 +1445,7 @@ Automated verification of latest dependencies, lowest dependencies, platform req
 - [ ] No unsafe lifecycle hooks exist.
 - [ ] `sort-packages` is enabled.
 - [ ] `platform.php` is a single concrete version equal to the lowest patch admitted by `require.php`, and is not presented as the consumer eligibility contract.
-- [ ] For a new package, `require.php` admits no patch below the §15.1.1 floor of any supported minor and no minor without a floor (not `^8.4`, `^8.4.27`, or an open-ended bound).
+- [ ] For a new package, `require.php` rejects patches below every applicable §15.1.1 floor. Any forward Composer eligibility follows §15.1 and remains distinct from verified support.
 - [ ] An existing published package's PHP constraint is changed only through its own approved compatibility boundary.
 - [ ] `optimize-autoloader` follows the approved package configuration policy.
 - [ ] Composer plugins are explicitly allowlisted when present.
@@ -1513,6 +1515,15 @@ Official Composer documentation remains authoritative for Composer mechanics. Th
 - Frozen baseline `4.1.0`, exact artifact blob `d020e3f4b09830338b4a1647851048e02c64252e`, proven by the completed VALID consumer upgrade in a consumer repository (PR #10; identity withheld per `DEC-042`). Upstream Adoption Commit: `2ea426aee0e6a5265f0c30ced667f21bb7b1d302`; consumer integration commit: `28b790455685b3f7052688d7d20d4b939fd13795`; the consumer-pinned artifact blob is `d020e3f4b09830338b4a1647851048e02c64252e` (exact blob equality PASS).
 - Issue #168 (`DEC-042`): consumer-identity neutralization of the preceding frozen-baseline evidence line only; `EDITORIAL / NO_CONTRACT_CHANGE` (Patch), absorbed in the existing Mutable Candidate calculated from the Frozen Version Baseline; no additional bump, freeze, release, or adoption. The artifact blob and commit hashes are unchanged.
 - `NORMATIVE / BREAKING_CONTRACT_CHANGE`: require the Composer-distributed archive to preserve the complete applicable consumer/release-facing artifact set and its exact release identity, including VCS export behavior and resulting archive inspection; existing archive/export exclusions may otherwise omit required documents. Calculated candidate from frozen baseline `4.1.0`: `5.0.0`.
+
+### `7.0.0`
+
+- `DEC-053` changes the Composer eligibility and release-verification contract (`NORMATIVE / BREAKING_CONTRACT_CHANGE`). Keep existing per-minor security floors and allow forward eligibility within a supported major under §15.1. Calculate the Major candidate from the frozen `6.1.0` artifact blob `1605e1f69513477d80ff40041a0f4ecb512d2f89`, proven by completed VALID adoption at `d3dd98b8d82c8bcdd65614fe4ed80853bdcdcc73`.
+
+### `6.1.0`
+
+- `DEC-050`: `NORMATIVE / BACKWARD_COMPATIBLE_CONTRACT_CHANGE` (Minor). Explicitly allow Composer’s `proprietary` identifier, allow GitHub to leave a custom license unclassified, and reference the separate presentation contract. Previously valid license identifiers and expressions remain accepted.
+- Mutable Candidate `6.1.0`, calculated from Frozen Version Baseline `6.0.0`, artifact blob `87e17351519855ee5438524acfb3f7f972d3a606` at completed VALID Adoption Commit `c5d70cbe005fc26c38a7218967efe991194e76d6` (consumer identity withheld per `DEC-042`).
 
 ### `6.0.0`
 

@@ -3,7 +3,7 @@
 ## Standard Metadata
 
 - **Standard ID:** `std-library-presentation`
-- **Standard Version:** `5.0.1`
+- **Standard Version:** `6.0.0`
 - **Standard Version Format:** `MAJOR.MINOR.PATCH`
 
 ## 1. Normative Language
@@ -323,7 +323,7 @@ Templates are state-specific, not one universal badge set. The following example
 [![Status](https://img.shields.io/badge/Status-Development-blue)](README.md)
 [![PHP](https://img.shields.io/badge/PHP-{MINIMUM_PHP_VERSION}-8892BF)](composer.json)
 [![License](https://img.shields.io/badge/License-{LICENSE}-green)](LICENSE)
-[![Maatify Ecosystem](https://img.shields.io/badge/Maatify-Ecosystem-blueviolet)](https://github.com/Maatify)
+[![Maatify Ecosystem](https://img.shields.io/badge/Maatify-Ecosystem-blueviolet)](https://github.com/Maatify-ltd)
 ```
 
 ### Live Published Distribution README
@@ -332,7 +332,7 @@ Templates are state-specific, not one universal badge set. The following example
 [![Version](https://img.shields.io/badge/Version-{PUBLISHED_VERSION}-blue)]({DISTRIBUTION_URL})
 [![PHP](https://img.shields.io/badge/PHP-{MINIMUM_PHP_VERSION}-8892BF)](composer.json)
 [![License](https://img.shields.io/badge/License-{LICENSE}-green)](LICENSE)
-[![Maatify Ecosystem](https://img.shields.io/badge/Maatify-Ecosystem-blueviolet)](https://github.com/Maatify)
+[![Maatify Ecosystem](https://img.shields.io/badge/Maatify-Ecosystem-blueviolet)](https://github.com/Maatify-ltd)
 ```
 
 Registry, download, and Install badges are appended only when the selected registry actually supports them and the publication-state matrix permits them. The exact package identity and version MUST be used in any install command.
@@ -536,8 +536,8 @@ Defaults to starting with:
 ```markdown
 # Code of Conduct — {COMPOSER_PACKAGE_NAME}
 
-[![Maatify {PACKAGE_BADGE_NAME}](https://img.shields.io/badge/Maatify-{PACKAGE_BADGE_TOKEN}-blue?style=for-the-badge)](https://github.com/Maatify/{REPOSITORY_SLUG})
-[![Maatify Ecosystem](https://img.shields.io/badge/Maatify-Ecosystem-9C27B0?style=for-the-badge)](https://github.com/Maatify)
+[![Maatify {PACKAGE_BADGE_NAME}](https://img.shields.io/badge/Maatify-{PACKAGE_BADGE_TOKEN}-blue?style=for-the-badge)]({REPOSITORY_URL})
+[![Maatify Ecosystem](https://img.shields.io/badge/Maatify-Ecosystem-9C27B0?style=for-the-badge)](https://github.com/Maatify-ltd)
 ```
 
 ### 13.2 `SECURITY.md`
@@ -545,14 +545,14 @@ Defaults to starting with:
 ```markdown
 # Security Policy
 
-[![Maatify {PACKAGE_BADGE_NAME}](https://img.shields.io/badge/Maatify-{PACKAGE_BADGE_TOKEN}-blue?style=for-the-badge)](https://github.com/Maatify/{REPOSITORY_SLUG})
-[![Maatify Ecosystem](https://img.shields.io/badge/Maatify-Ecosystem-9C27B0?style=for-the-badge)](https://github.com/Maatify)
+[![Maatify {PACKAGE_BADGE_NAME}](https://img.shields.io/badge/Maatify-{PACKAGE_BADGE_TOKEN}-blue?style=for-the-badge)]({REPOSITORY_URL})
+[![Maatify Ecosystem](https://img.shields.io/badge/Maatify-Ecosystem-9C27B0?style=for-the-badge)](https://github.com/Maatify-ltd)
 ```
 
 ### Mandatory Rules
 * `style=for-the-badge` MUST be used in these two locations.
-* The first badge MUST point to the current repository.
-* The Ecosystem badge MUST point to `https://github.com/Maatify`.
+* The first badge MUST point to the current canonical repository URL. Replace `{REPOSITORY_URL}` with that full URL.
+* The Ecosystem badge MUST point to the Maatify Ltd. GitHub organization at `https://github.com/Maatify-ltd`.
 * The name or repository link of another library MUST NOT be used.
 * A third badge MUST NOT be added without a documented decision.
 * The large Maatify logo MUST NOT be added inside these files.
@@ -815,6 +815,8 @@ Publication State and Published Artifact Verification are separate facts. The cu
 
 When PAV fails on artifact integrity while current external evidence still proves exact `X` resolvable and installable, `X` remains Published and publication integrity is NOT PASS. When PAV exposes credible evidence that exact `X` no longer resolves or installs, or otherwise contradicts the current Publication State, canonical Publication-State re-verification under this Section MUST be triggered. The operational determination is `RE-VERIFY` until that canonical check establishes the actual current state; this is a pending verification condition, not a second Publication-State authority or an inference that X is Published or Unpublished. The live/default-branch presentation MUST represent the state established by canonical re-verification. A PAV failure alone MUST NOT suppress synchronization when a static live claim is stale; when no static live claim became stale, no content synchronization is required solely for freshness.
 
+If the live default-branch Package Reference states a publication status, it MUST report the verified status of the exact version it names. After publication, update any stale preparation status on the default branch. In an immutable release artifact, a preparation status is allowed when expressly dated or scoped to qualification.
+
 Historical release facts, including that `X` was actually published on a particular date, remain historical facts if current availability later changes. A later Publication-State change MUST NOT rewrite release history to imply `X` was never released or alter its immutable tag. A tracked artifact correction requires a new exact release identity.
 
 Presentation MUST NOT make a tag or Release appear qualified by CI that ran on an older SHA. A later commit intended for the same release requires new qualification. The tag/release surface is a consumer-facing projection of the qualified commit; it does not own CI evidence or create release authorization.
@@ -923,7 +925,43 @@ This Standard explicitly does NOT force:
 * Runtime changes during presentation work.
 * `llms-full.txt`, generated full-context files, or a README badge/link requirement for `llms.txt`.
 
+## 25. License Presentation
+
+For new Maatify-owned PHP libraries, the default is the Maatify Proprietary License with written authorization available at no charge. A different license requires an explicit Owner decision for that repository. Existing approved licenses remain in force until an explicit repository license decision changes them.
+
+For libraries using the Maatify Proprietary License model, the root `LICENSE` MUST contain the approved terms, including:
+
+* The copyright holder’s confirmed legal name, applicable copyright year, and proprietary status. Public source visibility does not grant an open-source license.
+* The requirement to obtain written authorization before use, the applicable restrictions, and any permitted exceptions in the approved terms.
+* The no-charge license request process and the licensing contact.
+* The license-holder register and the use of the designated contact details for license administration, security advisories, and critical update notices.
+* The approved warranty disclaimer and limitation of liability.
+
+Use **Maatify Ltd.** for the copyright holder and licensor wherever Maatify Ltd. holds the rights. Use that legal name consistently in the license terms and in any README text that identifies the holder or licensor. Confirm ownership separately from the repository’s GitHub organization. Apply any correction on the default branch for the next release and preserve the LICENSE distributed with each published version.
+
+For libraries using the Maatify Proprietary License model, the README MUST link the `Proprietary` license badge to the relative path `LICENSE`. Its short `License` section MUST state that written authorization is required before use and available free of charge, provide the request contact, explain what contact details to provide and why, and link to `LICENSE` for the terms. Composer metadata follows [the Composer Package Standard](COMPOSER_PACKAGE_STANDARD.md#104-license).
+
+Example README section:
+
+```markdown
+## License
+
+This package is proprietary. Obtain written authorization before use by
+requesting a free license from [support@maatify.dev](mailto:support@maatify.dev).
+Include your organization name, if applicable, and an email address for the person who should
+receive security advisories and critical update notices. Maatify Ltd. uses those
+details to administer licenses and send those notices. See [LICENSE](LICENSE)
+for the terms.
+```
+
 ## Version History
+
+### `6.0.0`
+
+- `DEC-051` and related presentation updates: require the current Ecosystem badge destination, clarify publication status in the live Package Reference, and require confirmed legal identity in license presentation. The updated badge destination is a breaking presentation requirement. The highest cumulative impact remains Major from Frozen Baseline `5.0.1`.
+
+- `DEC-050`: `NORMATIVE / BREAKING_CONTRACT_CHANGE` (Major). Establish the proprietary no-charge authorization default for new Maatify-owned PHP libraries and require the corresponding LICENSE and README content when this model applies. Existing approved licenses remain in force.
+- Mutable Candidate `6.0.0`, calculated from Frozen Version Baseline `5.0.1`, artifact blob `cc936b98c6d591b3750e63b56162701ad0764d03` at completed VALID Adoption Commit `c5d70cbe005fc26c38a7218967efe991194e76d6` (consumer identity withheld per `DEC-042`).
 
 ### `5.0.1`
 

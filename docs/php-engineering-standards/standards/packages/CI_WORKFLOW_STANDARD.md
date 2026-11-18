@@ -3,7 +3,7 @@
 ## Standard Metadata
 
 - **Standard ID:** `std-ci-workflow`
-- **Standard Version:** `6.0.0`
+- **Standard Version:** `7.0.0`
 - **Standard Version Format:** `MAJOR.MINOR.PATCH`
 
 This document outlines the standard CI workflow architecture for reusable Composer artifacts in the Maatify ecosystem. It applies to standalone Composer packages and to an extractable Base Module Artifact Root when the check or service verifies that artifact as a reusable Package. It ensures a consistent, high-quality testing and static analysis baseline without coupling repository-specific values to this Standard.
@@ -227,7 +227,7 @@ Note that `composer update --prefer-lowest --prefer-stable` tests the lowest res
 
 ## 7. PHP Version Compatibility
 
-The declared Composer PHP constraint is a public compatibility contract.
+The declared Composer PHP constraint defines public installation eligibility under Composer Package Standard §15.1.
 
 * The minimum supported PHP minor MUST be tested.
 * The latest stable PHP minor permitted by the Composer constraint MUST be tested.
@@ -235,7 +235,7 @@ The declared Composer PHP constraint is a public compatibility contract.
   * be represented directly in CI, or
   * have an explicit documented architectural exception.
 * The minimum and latest supported versions MUST NOT be exempted.
-* Future unreleased PHP versions implied by an open-ended constraint are not considered supported CI targets until released.
+* Forward Composer eligibility under the Composer Package Standard §15.1 does not itself establish tested support. A future minor can enter the Stable verification matrix when its Stable release is available.
 * Versions outside the declared Composer constraint MUST NOT be included merely to make a matrix appear broader.
 * Packages SHOULD test every active intermediate minor directly; any omission requires documentation.
 
@@ -252,12 +252,13 @@ The per-minor PHP security patch floors are owned exclusively by [COMPOSER_PACKA
 Rules:
 
 * For every claimed supported PHP minor that has a floor, every CI job that executes the package on that minor MUST verify, after PHP setup and before running package checks, the actual installed interpreter patch (for example from `PHP_VERSION_ID`) against that minor's floor, and MUST fail closed when it is lower or cannot be determined.
+* A job used to qualify a supported Stable PHP minor MUST verify the actual interpreter is a Stable patch. A PHP Alpha, Beta, or RC run may provide exploratory evidence.
 * The actual installed patch MUST be recorded in the job output. A matrix label, a `php-version` setup input such as `8.4`, or the job name is not evidence of the installed patch.
 * A passing test suite on an interpreter below its minor's floor MUST NOT count as verification of that minor and MUST NOT be accepted as package acceptance.
 * CI MUST run `composer validate --strict` and `composer check-platform-reqs` under §5. Platform verification MUST NOT rely on `config.platform.php`, `--ignore-platform-reqs`, or any other emulated or ignored platform setting as evidence of the real interpreter.
-* For a package governed by COMPOSER_PACKAGE_STANDARD.md §15.1.1, CI MUST include a deterministic constraint-boundary verification of its declared `require.php`, using Composer's own constraint semantics, with a local invocation under §2.1. For every supported minor it MUST prove that the minor's floor is accepted and the patch immediately below that floor is rejected, and it MUST prove that the first patch of the next minor without a floor is rejected.
+* For a package governed by COMPOSER_PACKAGE_STANDARD.md §15.1.1, CI MUST include a deterministic constraint-boundary verification of its declared `require.php`, using Composer's own constraint semantics, with a local invocation under §2.1. For each admitted minor with a canonical floor, it MUST prove acceptance at the floor and rejection immediately below it. Where forward eligibility is declared, it MUST prove that Composer accepts a representative forward version within the declared range and rejects versions beyond the declared compatibility boundary. A simulated future version provides constraint evidence only.
 * Negative boundary cases MUST be proven by simulating the version through the constraint parser or an equivalent non-executing mechanism. CI MUST NOT require running, installing, or provisioning an interpreter below a floor to prove rejection.
-* A minor absent from §15.1.1 has no numeric floor and no gate under this section; this section does not retroactively change an existing package's declared compatibility.
+* For an admitted Stable minor without a canonical floor, before any subsequent package release admitting it or claiming it as supported, verify the actual interpreter version against official security evidence under Composer §15.1.1 and run the applicable matrix under §7. Record the interpreter version, official evidence, and successful compatibility results. Fail qualification if the security evidence or required compatibility coverage is missing. Existing published compatibility remains governed by its own release boundary.
 * A change to a §15.1.1 floor takes effect for CI only through a revision of the Standards; a repository MUST NOT lower or waive a floor through workflow configuration.
 
 ## 8. Mandatory Baseline Quality Checks
@@ -509,7 +510,9 @@ Any applicable reusable Composer artifact in the Maatify ecosystem MUST verify t
 * [ ] latest supported PHP is tested
 * [ ] every currently released PHP minor covered by the declared constraint is tested or has an explicit documented architectural exception
 * [ ] every job on a PHP minor that has a floor verifies and records the actual installed PHP patch and fails closed below that floor, without relying on matrix labels or setup inputs
-* [ ] for a package governed by Composer §15.1.1, a deterministic constraint-boundary check proves each supported minor's floor accepted, the patch below it rejected, and the next unqualified minor rejected, without executing a vulnerable interpreter
+* [ ] for a package governed by Composer §15.1.1, a deterministic constraint-boundary check proves each applicable floor accepted and the patch below it rejected, and checks any declared forward range without executing a vulnerable interpreter
+* [ ] every job qualifying a supported Stable PHP minor verifies that the actual interpreter is a Stable patch
+* [ ] before a subsequent release admits a Stable PHP minor without a canonical floor, or the package claims support for it, qualification records the actual interpreter version, applicable official PHP security evidence, and successful compatibility checks under §7.1
 * [ ] workflow files pass linting when workflows exist
 * [ ] every externally sourced GitHub Action and external reusable workflow is pinned to an immutable full commit SHA
 * [ ] downloaded CI tools and validators use a documented integrity-verifiable installation policy where downloaded tools exist
@@ -538,6 +541,10 @@ Any applicable reusable Composer artifact in the Maatify ecosystem MUST verify t
 - Frozen baseline `4.0.0`, artifact blob `81f63475c89a1e85790acfaef885a25049518399` (a consumer repository's completed VALID upgrade, identity withheld per `DEC-042`; upstream commit `2ea426aee0e6a5265f0c30ced667f21bb7b1d302`).
 - Issue #168 (`DEC-042`): consumer-identity neutralization of the preceding frozen-baseline evidence line only; `EDITORIAL / NO_CONTRACT_CHANGE` (Patch), absorbed in the existing Mutable Candidate calculated from the Frozen Version Baseline; no additional bump, freeze, release, or adoption. The artifact blob and commit hashes are unchanged.
 - `NORMATIVE / BREAKING_CONTRACT_CHANGE`: add exact-SHA Release Artifact Verification before release authorization and post-publication Published Artifact Verification as distinct release/distribution integrity gates; preserve separate runtime Consumer Verification evidence.
+
+### `7.0.0`
+
+- `DEC-053` updates the boundary and qualification checks for forward PHP minor eligibility (`NORMATIVE / BREAKING_CONTRACT_CHANGE`). Calculate the Major candidate from the frozen `6.0.0` artifact blob `2c4f364b1c62633d6310785a67172bf6084c48d1`, proven by completed VALID adoption at `d3dd98b8d82c8bcdd65614fe4ed80853bdcdcc73`.
 
 ### `6.0.0`
 

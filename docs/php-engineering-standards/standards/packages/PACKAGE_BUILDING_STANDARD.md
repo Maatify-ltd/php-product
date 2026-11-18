@@ -5,17 +5,16 @@
 ## Standard Metadata
 
 - **Standard ID:** `std-package-building`
-- **Standard Version:** `4.0.0`
+- **Standard Version:** `5.0.0`
 - **Standard Version Format:** `MAJOR.MINOR.PATCH`
 
-This document is the law for building any new standalone Composer package in the Maatify ecosystem.
-Read it fully before writing a single line of code.
+This Standard defines the architecture and runtime contract for reusable Maatify Composer packages.
 
 ---
 
 ## 1. The Package Contract
 
-This standard applies generally to all PHP/Composer reusable libraries in the Maatify ecosystem.
+This Standard applies to standalone reusable Maatify PHP/Composer packages and to an extractable Base Module's Artifact Root where the Base Module Standard applies the generic Package contract.
 
 Every package must be:
 
@@ -24,13 +23,13 @@ Every package must be:
 - **Host-agnostic** — never FKs or JOINs on host tables. Host provides IDs; package trusts them. Host applications wire dependencies themselves.
 - **PHPStan max** — zero errors at level max before the package is considered done
 
-### PHP 8.4 Baseline
+### PHP Compatibility Baseline
 
-PHP 8.4 is the minimum baseline for newly created Maatify PHP libraries, reusable modules, and new standalone PHP work. An already published package MUST retain its declared compatibility contract until raising the minimum PHP version is permitted by the package's compatibility/versioning policy.
+New Packages and applicable Base Artifacts MUST follow the PHP support, Composer eligibility, and security floor rules in [Composer Package Standard §15.1](COMPOSER_PACKAGE_STANDARD.md#151-php-constraint). An already published Package MUST retain its declared compatibility contract until raising the minimum PHP version is permitted by its compatibility/versioning policy.
 
 ### Persistence Conditional Applicability
 
-All rules in this Standard concerning PDO, SQL, `schema/`, migrations, transaction handling, Ordering/Pagination, PDO hydration, database integration, and database-focused testing apply only when the package owns SQL persistence or SQL database behavior.
+PDO, SQL, SQL schema and migrations, shared PDO Ordering/Pagination, and PDO hydration rules apply only when the Package owns SQL persistence or SQL database behavior. General transaction ownership, concurrency and persistence verification rules apply to the behavior and backend the Package actually owns, including non-SQL backends under the next section.
 
 A package without persistence or database behavior is not required to use PDO, provide `schema/`, define migrations, or implement database-specific architecture or tests. When a package does own persistence or database behavior, all applicable persistence requirements in this Standard remain mandatory. For SQL persistence, these requirements include direct PDO usage, no ORM, and no external query builder. Small internal SQL fragment builders are allowed only for repeated package-local query logic.
 
@@ -52,6 +51,7 @@ PDO driver availability alone does not establish database support.
 - [`CI_WORKFLOW_STANDARD.md`](CI_WORKFLOW_STANDARD.md) owns workflow and check execution.
 - [`LIBRARY_PRESENTATION_STANDARD.md`](LIBRARY_PRESENTATION_STANDARD.md) owns README structure, badges, release-facing files, and the consumer-facing Usage Guide/examples artifact requirements.
 - [`DOCUMENTATION_LIFECYCLE_STANDARD_AR.md`](../governance/DOCUMENTATION_LIFECYCLE_STANDARD_AR.md) owns document roles, current-versus-historical semantics, freshness, retention, and documentation-reference hygiene.
+- [`PHP_SOURCE_DOCUMENTATION_STANDARD.md`](../php/PHP_SOURCE_DOCUMENTATION_STANDARD.md) owns general PHP source documentation. [`PHP_CODING_STYLE_STANDARD.md`](../php/PHP_CODING_STYLE_STANDARD.md) owns PHP coding style.
 
 These standards MUST use cross-references and MUST NOT duplicate each other's detailed rules.
 
@@ -70,14 +70,14 @@ To maintain standalone Composer package boundaries and a framework-agnostic arch
 - **Clock/Date-Time:** A package that requires a clock abstraction MUST depend on `maatify/shared-common` and consume `ClockInterface`, available from `v1.0.0`. `SystemClock` is a production implementation available from `v1.0.0`, but it is not mandatory for every consumer. No shared Frozen/Test Clock is claimed by this Standard.
   Repository: https://github.com/Maatify/SharedCommon
 
-- **Persistence Utilities:** Packages that require reusable PDO row-position/display-order management or pagination capabilities must depend on `maatify/php-persistence`.
+- **Persistence Utilities:** Packages that require reusable PDO row-position/display-order management or pagination capabilities MUST use the eligible public API of `maatify/php-persistence` under Section 11.
   Repository: https://github.com/Maatify-ltd/php-persistence
 
-**Rule:** Packages MUST NOT define package-local duplicates of a capability that is available through a stable public API in a Maatify shared package. This prohibition includes exception hierarchies, clock abstractions, PDO row-position/display-order mechanics, and PDO pagination mechanics.
+**Rule:** Packages MUST NOT define package-local duplicates of a capability available through an eligible public API in a Maatify shared package. Section 11 defines the release eligibility and non-duplication rules for the shared PDO capabilities.
 
-A consuming package MUST declare the minimum stable dependency version that exposes every shared API it uses, subject only to the temporary trial exception in Section 11. Proposed architecture documents, unreleased branches, commits, and implementation contracts are not consumable public APIs and MUST NOT be copied into consumer packages.
+A stable dependency constraint MUST start at the first compatible stable release that exposes every shared API the Package uses. Section 11 defines the temporary RC trial exception for Persistence. Proposed architecture documents, unreleased branches, commits, and implementation contracts are not consumable public APIs and MUST NOT be copied into consumer packages.
 
-The declaration, constraint, ordering, and validation rules for these dependencies are governed by [COMPOSER_PACKAGE_STANDARD.md](COMPOSER_PACKAGE_STANDARD.md).
+The [Composer Package Standard](COMPOSER_PACKAGE_STANDARD.md) owns dependency declarations and constraints, including the eligibility and disclosure rules in §15.4 for an independently optional runtime prerequisite. Optional declaration does not waive shared API or release eligibility requirements.
 
 This ensures:
 - Explicit Composer/runtime dependencies only
@@ -93,7 +93,7 @@ Repository presentation, governance-document identity, release-facing metadata, 
 Composer package metadata, dependency declarations, autoloading, scripts, configuration, stability, and lock-file policy MUST follow [COMPOSER_PACKAGE_STANDARD.md](COMPOSER_PACKAGE_STANDARD.md).
 
 
-Every package must contain these files at its package root (the repository root for a standalone package; for an in-project Base Module, the Artifact Root defined in `MODULE_BUILDING_STANDARD.md`):
+Every Package MUST provide the applicable files and directories below. The Library Presentation Standard defines the complete applicable release-facing and consumer-facing artifact set. Use the repository root for a standalone Package and the Artifact Root defined by `MODULE_BUILDING_STANDARD.md` for an in-project Base Module.
 
 ```
 ├── README.md                          ← installation, quick examples, what it does / does not
@@ -103,13 +103,13 @@ Every package must contain these files at its package root (the repository root 
 ├── phpstan.neon                       ← governed by Section 21
 ├── src/                               ← all PHP source code
 ├── tests/                             ← if applicable
-├── schema/                            ← if applicable (only when the package has SQL persistence or SQL database behavior)
+├── schema/                            ← when the Package owns SQL schema, migration, or install assets
 └── docs/                              ← detailed architecture, integration, roadmap, and audit documents
 ```
 
 ### Canonical Package Reference Location
 
-Every standalone Maatify package MUST maintain exactly one canonical Package Reference at the repository root.
+Every Package covered by this Standard MUST maintain exactly one canonical Package Reference at its Package root.
 
 The canonical path is:
 
@@ -323,10 +323,10 @@ A capability-specific exception belongs under `{Capability}/Exception/`. The sam
 
 ### Management and Consumer Use Cases
 
-When this Standard requires distinct Management and Consumer use cases, the split MUST remain inside the Capability:
+When Section 15 requires distinct Management and Consumer use cases, the split MUST remain within the capability that owns them. For a single-capability Package, the Package root namespace under `src/` already represents that capability. For multi-capability and multi-domain Packages, use the actual capability path from the declared topology.
 
 ```text
-{Capability}/
+{owning capability path}/
 ├── Management/
 │   ├── Command/
 │   ├── Criteria/
@@ -411,6 +411,8 @@ A **Deferred Structural Obligation** is the automatic result of a proven compati
 
 These rules, including `schema/`, database structure, database tests, and migrations, are conditionally applicable **only** when the package has SQL persistence or SQL database behavior.
 
+Apply the table and migration rules to assets owned by the Package. If a SQL utility operates on caller-supplied tables, describe the required table and engine characteristics in its Package Reference and verify the behavior against those characteristics under Sections 21 and 25. The caller retains schema ownership.
+
 - Table prefix: `maa_{package_short_name}_` (e.g. `maa_library_example_`)
 - Every table needs: `PRIMARY KEY (id)`, proper indexes, meaningful COMMENTs on columns.
 - All policies (soft delete, display order, FK behavior, uniqueness) documented in the SQL header.
@@ -436,14 +438,16 @@ These rules, including `schema/`, database structure, database tests, and migrat
 7. Blind catch-all wrapping is forbidden.
 8. Swallowing errors is forbidden.
 9. When wrapping, preserve the original throwable as `previous` where supported.
-10. Transaction catch blocks must rollback owned transactions and rethrow the original throwable unless an explicitly documented semantic conversion is performed.
+10. Transaction catch blocks MUST attempt rollback only for an owned transaction that is still active and preserve the original throwable under the Transaction Pattern below.
 11. Rethrowing the original throwable after rollback is valid and is not a violation of named-exception rules.
 12. Packages MUST NOT be universally required to convert every external infrastructure failure into a package-defined exception. The chosen wrapping or propagation contract must follow the package-owned semantic boundary and be documented.
 
 ### Interface
 
 ```php
-interface {PackageName}ExceptionInterface extends \Throwable {}
+interface SomethingExceptionInterface extends \Throwable
+{
+}
 ```
 
 The canonical package marker location is:
@@ -473,10 +477,12 @@ Release-version selection, including whether a legacy marker rename warrants a M
 ### Example: Package-Defined Storage Exception
 
 ```php
-final class {Domain}DatabaseException extends \Maatify\Exceptions\Exception\System\SystemMaatifyException
-    implements {PackageName}ExceptionInterface
+final class SomethingStorageConnectionException extends \Maatify\Exceptions\Exception\System\SystemMaatifyException implements SomethingExceptionInterface
 {
-    // Implementation uses Maatify codes
+    protected function defaultErrorCode(): \Maatify\Exceptions\Contracts\ErrorCodeInterface
+    {
+        return \Maatify\Exceptions\Enum\ErrorCodeEnum::DATABASE_CONNECTION_FAILED;
+    }
 }
 ```
 
@@ -498,23 +504,21 @@ Behavior must stay domain-specific:
 - `PDOException::getCode()` represents the SQLSTATE, not a Driver-specific error code.
 - SQLSTATE Class `23` is a broad category for Integrity Constraint Violations (e.g., Duplicate Key, Foreign Key, Explicit NULL), not just duplicates alone.
 - It is forbidden to blindly map all `23xxx` errors to an `AlreadyExists` or Duplicate exception.
-- Semantic conversion is permitted only when there is documented Driver-specific evidence proving a Duplicate Key violation.
+- Mapping to a duplicate-key exception requires documented driver-specific evidence of a duplicate key. Mapping to a field-specific conflict also requires evidence that the operation failed on that field's unique constraint.
 - `PDOException::$errorInfo` might be `null`, so you must check for the existence of `[1]` safely before using it.
 - The MySQL/MariaDB driver uses code `1062` to identify a Duplicate Key. Any other Driver or DBMS must use its own official documented code and must not blindly copy `1062`.
 - Any error not explicitly classified by a documented evidence must propagate as-is.
 - Retain the `previous` exception when your wrapping exception contract supports it, but do not invent a new named constructor signature solely for that purpose.
 
-*Note: The following example is Driver-specific to MySQL/MariaDB. It is not a general rule for all PDO drivers.*
+This MySQL/MariaDB example assumes the operation and schema establish that a duplicate-key failure can only be a conflict on `code`. If another constraint can also produce that failure, preserve the original exception unless the actual constraint can be identified under the documented mapping. The named constructor in this example supports retaining the cause.
 
 ```php
 } catch (\PDOException $e) {
-    $driverCode = isset($e->errorInfo[1])
-        ? (int) $e->errorInfo[1]
-        : null;
+    $driverCode = $e->errorInfo[1] ?? null;
 
     // MySQL/MariaDB duplicate-key driver code.
-    if ($driverCode === 1062) {
-        throw {Domain}CodeAlreadyExistsException::withCode($command->code);
+    if (in_array($driverCode, [1062, '1062'], true)) {
+        throw SomethingCodeAlreadyExistsException::withCode($command->code, previous: $e);
     }
 
     throw $e;
@@ -523,29 +527,33 @@ Behavior must stay domain-specific:
 
 ### Transaction Pattern
 
-In any method that uses `beginTransaction()`:
+The example owns the transaction it starts. Use this pattern at the documented transaction boundary. Check the transaction-control return values even when a driver can also throw. The package-defined exception factories below illustrate how to report a start or commit failure signalled by `false`.
 
 ```php
-        $this->pdo->beginTransaction();
+if ($this->pdo->beginTransaction() === false) {
+    throw SomethingDatabaseException::transactionStartFailed();
+}
 
-        try {
-            // ...
-            $this->pdo->commit();
-        } catch (\Throwable $e) {
-            try {
-                if ($this->pdo->inTransaction()) {
-                    $this->pdo->rollBack();
-                }
-            } finally {
-                // Cleanup failure must not replace the original throwable.
-                // Optional documented semantic conversion may occur here.
-                throw $e;
-            }
+try {
+    // ...
+    if ($this->pdo->commit() === false) {
+        throw SomethingDatabaseException::transactionCommitFailed();
+    }
+} catch (\Throwable $e) {
+    try {
+        if ($this->pdo->inTransaction()) {
+            $this->pdo->rollBack();
         }
+    } finally {
+        // Preserve the primary failure even if cleanup fails.
+        throw $e;
+    }
+}
 ```
 
 Only package-owned transactions are rolled back by this pattern.
 Rollback must be attempted only while the transaction is active.
+The operations inside the boundary must be rollback-capable on the supported engine. Account for statements that can implicitly commit, such as MySQL DDL, before claiming that the whole operation is atomic.
 The original throwable is rethrown unless an explicitly documented semantic conversion is performed, even if checking transaction activity or attempting rollback throws.
 Swallowing the original throwable is forbidden.
 If a semantic conversion wraps the original throwable, the original should be retained as `previous` where supported.
@@ -553,6 +561,8 @@ If a semantic conversion wraps the original throwable, the original should be re
 ## 8. Command Rules
 
 For public contracts accepting IDs as raw `int|string` input, accept only a canonical positive integer representation. Reject floats, booleans, null, signs, whitespace, leading zeroes, decimal notation, and scientific notation; check bounds before casting to `int`.
+
+Validate at the entry point that receives the raw value, before a scalar parameter declaration or cast can coerce it. PHP's scalar strictness follows the calling file, so a package's `strict_types` declaration alone cannot enforce the raw input contract for all callers.
 
 For strict, known-format date-only input, use `\DateTimeImmutable::createFromFormat()` and require an exact round-trip string match so normalization or overflow is rejected. Inspecting `getLastErrors()` MAY provide an additional check. This does not prohibit general free-form date-time parsing with `\DateTimeImmutable`.
 
@@ -562,9 +572,9 @@ Commands are self-validating value objects:
 final readonly class CreateSomethingCommand
 {
     public function __construct(
-        public string  $code,
-        public string  $name,
-        public bool    $isActive,
+        public string $code,
+        public string $name,
+        public bool $isActive,
         public ?string $notes,
     ) {
         if (trim($code) === '') {
@@ -586,7 +596,7 @@ Rules:
 - Host IDs (e.g. `methodId`, `currencyId`) MUST follow the canonical positive-ID contract in this section.
 - Image/media inputs MUST follow the conditional ownership and assignment contract in Section 17; this Standard does not require every domain to have an image field or a dedicated image operation.
 - Monetary and fixed-precision decimal inputs MUST follow Section 19
-- General/free-form date-time strings MUST be validated with `new \DateTimeImmutable($value)` in a try/catch; strict known-format date-only inputs follow the round-trip rule defined earlier in this section.
+- General/free-form date-time strings MUST be validated with `new \DateTimeImmutable($value)` in a try/catch. The Package contract determines whether empty values, relative expressions, or normalized dates are valid inputs. A successful parse alone does not establish that those inputs are allowed. Strict known-format date-only inputs follow the round-trip rule above.
 
 ---
 
@@ -598,9 +608,10 @@ DTOs represent data snapshots or results and MUST NOT be used as substitutes for
 final readonly class SomethingDTO implements \JsonSerializable
 {
     public function __construct(
-        public int    $id,
+        public int $id,
         public string $name,
-    ) {}
+    ) {
+    }
 
     public function jsonSerialize(): mixed
     {
@@ -621,12 +632,21 @@ final readonly class SomethingCollectionDTO implements \IteratorAggregate, \Json
     private array $items;
 
     /** @param list<SomethingDTO> $items */
-    public function __construct(array $items) { $this->items = $items; }
+    public function __construct(array $items)
+    {
+        $this->items = $items;
+    }
 
     /** @return \ArrayIterator<int, SomethingDTO> */
-    public function getIterator(): \ArrayIterator { return new \ArrayIterator($this->items); }
+    public function getIterator(): \ArrayIterator
+    {
+        return new \ArrayIterator($this->items);
+    }
 
-    public function jsonSerialize(): mixed { return $this->items; }
+    public function jsonSerialize(): mixed
+    {
+        return $this->items;
+    }
 }
 ```
 
@@ -638,33 +658,39 @@ final readonly class SomethingCollectionDTO implements \IteratorAggregate, \Json
 
 | Operation | Returns | Why |
 |---|---|---|
-| `create()` | `int` | `lastInsertId()` |
+| `create()` | `int` | Validated identifier of the created entity |
 | `update()` | `bool` | Documented mutation outcome; changed rows alone do not establish target absence |
 | `updateStatus()` | `bool` | Documented mutation outcome; changed rows alone do not establish target absence |
 | `updateDisplayOrder()` | `bool` | delegated to `Maatify\PhpPersistence\Ordering\Repository\ScopedOrderingManager` from `maatify/php-persistence` |
 | `updateImage()` | `bool` | Documented mutation outcome; changed rows alone do not establish target absence |
 | `softDelete()` | `bool` | Documented deletion/lifecycle outcome, including any already-deleted condition |
-| `hardDelete()` | `bool` | `rowCount() > 0` after transaction |
+| `hardDelete()` | `bool` | Documented deletion outcome. If the contract reports whether a row was deleted, use the successful delete statement's result |
 | `findById()` | `?DTO` | `null` if not found — Service decides whether to throw |
 
 This table defines Repository-level return contracts. A Service MAY expose `updateDisplayOrder(...): void`, call the Repository operation, and convert `false` into the approved not-found exception only when the Repository contract establishes that `false` means the target is missing, as required below and in Section 13. The Repository and Service signatures belong to different layers and MUST NOT be treated as competing alternatives.
+
+When using PDO `lastInsertId()`, verify that the result identifies the newly created row, is representable as a PHP `int`, and falls within the Package's documented identifier range before conversion. Follow the supported backend's ID retrieval and transaction timing. A failed statement or failed ID retrieval cannot provide a successful `create()` result.
 
 ### Mutation Outcomes and Missing Targets
 
 A boolean mutation result MUST document whether it reports changed state, a matched target, or another domain-specific outcome. A changed-row contract MAY return `false` for an unchanged existing target; that result MUST NOT be interpreted as proof that the target is missing. Zero affected rows alone cannot distinguish an unchanged existing target from a missing target. A failed conditional update or compare-and-swap condition likewise MUST NOT automatically be classified as target absence.
 
-A Service MUST convert a Repository `false` result to a not-found exception only when the documented Repository contract and its implementation establish that `false` means the target is missing. Otherwise it MUST handle the result according to its actual mutation contract. This does not mandate success for every no-op or redefine domain-specific lifecycle, conditional-update, or conflict outcomes.
+A Service MAY convert a Repository `false` result to a not-found exception only when the documented Repository contract and its implementation establish that `false` means the target is missing. It MUST handle all other results according to the actual mutation contract. This does not mandate success for every no-op or redefine domain-specific lifecycle, conditional-update, or conflict outcomes.
 
 The implementation's evidence of absence MUST remain valid within the operation's documented concurrency and transaction boundary. An unprotected existence precheck followed by a separate write is not sufficient proof of the write outcome. This Standard does not prescribe a universal SQL algorithm, connection option such as `ATTR_FOUND_ROWS`, or new public result type.
 
 ### `findById` Pattern
 
+Return `null` only after a successful query establishes that no row was found. This example assumes the injected connection uses `PDO::ERRMODE_EXCEPTION`. If the package supports a PDO mode that reports errors through return values, it MUST distinguish failed preparation, execution, or fetch from a successful query with no matching row under Section 7. Keep the documented connection configuration and error contract at the integration boundary.
+
 ```php
-// Repository — returns null, never throws for not-found
-public function findById(int $id): ?SomeDTO
+/** Finds an item by ID. Returns null after a successful query with no matching row. */
+public function findById(int $id): ?SomethingDTO
 {
-    $stmt = $this->pdo->prepare('SELECT ... FROM maa_something WHERE id = :id LIMIT 1');
-    $stmt->execute(['id' => $id]);
+    $stmt = $this->pdo->prepare('SELECT id, name FROM maa_example_items WHERE id = :id LIMIT 1');
+    if ($stmt === false || $stmt->execute(['id' => $id]) === false) {
+        throw SomethingDatabaseException::readFailed();
+    }
 
     /** @var array<string, mixed>|false $row */
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -675,33 +701,28 @@ public function findById(int $id): ?SomeDTO
 
     return $this->hydrateDetail($row);
 }
-
-// Service — throws NotFoundException when null
-public function getById(int $id): SomeDTO
-{
-    $dto = $this->queryReader->findById($id);
-
-    if ($dto === null) {
-        throw SomethingNotFoundException::withId($id);
-    }
-
-    return $dto;
-}
 ```
 
 ### Hydration — never cast `mixed` directly
 
-```php
-// ❌ PHPStan max rejects this
-isActive:     (bool) ($row['is_active']     ?? false),
-displayOrder: (int)  ($row['display_order'] ?? 0),
+Validate the stored representation and range before use. This example expects a required integer column and a required boolean encoded as `0` or `1`. A missing or malformed required value is a hydration failure. Apply defaults only when the domain contract expressly defines them.
 
-// ✅ extract first, check type, then cast
-$isActive     = $row['is_active']     ?? null;
+```php
+$isActive = $row['is_active'] ?? null;
 $displayOrder = $row['display_order'] ?? null;
 
-isActive:     (is_int($isActive)     || is_string($isActive)) && (int) $isActive === 1,
-displayOrder: (is_int($displayOrder) || is_string($displayOrder)) ? (int) $displayOrder : 0,
+if (!in_array($isActive, [0, 1, '0', '1'], true)) {
+    throw SomethingHydrationException::invalidField('is_active');
+}
+
+$order = is_int($displayOrder) || is_string($displayOrder)
+    ? filter_var($displayOrder, FILTER_VALIDATE_INT)
+    : false;
+if ($order === false) {
+    throw SomethingHydrationException::invalidField('display_order');
+}
+
+return ['isActive' => $isActive === 1 || $isActive === '1', 'displayOrder' => $order];
 ```
 
 ---
@@ -745,12 +766,14 @@ Stable releases of consuming packages MUST use a published stable release of `ma
 
 The consumer MUST:
 
-- declare `maatify/php-persistence` as a direct Composer dependency when its public API is referenced
-- set the dependency floor at the first compatible stable version that contains the needed capability, except for the trial below
+- declare `maatify/php-persistence` directly under the Composer Package Standard, including §15.4 if it qualifies as an optional prerequisite for an independently selectable implementation
+- when declaring a stable version constraint, set its floor at the first compatible stable version that contains the needed capability. For an eligible optional prerequisite omitted from `require`, document the supported versions under Composer Package Standard §15.4
 - confirm availability from the package reference and release metadata for the selected published version
 - avoid depending on an unreleased branch, commit, proposed contract, or target version as though it were an available Runtime API
 
-**Temporary trial exception:** While `maatify/php-persistence` has no published stable release, a trial MAY use its latest published release candidate by SemVer precedence. Verify that the release tag and published Composer metadata identify the same version and source revision, and confirm the needed capability in that revision's package reference. Pin the selected RC exactly in the trial's Composer constraint and record its resolved version and revision in the trial lock or verification evidence. Keep `minimum-stability: stable` and `prefer-stable: true`, and follow the [Composer Package Standard](./COMPOSER_PACKAGE_STANDARD.md) for pre-release dependency work. The exception ends when a stable release is published. Selecting a stable replacement requires review of the needed capability and integration. This trial exception does not authorize a stable consumer release.
+**Temporary trial exception:** While `maatify/php-persistence` has no published stable release, a trial MAY use its latest published release candidate by SemVer precedence. Verify that the release tag and published Composer metadata identify the same version and source revision, and confirm the needed capability in that revision's package reference. The trial's Composer constraint MUST match only the selected RC and pass `composer validate --strict`. Verify with Composer's constraint semantics that the published RC matches and that its `-dev` variant and neighboring versions are rejected. Record the resolved version and revision in the trial lock or verification evidence. Keep `minimum-stability: stable` and `prefer-stable: true`, and follow the [Composer Package Standard](./COMPOSER_PACKAGE_STANDARD.md) for pre-release dependency work. The exception ends when a stable release is published. Selecting a stable replacement requires review of the needed capability and integration. This trial exception does not authorize a stable consumer release.
+
+**Verified trial pin (2026-11-18).** The verified Composer declaration for the current RC is `"maatify/php-persistence": "1.0.0-rc.2 <=1.0.0-rc.2"`. Composer interprets the first term as equality. The matching upper bound makes the compound constraint pass strict validation while equality limits the match to RC.2. An inclusive `>=1.0.0-rc.2` lower bound normalizes to a bound that admits `1.0.0-RC2-dev`. A trial pinned to `1.0.0-rc.1` MUST update its constraint and resolve the eligible RC before it can qualify under this exception. The [published release tag](https://github.com/Maatify-ltd/php-persistence/releases/tag/v1.0.0-rc.2) and [Packagist Composer metadata](https://repo.packagist.org/p2/maatify/php-persistence.json) identify source revision `71dc61548e48fd053376db69149a00bc87069b70`. Confirm the needed Ordering or Pagination capability in the [package reference at that revision](https://github.com/Maatify-ltd/php-persistence/blob/71dc61548e48fd053376db69149a00bc87069b70/PHP_PERSISTENCE_PACKAGE_REFERENCE.md). Apply the same verification when a newer RC is published.
 
 A proposed or documentation-only API does not qualify until it is published in an eligible release.
 
@@ -774,11 +797,9 @@ The consumer Repository / Service may:
 The consumer MUST NOT reproduce ordering SQL shifts, transaction ownership, scope locking, identifier validation, or persistence exception behavior locally.
 
 **Integration Boundaries:**
-- `getNextPosition()` is a plain non-locking read that returns `MAX + 1`: it does not start a transaction, acquire a lock, or serialize concurrent allocations. When concurrency correctness is required, the caller MUST own the transaction and a serialization lock that every competing writer takes first (for example on a parent row). Under `REPEATABLE READ`, that lock MUST be taken before the transaction's first non-locking read: a lock taken after the snapshot exists does not refresh it, so the plain read can return a stale value, and repeating the call in the same transaction does not correct it.
-- `moveWithinScope()` owns a transaction only when the PDO connection has no active transaction. When the caller already owns an active PDO transaction, the caller retains final commit and rollback ownership. The operation opens a savepoint only for a move that will write, after finding the target and excluding a no-op. The savepoint protects the operation’s writes while the caller’s transaction remains active.
-- Non-positive movement values are rejected before clamping. Clamping is to the maximum existing position.
-- Soft-delete filtering is supported when `deletedAtColumn` is configured and disabled when it is `null`.
-- Do not duplicate full public signatures; refer to `maatify/php-persistence`.
+- When concurrent position allocation matters, the caller MUST provide the transaction and serialization required by the selected API and backend. For a plain read that uses a transaction snapshot, acquire the serialization lock before that snapshot is established. A locking read of the last row alone cannot protect the first allocation in an empty scope.
+- For moves, verify that the selected API, storage engine, indexes, and constraints support the required locking and rollback behavior. In particular, a scope/position uniqueness constraint can reject an intermediate write even if the final order is unique. If the selected API cannot preserve a required invariant, apply the Missing Capability rule below.
+- The caller retains final commit and rollback ownership of its own transaction. An operation-local savepoint protects the move's writes while the caller's transaction remains active under the selected release's documented conditions. Preserve that boundary and the documented PDO failure contract through any adapter. Apply the missing-target rule in Section 10.
 
 ### Pagination Integration
 
@@ -788,7 +809,9 @@ Paginated Repository / QueryReader operations MUST delegate reusable pagination 
 Maatify\PhpPersistence\Pagination
 ```
 
-`PdoPaginator` does not own a transaction and can run inside a caller-owned transaction without modifying its state.
+`PdoPaginator` can run inside a caller-owned transaction. The caller controls transaction start, completion, and isolation.
+
+The count and data queries run separately. If the Package promises results from one snapshot, it MUST establish the backend and transaction/isolation conditions specified by the selected release for a consistent read. An active transaction by itself does not establish that guarantee.
 
 The consumer remains responsible for domain-owned concerns:
 
@@ -860,9 +883,9 @@ Accordingly, this Standard does not require any particular translation implement
 
 ### Unified Same-Shape Content Pattern
 
-Translation remains optional. When localized and non-localized values are the same concept with the same shape, a unified content relation that supports `language_code = NULL` and non-NULL language codes is the preferred pattern over a base relation plus a structurally duplicate translations relation.
+Translation remains optional. When localized and non-localized values are the same concept with the same shape, a unified content relation with a nullable language code is preferred over separate relations with duplicate structure.
 
-`NULL` represents the exact NULL-language scope; it MUST NOT mean fallback to or from a specific language unless the domain contract says so explicitly. A separate translation relation remains appropriate when structure, lifecycle, identity, or cardinality materially differs. This preference MUST NOT create a translation capability in a domain that does not need one.
+A stored `NULL` language code represents the exact NULL-language scope. In SQL, select that scope with `language_code IS NULL` or an equivalent NULL-safe predicate on the supported engine. Fallback applies only when the domain contract defines it. A separate translation relation remains appropriate when structure, lifecycle, identity, or cardinality materially differs. This preference MUST NOT create a translation capability in a domain that does not need one.
 
 ### Host-Owned Language Identity
 
@@ -877,7 +900,7 @@ Any query whose contract promises one row per entity MUST constrain the translat
 If the Package owns persistence for translations:
 
 - the logical translation identity MUST be documented in the Package Reference or Architecture
-- the persistence schema MUST enforce that identity with uniqueness constraints appropriate to the domain contract
+- the persistence schema MUST enforce that identity with uniqueness constraints appropriate to the domain contract, including the NULL-language scope when it participates in the identity. Apply the engine-specific verification in Section 24
 - the mutation behavior MUST follow the domain contract; this Standard does not prescribe Upsert or any other single mutation strategy
 
 ---
@@ -897,7 +920,7 @@ The mutation example below assumes a documented Repository contract in which `fa
 public function update(UpdateSomethingCommand $command): void
 {
     $targetFound = $this->commandRepo->update($command);
-    if (! $targetFound) {
+    if ($targetFound === false) {
         throw SomethingNotFoundException::withId($command->id);
     }
 }
@@ -913,18 +936,13 @@ public function getById(int $id): SomethingDTO
 }
 ```
 
-Services **never**:
-- Contain raw SQL
-- Catch exceptions (let them propagate)
-- Instantiate repositories directly (use constructor injection)
+Services MUST keep SQL and repository construction outside orchestration. Inject the required collaborators. A Service that directs an atomic workflow uses the documented transaction boundary under Sections 7 and 25. The transaction owner handles cleanup and the Service lets failures propagate.
 
 ---
 
-## 14. Admin vs Customer Separation
+## 14. Management and Consumer Separation
 
-Some business modules may choose actor-specific namespaces (e.g., `Admin\` vs `Customer\`).
-
-However, infrastructure packages such as `{PACKAGE_SLUG}` should use their actual package/domain boundaries instead. For example, `{DomainOne}` and `{DomainTwo}` may serve as public architectural boundaries rather than arbitrary Admin/Customer folders.
+Apply the distinct-use-case test in Section 15 and the owning capability placement in Section 5. Infrastructure Packages organize their public API by the real domains and capabilities they own. Host-specific actor labels belong at the integration boundary.
 
 ---
 
@@ -956,7 +974,7 @@ Operational Read / Reporting inside a reusable Package is limited to data and me
 - HTTP controllers
 - Routes
 - Middleware
-- Permissions
+- Host actor permission infrastructure
 - UI dashboards
 - CSV/PDF/Excel exports
 - Host-specific actor/name resolution
@@ -972,7 +990,7 @@ When a reporting result depends on persisted state, the aggregate, count, filter
 
 ## 16. display_order Rules
 
-When persisted entities expose mutable row-position or display-order behavior, the package MUST consume the public Ordering API from `maatify/php-persistence` under the release eligibility rules in Section 11.
+When SQL-persisted entities expose mutable row-position or display-order behavior, the Package MUST consume the public Ordering API from `maatify/php-persistence` under the applicability and release eligibility rules in Sections 1 and 11.
 
 The package-level integration contract is:
 
@@ -1019,17 +1037,17 @@ Rules:
 
 ## 19. Decimal / Financial Rules
 
-- All monetary values stored as `string` (DECIMAL precision — never `float`)
-- All arithmetic uses `bcmath` — never native PHP arithmetic on monetary values
-- Validate decimal format **before** any `bcmath` call:
+- Represent monetary values as strings in PHP and use exact-precision storage for persisted monetary values, such as SQL `DECIMAL` where applicable. The Package contract defines the PHP representation of non-monetary fixed-precision values.
+- Use BCMath for decimal arithmetic. Declare `ext-bcmath` under the applicable Composer runtime dependency rules in Composer Package Standard §15.2 and §15.4.
+- Validate the decimal format against the domain's accepted representation before any BCMath call. The example below checks the lexical form for an unsigned value with at most four fractional digits. Apply the domain's applicable integer-digit limit and value range before calculation.
 
 ```php
-if (! preg_match('/\A\d+(?:\.\d{1,4})?\z/', $value)) {
+if (preg_match('/\A\d+(?:\.\d{1,4})?\z/', $value) !== 1) {
     throw SomethingInvalidArgumentException::invalidDecimal($field, $value);
 }
 ```
 
-- Always pass explicit scale: `bcadd($a, $b, 4)`, `bcmul($a, $b, 4)`, `bcdiv($a, $b, 8)`
+- Pass the scale explicitly to operations that take a scale argument. The domain defines the scale and rounding semantics for each operation.
 
 ---
 
@@ -1040,15 +1058,12 @@ Every placeholder must appear exactly once per SQL string.
 
 When the same value is needed in multiple subqueries:
 
+```sql
+AND gc_al.country_code = :country_code_allow
+AND gc_bl.country_code = :country_code_block
+```
+
 ```php
-// ❌ WRONG — same placeholder used twice
-AND gc.country_code = :country_code  -- subquery 1
-AND gc.country_code = :country_code  -- subquery 2
-
-// ✅ CORRECT — unique names, same value
-AND gc_al.country_code = :country_code_allow   -- allowlist subquery
-AND gc_bl.country_code = :country_code_block   -- blocklist subquery
-
 $params['country_code_allow'] = $countryCode;
 $params['country_code_block'] = $countryCode;
 ```
@@ -1078,22 +1093,13 @@ parameters:
 ```
 
 Repositories MUST configure PHPStan from their actual package-owned paths and MUST NOT reference a non-existent path merely to copy this example. Existing package-owned tests MUST NOT be excluded from static analysis.
-No PHPStan baseline, `ignoreErrors`, or inline suppression is permitted merely to make CI green.
+Follow [CI Workflow Standard §8](CI_WORKFLOW_STANDARD.md#8-mandatory-baseline-quality-checks) for zero-error enforcement, prohibited baselines and `ignoreErrors`, and limits on inline suppression.
 
 ### Final Classes and Test Doubles
 
-- Test Doubles MUST target interfaces or replaceable contracts by default, not concrete `final` classes.
-- A `final` keyword MUST NOT be removed from a class solely to facilitate testing.
-- When testing a class that depends on a concrete final class:
-  1. Use a real instance if it is deterministic and suitable for testing.
-  2. Or test via a Mock/Fake for the collaborators or external boundaries that it depends on.
-  3. Create an interface only when replaceability is a true runtime requirement, not just to satisfy a single test.
-- Production design must not be weakened solely for testing; `final` and `readonly` must not be removed merely to make mocking easier.
-- Interfaces must not be invented solely for a one-off test when runtime replaceability is not a real architectural requirement.
-- Prefer testing through real deterministic instances or proper replaceable collaborators/contracts.
-- The package `dg/bypass-finals` is NOT a Central Baseline and NOT a general requirement for Maatify projects.
-- `dg/bypass-finals` MAY be used as a development-only test tool when a repository has a legitimate documented need to test/mock concrete final classes and that choice is consistent with its test architecture.
-- Its use must never justify PHPStan suppressions, baselines, or weakening production architecture.
+Follow [Testing Standard §3.6](../testing/TESTING_STANDARD.md#36-final-classes-and-test-doubles) for test doubles and runtime replaceability. Preserve production `final` and `readonly` declarations when the only reason to remove them is to facilitate testing.
+
+A Package MAY use `dg/bypass-finals` as a development-only test tool for a documented need consistent with its test architecture. Its use must preserve the production design and the applicable static-analysis rules. The tool is optional.
 
 ### Testing Strategy
 
@@ -1104,7 +1110,9 @@ No PHPStan baseline, `ignoreErrors`, or inline suppression is permitted merely t
 - CI execution requirements — including real-service provisioning, MySQL/SQLite enforcement, PHP matrices, cleanup/repeatability checks, and example syntax validation — are governed exclusively by [`CI_WORKFLOW_STANDARD.md`](CI_WORKFLOW_STANDARD.md).
 - Package readiness requires the complete maintained and applicable test suite to be covered by the appropriate CI quality gate, using the repository's actual maintained test runner and tooling. CI execution and failure enforcement are governed by [`CI_WORKFLOW_STANDARD.md`](CI_WORKFLOW_STANDARD.md).
 
-### PDO fetch results — always annotate
+### PDO fetch result annotations
+
+Annotate PDO fetch results with the shape of the selected fetch mode and its actual failure or absence type. An annotation cannot perform result validation or turn a driver failure into an empty result.
 
 ```php
 /** @var array<string, mixed>|false $row */
@@ -1131,12 +1139,14 @@ $stmt->bindValue(':offset', $offset,  PDO::PARAM_INT);
 
 ### Private method annotations
 
-```php
+Use precise PHPDoc types where a native type cannot express a meaningful shape. General documentation coverage is governed by the PHP Source Documentation Standard. The declarations below illustrate type annotations independently.
+
+```text
 /** @param array<string, mixed> $row */
 private function hydrateListItem(array $row): ?SomeListItemDTO
 
 /** @param array<string, mixed> $row */
-private function hydrateDetail(array $row): ?SomeDTO
+private function hydrateDetail(array $row): SomethingDTO
 
 /**
  * @param  list<array<string, mixed>>  $rows
@@ -1155,7 +1165,7 @@ private function findRawById(int $id): ?array
 
 ## 22. CI Workflow Rules
 
-Every new standalone Composer package in the Maatify ecosystem must adhere to the CI workflow standards defined in [`CI_WORKFLOW_STANDARD.md`](CI_WORKFLOW_STANDARD.md).
+Standalone Packages and extractable Base Artifacts MUST follow [`CI_WORKFLOW_STANDARD.md`](CI_WORKFLOW_STANDARD.md) when that Standard applies to the artifact's verification.
 
 `CI_WORKFLOW_STANDARD.md` is the single detailed source of truth for workflow architecture, path relevance, dependency resolution, PHP compatibility matrices, quality checks, real-service Integration execution, security audit, workflow linting, permissions, immutable action pinning, execution reliability, and stable required gates.
 
@@ -1171,20 +1181,20 @@ Compliance requires the repository's CI to pass the current Compliance Checklist
 - [ ] CI workflows exist, pass, and satisfy the current Compliance Checklist in `CI_WORKFLOW_STANDARD.md`
 - [ ] Package-owned runtime and test architecture is represented in CI where applicable
 - [ ] `README.md`, `CHANGELOG.md`, and other release-facing files comply with `LIBRARY_PRESENTATION_STANDARD.md`.
-- [ ] Where the artifact is a reusable Package or applicable Base Artifact, `docs/guides/USAGE_GUIDE.md`, root `examples/`, and the required consumer-facing links are present and accurate under `LIBRARY_PRESENTATION_STANDARD.md`.
+- [ ] Where the artifact is a reusable Package or applicable Base Artifact, the Usage Guide, `examples/`, `llms.txt`, and the required consumer-facing links are present and accurate under `LIBRARY_PRESENTATION_STANDARD.md`.
 - [ ] `{PACKAGE}_PACKAGE_REFERENCE.md` complete — full API, design rules, extension guide
 - [ ] `composer.json` complies with [COMPOSER_PACKAGE_STANDARD.md](COMPOSER_PACKAGE_STANDARD.md).
 - [ ] The technical consumer workflow and examples meet the requirements in Section 25; their required presentation, navigation, and discoverability follow `LIBRARY_PRESENTATION_STANDARD.md`.
-- [ ] The standalone Package has the reproducible Consumer Verification Harness required by [TESTING_STANDARD.md](../testing/TESTING_STANDARD.md).
-- [ ] Every public service/repository capability intended for infrastructure substitution has a matching contract (interface)
+- [ ] The standalone Package or applicable extractable Base Artifact has the reproducible Consumer Verification Harness required by [TESTING_STANDARD.md](../testing/TESTING_STANDARD.md).
+- [ ] Every public service/repository capability intended for infrastructure substitution has a matching contract (interface). An infrastructure implementation using the optional prerequisite permission follows the eligibility rules in Composer Package Standard §15.4.
 - [ ] Domain-specific failure semantics are documented
 - [ ] Boolean mutation meanings distinguish changed, unchanged, missing, and conditional outcomes where applicable; not-found mapping follows Section 10 and is not inferred from zero changed rows alone.
-- [ ] Transaction catch blocks rethrow the original `\Throwable` after rollback — never swallow
+- [ ] Owned transaction failures follow Section 7. Cleanup preserves the primary error, including when the boundary performs a documented semantic conversion.
 - [ ] Business orchestration lives in Services, validation in Commands/filters, SQL in Repositories
 - [ ] Schema/persistence documentation aligns with the package's declared persistence backend and domain-owned storage structures, with no generic `logs` or `event_logs` storage
 - [ ] Framework-agnostic boundaries preserved: no host app namespaces, no framework bindings required
 - [ ] No generic logger, recorder, or repository
-- [ ] Docs reflect current exception rules, package-defined exceptions use `maatify/exceptions`, and any clock/date-time contract uses `maatify/shared-common` instead of a local duplicate
+- [ ] Package-defined exceptions follow Section 7 and use `maatify/exceptions`. A Package that needs a clock abstraction uses `maatify/shared-common` under Section 2.
 
 ## 24. Domain Ownership, External References, and Lifecycle
 
@@ -1201,6 +1211,8 @@ Standalone Packages and Base Modules MUST NOT depend on Host foreign keys, Host-
 
 Nullable scope fields use exact-scope semantics: `NULL` means only the exact NULL scope. It MUST NOT mean wildcard, fallback, all, default, any language, or any platform unless the domain contract explicitly defines that meaning.
 
+If a nullable scope is part of a unique identity, verify that the chosen constraint on the supported engine rejects duplicates in the NULL scope as well as in named scopes. A composite `UNIQUE` constraint on MySQL, for example, can permit duplicate rows when one of the indexed fields is `NULL`. Use an engine-supported constraint that enforces the documented identity and verify it through applicable persistence Integration tests.
+
 For each entity or assignment, the Package Reference MUST distinguish stable identity fields from mutable business fields, lifecycle fields, and ordering fields. Generic updates MUST NOT change stable identity. Soft Delete is optional and SHOULD be used only when domain history, restore behavior, or identity invariants require it; it is not a universal capability. When a lifecycle is used, its identity, uniqueness, restore, and deletion semantics MUST be documented.
 
 ## 25. Runtime Workflow, Transactions, Concurrency, and Clock
@@ -1208,10 +1220,10 @@ For each entity or assignment, the Package Reference MUST distinguish stable ide
 Each reusable Package MUST define a realistic technical consumer workflow in its Package Reference or another canonical technical contract document. A Usage Guide MAY present that contract for consumers, but it MUST NOT create a competing technical contract. The documented workflow MUST show the consumer path:
 
 ```text
-Host Input → Public API → Domain Service → Integration Boundary → Observable Result
+Host Input → Public API → Applicable Orchestration / Integration Boundaries → Observable Result
 ```
 
-Examples MUST demonstrate supported construction/wiring, a basic workflow, public API use, and the applicable integration boundaries. They illustrate the technical contract; the Package Reference and this Standard remain the sources of normative rules. `LIBRARY_PRESENTATION_STANDARD.md` owns whether the Usage Guide and examples artifacts exist, their navigation/discoverability, and their consumer-facing presentation; it does not replace this technical workflow contract.
+Examples MUST demonstrate supported construction/wiring, a basic workflow, public API use, and the applicable integration boundaries. Show only the layers that participate in the actual workflow. The Package Reference and this Standard own the technical contract. `LIBRARY_PRESENTATION_STANDARD.md` owns the required Usage Guide and examples artifacts and their consumer-facing presentation.
 
 When a domain invariant spans multiple operations, the Package MUST identify the transaction owner and the required transaction, locking, and concurrency boundaries. It MUST state whether an outer transaction is supported when that affects callers. Race-prone invariants—such as ordering, hierarchy, unique defaults, or lifecycle transitions—require concurrency verification when concurrent access is realistic for the domain. The Testing Standard owns the general testing evidence model.
 
@@ -1226,6 +1238,17 @@ When this pattern applies, the domain contract may define a stable `field_key`, 
 The Host owns the meaning and administration of `field_key`, including editor configuration, sanitization, rendering, and fallback, unless the Package's own domain explicitly owns those semantics. The Package MUST NOT create a Field Definition Registry solely because it stores a `field_key`; the Registry rule in Section 24 still applies.
 
 ## Version History
+
+### `5.0.0`
+
+- [Issue #198](https://github.com/Maatify-ltd/php-engineering-standards/issues/198) qualifies Frozen Version Baseline `4.0.0`, artifact blob `290907492e48f11cc599d9ff94c567ea504855d2` at Adoption Commit `d3dd98b8d82c8bcdd65614fe4ed80853bdcdcc73`. A consumer completed VALID Adoption on 2026-11-14 with that exact artifact, before PR #197 changed it. The entries under `4.0.0` record the earlier calculation through that frozen snapshot.
+- Section 1 extends general transaction ownership and concurrency rules to applicable non-SQL persistence behavior. `NORMATIVE / BREAKING_CONTRACT_CHANGE` (Major class). A Package with non-SQL workflows that span multiple operations may now need to document and verify those boundaries under Section 25.
+- Section 10 allows `hardDelete()` to express the Package's documented deletion outcome as a `bool`. `NORMATIVE / BACKWARD_COMPATIBLE_CONTRACT_CHANGE` (Minor class). The previous `rowCount() > 0` contract satisfies the new rule when the result describes whether a row was deleted. Other documented outcomes are permitted subject to the missing-target rule.
+- Section 11 records the verified `1.0.0-rc.2` trial pin under the existing `DEC-049` release eligibility rules. An earlier pin must be updated to qualify while `1.0.0-rc.2` is the latest published RC. `CLARIFICATION / NO_CONTRACT_CHANGE` (Patch class).
+- Clarify Package and Base Artifact relationships, Composer/CI/Testing/Presentation ownership, Management/Consumer placement, and the PHP examples. The changes distinguish failed statements and transactions from successful outcomes. `CLARIFICATION / NO_CONTRACT_CHANGE` (Patch class).
+- Clarify exact NULL-scope selection and uniqueness, caller-owned schema and transactions, and SQL Ordering applicability. `CLARIFICATION / NO_CONTRACT_CHANGE` (Patch class).
+- Issue #198 corrects the version metadata and the frozen baseline calculation. `EDITORIAL / NO_CONTRACT_CHANGE` (Patch class). The highest cumulative impact of PR #197 and this correction from Frozen `4.0.0` is Major, yielding Mutable Candidate `5.0.0`.
+- [Issue #200](https://github.com/Maatify-ltd/php-engineering-standards/issues/200) permits Composer constraints that match only the eligible RC and pass the existing strict validation gate. `NORMATIVE / BACKWARD_COMPATIBLE_CONTRACT_CHANGE` (Minor class). The eligible release and verification requirements of `DEC-049` remain in force. The cumulative Major calculation from Frozen `4.0.0` yields Mutable Candidate `5.0.0`.
 
 ### `4.0.0`
 
