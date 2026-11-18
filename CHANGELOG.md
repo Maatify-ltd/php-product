@@ -4,6 +4,19 @@ All notable changes to this package are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- Move the development checkout and its consumer harness to Persistence `1.0.0-rc.2`.
+- Evaluate Product visibility once per query and scope metadata-only writes to their owner and target rows.
+
+### Fixed
+
+- Distinguish NULL and collated text in Content and Image Assignment identities. Existing RC.1 installations need the [schema upgrade](schema/README.md#upgrade-from-the-published-rc1-schema).
+- Preserve typed duplicate conflicts with localized MySQL diagnostics and reject malformed stored timestamps.
+- Keep page counts and row selection consistent on autocommit connections, and bound concurrency-test worker waits.
+
 ## [1.0.0-rc.1] - 2026-11-14
 
 ### Added
@@ -47,4 +60,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Changed the Product package license from MIT to proprietary. The `LICENSE`, Composer metadata, and README now reflect the proprietary license.
 
+[Unreleased]: https://github.com/Maatify-ltd/php-product/compare/v1.0.0-rc.1...HEAD
 [1.0.0-rc.1]: https://github.com/Maatify-ltd/php-product/releases/tag/v1.0.0-rc.1

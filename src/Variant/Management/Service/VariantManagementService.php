@@ -13,10 +13,12 @@ use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
 use Maatify\Product\Common\Exception\ProductStorageFailureFactory;
 use Maatify\Product\Common\Validation\TextInputRules;
 use Maatify\Product\Product\DTO\ProductConfigurationSnapshotDTO;
+use Maatify\Product\Product\Repository\ProductCommandRepositoryInterface;
 use Maatify\Product\Product\Repository\ProductConfigurationRepositoryInterface;
 use Maatify\Product\Product\Service\ProductConfigurationValidator;
 use Maatify\Product\Variant\DTO\VariantCollectionDTO;
 use Maatify\Product\Variant\DTO\VariantDTO;
+use Maatify\Product\Variant\DTO\VariantLifecycleStateDTO;
 use Maatify\Product\Variant\DTO\VariantStateDTO;
 use Maatify\Product\Variant\Enum\VariantStatusEnum;
 use Maatify\Product\Variant\Exception\VariantNotFoundException;
@@ -32,7 +34,7 @@ use Maatify\SharedCommon\Contracts\ClockInterface;
  * Orchestrates Variant management reads, status and lifecycle mutations, the SKU and barcode
  * update, and ordering.
  *
- * Reads write nothing and open no transaction. Every mutation runs in the savepoint transaction
+ * Reads write nothing. Every mutation runs in the savepoint transaction
  * runner and locks the owning Product row first. Status and lifecycle mutations read the
  * configuration under that lock, validate the resulting graph in memory, and write only when the
  * invariants hold; the identifier update and ordering change no invariant and rely on the database
@@ -45,6 +47,7 @@ final readonly class VariantManagementService implements VariantManagementServic
     public function __construct(
         private VariantQueryReaderInterface $reader,
         private VariantCommandRepositoryInterface $variants,
+        private ProductCommandRepositoryInterface $products,
         private ProductConfigurationRepositoryInterface $configuration,
         private SavepointTransactionRunnerInterface $transactions,
         private ClockInterface $clock,
@@ -156,12 +159,7 @@ final readonly class VariantManagementService implements VariantManagementServic
         $occurredAt = $this->clock->now();
 
         $this->transactions->run(function () use ($command, $variantId, $occurredAt): void {
-            [$snapshot, $variant] = $this->lockedVariant($variantId);
-            $this->assertMutable($snapshot, $variant);
-            $stored = $this->variants->lockForUpdate($variantId);
-            if ($stored === null) {
-                throw ProductStorageFailureFactory::lockedRowVanished('Variant', $variantId);
-            }
+            $stored = $this->lockMutableVariantRow($variantId);
             $sku = $command->sku->resolve($stored->sku);
             $barcode = $command->barcode->resolve($stored->barcode);
             if ($sku === $stored->sku && $barcode === $stored->barcode) {
@@ -179,9 +177,8 @@ final readonly class VariantManagementService implements VariantManagementServic
         $occurredAt = $this->clock->now();
 
         $this->transactions->run(function () use ($command, $variantId, $occurredAt): void {
-            [$snapshot, $variant] = $this->lockedVariant($variantId);
-            $this->assertMutable($snapshot, $variant);
-            if (!$this->variants->updateDisplayOrder($variantId, $snapshot->productId, $command->displayOrder, $occurredAt)) {
+            $variant = $this->lockMutableVariantRow($variantId);
+            if (!$this->variants->updateDisplayOrder($variantId, $variant->productId, $command->displayOrder, $occurredAt)) {
                 throw ProductStorageFailureFactory::lockedRowVanished('Variant', $variantId);
             }
         });
@@ -223,6 +220,30 @@ final readonly class VariantManagementService implements VariantManagementServic
         }
 
         return [$snapshot, $variant];
+    }
+
+    /**
+     * Identifier and order edits need the current owner and target state. Lock the Product first.
+     */
+    private function lockMutableVariantRow(int $variantId): VariantLifecycleStateDTO
+    {
+        $productId = $this->configuration->findVariantProductId($variantId);
+        $product = $productId === null ? null : $this->products->lockForUpdate($productId);
+        if ($product === null) {
+            throw VariantNotFoundException::withId($variantId);
+        }
+        $variant = $this->variants->lockForUpdate($variantId, $product->id);
+        if ($variant === null) {
+            throw VariantNotFoundException::withId($variantId);
+        }
+        if ($product->deleted) {
+            throw ProductBusinessRuleException::ownerSoftDeleted('Variant', $variantId, 'Product', $product->id);
+        }
+        if ($variant->deleted) {
+            throw ProductBusinessRuleException::softDeleted('Variant', $variantId);
+        }
+
+        return $variant;
     }
 
     private function assertMutable(ProductConfigurationSnapshotDTO $snapshot, VariantStateDTO $variant): void

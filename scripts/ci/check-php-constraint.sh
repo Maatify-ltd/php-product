@@ -14,6 +14,18 @@ fixture="$(mktemp -d "${TMPDIR:-/tmp}/product-php-constraint.XXXXXX")"
 trap 'rm -rf -- "$fixture"' EXIT
 export COMPOSER_HOME="$fixture/home"
 
+# Exercise the interpreter gate independently of the supported PHP installed here.
+php -r '
+    require "scripts/ci/php-patch-floors.php";
+    $floor = "8.5.12";
+    foreach (["8.5.12" => true, "8.5.13" => true, "8.5.11" => false, "8.6.0" => false,
+        "8.5.13alpha1" => false, "8.5.13beta1" => false, "8.5.13RC1" => false, "8.5.13-dev" => false] as $version => $expected) {
+        if (isStablePhpPatchAtFloor($version, "8.5", $floor) !== $expected) {
+            throw new RuntimeException("Unexpected interpreter qualification for PHP " . $version);
+        }
+    }
+'
+
 check_version() {
     local php_version="$1" expected="$2" status=0
     php -r '

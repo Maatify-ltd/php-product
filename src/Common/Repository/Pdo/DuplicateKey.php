@@ -8,10 +8,9 @@ use PDOException;
 
 /**
  * Classification of MySQL duplicate-key errors (driver code 1062) for the package's conflict
- * converters. The key is read only from the end of the driver message, `... for key '<key>'`, never
- * from the duplicated value earlier in the message, so a value that happens to contain a key name
- * cannot change the classification. MySQL 8.0.16 to 8.0.18 name the key `<key>` and 8.0.19 and later
- * `<table>.<key>`; both forms yield `<key>`.
+ * converters. The localized diagnostic quotes the rejected value and then the key, and some
+ * languages place text after the second quote. Extract the final quoted identifier only after
+ * a separate quoted value. Both unqualified and table-qualified key names occur.
  *
  * @internal Not part of the Public Runtime API.
  */
@@ -41,7 +40,9 @@ final class DuplicateKey
             return null;
         }
         $message = $exception->errorInfo[2] ?? null;
-        if (!is_string($message) || preg_match("/ for key '(?:[^'.]*\\.)?([^'.]+)'\\z/", $message, $match) !== 1) {
+        if (!is_string($message)
+            || preg_match("/'[^']*'[^'\\r\\n]+'(?:[A-Za-z0-9_]+\\.)?([A-Za-z0-9_]+)'[^'\\r\\n]*\\z/", $message, $match) !== 1
+        ) {
             return null;
         }
 

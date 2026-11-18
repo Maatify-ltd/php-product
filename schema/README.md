@@ -12,7 +12,8 @@ public package contract; this file only indexes and explains the SQL asset.
 
 | File | Purpose |
 |---|---|
-| [`product.sql`](product.sql) | Creates exactly the ten Product tables. It is the only install asset; there are no migrations. |
+| [`product.sql`](product.sql) | Creates exactly the ten Product tables. Use this for new installations. |
+| [`upgrade-null-scope-identities.sql`](upgrade-null-scope-identities.sql) | Upgrades the four unique indexes on an install from `v1.0.0-rc.1`. |
 
 For an existing trial database installed from an earlier Product development snapshot, pause Product writes and add the revision column before running this code. This keeps existing rows and initializes their revisions to 1. Discard editor drafts created before the upgrade.
 
@@ -53,6 +54,15 @@ namespace per table set, so there is no `catalog_id`, tenant, or store column.
 
 Identity stability (`id`, `code`, `role_key`, the composition fingerprint, and the identity dimensions of Content and Image Assignments) is deliberately not enforced by triggers: the architecture (§4.1, §11.1) makes it an application contract, and the package has no write path that changes an identity column. The database therefore does not stop an `UPDATE` of an identity column issued outside the package; such writes are the Host's responsibility. `tests/Unit/IdentityStabilityTest.php` and the schema test that asserts no trigger or routine exists keep both facts true.
 
+## Upgrade from the published RC.1 schema
+
+Back up the Product database and pause its writers before running
+`mysql your_database < schema/upgrade-null-scope-identities.sql`. The four
+statements update separate tables without rewriting existing identities. MySQL
+commits each table alteration independently. If an ALTER fails, inspect which
+tables already contain `language_code_is_null` and resume with the remaining
+statements after resolving the failure. Fresh installations use `product.sql`.
+
 ## Tables
 
 Creation order follows foreign-key dependency.
@@ -92,8 +102,9 @@ Creation order follows foreign-key dependency.
   barcode reserved until the value is cleared or replaced.
 - **Nullable scope.** `NULL` is an exact scope, never a wildcard or fallback.
   Content and image-assignment identities use generated NULL-safe columns (`NULL` maps to
-  `''` or `0`), and `CHECK` constraints make those sentinels impossible as real
-  values.
+  a fallback value) and a separate flag for nullable text, so the
+  collation cannot make a non-NULL language or platform collide with NULL.
+  Positive-ID checks reserve `0` for NULL numeric scopes.
 - **Media.** `media_asset_id` is `BIGINT UNSIGNED` with `CHECK (> 0)` and no
   foreign key. At most one active default exists per exact target and
   role/language/platform scope; a soft-deleted row can never be default, enforced

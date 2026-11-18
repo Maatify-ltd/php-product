@@ -36,6 +36,18 @@ final class ContentIdentityTest extends SchemaTestCase
     }
 
     #[DataProvider('contentTables')]
+    public function testNullIsDistinctFromAnAcceptedLanguageWithNoCollationWeight(string $table, string $column): void
+    {
+        $owner = $this->owner($column);
+        $null = $this->insert($table, [$column => $owner, 'language_code' => null, 'name' => 'Unlocalized']);
+        $this->execute('UPDATE ' . $table . ' SET deleted_at = :deleted WHERE id = :id', ['deleted' => self::TS, 'id' => $null]);
+        $language = [$column => $owner, 'language_code' => "\u{0301}", 'name' => 'Exact'];
+        self::assertGreaterThan(0, $this->insert($table, $language));
+        $this->assertInsertRejected(self::DUPLICATE_KEY, $table, $language);
+        $this->assertInsertRejected(self::DUPLICATE_KEY, $table, [$column => $owner, 'language_code' => null, 'name' => 'Duplicate']);
+    }
+
+    #[DataProvider('contentTables')]
     public function testSoftDeletedIdentityStaysReserved(string $table, string $column): void
     {
         $owner = $this->owner($column);

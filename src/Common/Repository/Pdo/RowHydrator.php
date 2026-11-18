@@ -127,11 +127,20 @@ final readonly class RowHydrator
      */
     public function timestamp(array $row, string $column): DateTimeImmutable
     {
+        $value = self::string($row, $column);
         try {
-            return new DateTimeImmutable(self::string($row, $column), $this->clock->getTimezone());
+            $timestamp = new DateTimeImmutable($value, $this->clock->getTimezone());
         } catch (Exception $exception) {
             throw ProductStorageFailureFactory::invalidStorageValue($column, $exception);
         }
+
+        if (DateTimeImmutable::getLastErrors() !== false
+            || preg_match('/\A[1-9][0-9]{3}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\z/', $value) !== 1
+        ) {
+            throw ProductStorageFailureFactory::invalidStorageValue($column);
+        }
+
+        return $timestamp;
     }
 
     /**

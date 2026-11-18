@@ -4,3 +4,4 @@ parameters:
         - src
         - tests
         - examples
+        - consumer-verification/BarrierProcessGroup.php

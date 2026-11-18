@@ -50,9 +50,11 @@ use Maatify\Product\Variant\Exception\VariantNotFoundException;
 use Maatify\Product\Variant\Management\Command\UpdateVariantIdentifiersCommand;
 use Maatify\Product\Variant\ValueObject\OptionValueSelection;
 use Maatify\Product\Variant\ValueObject\VariantIdentifierChange;
+use Maatify\Product\Verification\BarrierProcessGroup;
 use Maatify\SharedCommon\Infrastructure\SystemClock;
 
 require __DIR__ . '/vendor/autoload.php';
+require __DIR__ . '/BarrierProcessGroup.php';
 
 function check(bool $condition, string $message): void
 {
@@ -111,39 +113,16 @@ if (($argv[1] ?? '') === 'race-worker') {
  */
 function raceCreates(string $database, array $codes): array
 {
-    $workers = [];
-    foreach ($codes as $code) {
-        $process = proc_open([PHP_BINARY, __FILE__, 'race-worker', $database, $code], [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
-        check(is_resource($process), 'a race worker process starts');
-        $workers[] = ['process' => $process, 'pipes' => $pipes];
-    }
-    foreach ($workers as $worker) {
-        $line = fgets($worker['pipes'][1]);
-        if ($line !== "ready\n") {
-            throw new RuntimeException('FAIL: a race worker did not become ready: ' . stream_get_contents($worker['pipes'][2]));
-        }
-    }
-    foreach ($workers as $worker) {
-        fwrite($worker['pipes'][0], "go\n");
-        fclose($worker['pipes'][0]);
-    }
-    $outcomes = [];
-    foreach ($workers as $worker) {
-        $outcome = (string) stream_get_contents($worker['pipes'][1]);
-        $errors = (string) stream_get_contents($worker['pipes'][2]);
-        fclose($worker['pipes'][1]);
-        fclose($worker['pipes'][2]);
-        check(proc_close($worker['process']) === 0, 'a race worker exits cleanly' . ($errors === '' ? '' : ': ' . $errors));
-        $outcomes[] = $outcome;
-    }
-
-    return $outcomes;
+    return BarrierProcessGroup::run(array_map(
+        static fn(string $code): array => [PHP_BINARY, __FILE__, 'race-worker', $database, $code],
+        $codes,
+    ));
 }
 
 check(InstalledVersions::isInstalled('maatify/php-product'), 'package is installed through Composer');
 check(InstalledVersions::isInstalled('maatify/php-persistence'), 'successor Persistence is installed');
-check(InstalledVersions::getPrettyVersion('maatify/php-persistence') === 'v1.0.0-rc.1', 'Persistence resolves to the exact trial RC');
-check(InstalledVersions::getReference('maatify/php-persistence') === '34c3b874525d36ae064c162cdd553bc75d18772b', 'Persistence matches the verified published revision');
+check(InstalledVersions::getPrettyVersion('maatify/php-persistence') === 'v1.0.0-rc.2', 'Persistence resolves to the exact trial RC');
+check(InstalledVersions::getReference('maatify/php-persistence') === '71dc61548e48fd053376db69149a00bc87069b70', 'Persistence matches the verified published revision');
 check(!InstalledVersions::isInstalled('maatify/persistence'), 'legacy Persistence is absent');
 $installPath = InstalledVersions::getInstallPath('maatify/php-product');
 check(is_string($installPath) && is_dir($installPath), 'installed package path exists');

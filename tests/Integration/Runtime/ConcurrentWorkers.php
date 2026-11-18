@@ -7,7 +7,9 @@ namespace Maatify\Product\Tests\Integration\Runtime;
 use Maatify\PhpPersistence\Ordering\Repository\ScopedOrderingManager;
 use Maatify\Product\Product\Repository\Pdo\PdoProductConfigurationRepository;
 use Maatify\Product\Product\Service\ProductConfigurationValidator;
-use Maatify\Product\Tests\Support\ProcessPipes;
+use Maatify\Product\Verification\BarrierProcessGroup;
+
+require_once dirname(__DIR__, 3) . '/consumer-verification/BarrierProcessGroup.php';
 
 /**
  * Runs one public command per child process, each on its own MySQL connection, and returns the
@@ -47,46 +49,10 @@ trait ConcurrentWorkers
         $environment = array_merge(getenv(), ['PRODUCT_TEST_DB_NAME' => self::$database]);
         $path = dirname(__DIR__, 2) . '/Support/' . $script;
 
-        $running = [];
-        foreach ($argumentLists as $arguments) {
-            $stderr = tempnam(sys_get_temp_dir(), 'product-worker-');
-            self::assertIsString($stderr);
-            $process = proc_open(
-                [PHP_BINARY, $path, ...$arguments],
-                [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['file', $stderr, 'w']],
-                $pipes,
-                null,
-                $environment,
-            );
-            self::assertIsResource($process, 'A worker process must start.');
-            $running[] = [
-                'process' => $process,
-                'stdin' => ProcessPipes::stream($pipes, 0),
-                'stdout' => ProcessPipes::stream($pipes, 1),
-                'stderr' => $stderr,
-            ];
-        }
-
-        foreach ($running as $worker) {
-            self::assertSame("ready\n", fgets($worker['stdout']), 'Worker did not become ready: ' . file_get_contents($worker['stderr']));
-        }
-        foreach ($running as $worker) {
-            fwrite($worker['stdin'], "go\n");
-            fclose($worker['stdin']);
-        }
-
-        $outcomes = [];
-        foreach ($running as $worker) {
-            $output = (string) stream_get_contents($worker['stdout']);
-            fclose($worker['stdout']);
-            $exit = proc_close($worker['process']);
-            $errors = (string) file_get_contents($worker['stderr']);
-            unlink($worker['stderr']);
-            self::assertSame(0, $exit, 'Worker failed: ' . $errors . $output);
-            $outcomes[] = $output;
-        }
-
-        return $outcomes;
+        return BarrierProcessGroup::run(
+            array_map(static fn(array $arguments): array => [PHP_BINARY, $path, ...$arguments], $argumentLists),
+            $environment,
+        );
     }
 
     /**

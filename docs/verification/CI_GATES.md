@@ -40,15 +40,32 @@ lifecycle and support claims, and the approved delivery policy at the qualifying
 SHA. After authorized publication, verify the exact version and actual install
 mode from the approved Composer channel in a clean external root under §2.6.
 
+## Published artifact verification
+
+Run the maintained command on a supported PHP runtime with Composer and the qualified Git tag
+available in the clone. Pass additional exact prerelease requirements needed by the published
+version. For the published Product RC.1:
+
+```bash
+bash scripts/ci/verify-published-artifact.sh 1.0.0-rc.1 40d2047b7f4228e8c80c131a790e43df9675ed76 \
+  'maatify/php-persistence:1.0.0-rc.1'
+```
+
+The command checks the tag, installs through an isolated Composer home and cache, records the
+actual installation mode and references, and verifies the complete installed tree against the
+qualified archive. Keep this check's output with the publication evidence and run the runtime
+Consumer Harness separately.
+
 ## Persistence RC trial plan
 
 The development checkout uses the successor `maatify/php-persistence` package.
 The exact RC and the checks for changing it are listed below.
 
-- **Selection.** The trial pins `maatify/php-persistence` `1.0.0-rc.1` at
-  `34c3b874525d36ae064c162cdd553bc75d18772b`, as recorded by the
-  [published release](https://github.com/Maatify-ltd/php-persistence/releases/tag/v1.0.0-rc.1).
-  The Composer constraint has equal inclusive endpoints, so it admits only this RC.
+- **Selection.** The trial pins `maatify/php-persistence` `1.0.0-rc.2` at
+  `71dc61548e48fd053376db69149a00bc87069b70`, as recorded by the
+  [published release](https://github.com/Maatify-ltd/php-persistence/releases/tag/v1.0.0-rc.2).
+  The constraint `1.0.0-rc.2 <=1.0.0-rc.2` passes strict validation.
+  Composer requires equality and rejects development variants and adjacent releases.
   Before selecting another RC, verify the latest published candidate by SemVer
   precedence and match the release tag, Composer distribution metadata, and source
   revision. Record the new version and revision and rerun the affected gates.
@@ -67,12 +84,10 @@ The exact RC and the checks for changing it are listed below.
   and identity checks, then rerun dependency, runtime and external consumer gates
   on that revision. Product Stable requires the compatible Stable Persistence
   integration, the first-Stable gates, and separate owner release authorization.
-- **Published Product RC.** Install `maatify/php-product:1.0.0-rc.1` and the exact
-  Persistence RC above from Packagist in a clean external Composer root using
-  the [README install command](../../README.md#installation).
-  Verify the actual distribution install and match its source reference and
-  contents to the qualified artifact. Run the Consumer Harness against that
-  installed Product RC.
+- **Published Product RC.** The published Product `1.0.0-rc.1` depends on
+  Persistence `1.0.0-rc.1` at `34c3b874525d36ae064c162cdd553bc75d18772b`.
+  Use the [README install command](../../README.md#installation) and the Consumer
+  Harness from the matching Product tag to test that published combination.
 
 ## Gates
 

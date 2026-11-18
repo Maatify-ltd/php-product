@@ -10,8 +10,11 @@ use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
 use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
 use Maatify\PhpPersistence\Transaction\Repository\SavepointTransactionRunnerInterface;
 use Maatify\Product\Common\Enum\ProductDeletedStateEnum;
+use Maatify\Product\Product\Management\Command\CreateProductCommand;
+use Maatify\Product\Product\Repository\ProductCommandRepositoryInterface;
 use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
 use Maatify\Product\Tests\Support\UnusedProductConfigurationRepository;
+use Maatify\Product\Tests\Support\UnusedProductLifecycleWrites;
 use Maatify\Product\Tests\Support\UnusedVariantLifecycleWrites;
 use Maatify\Product\Variant\Consumer\Criteria\VariantVisibleListCriteriaDTO;
 use Maatify\Product\Variant\Consumer\Service\VariantConsumerService;
@@ -203,6 +206,15 @@ final class VariantServiceTest extends TestCase
             }
         };
 
-        return new VariantManagementService($reader, $variants, new UnusedProductConfigurationRepository(), $transactions, $clock);
+        $products = new class implements ProductCommandRepositoryInterface {
+            use UnusedProductLifecycleWrites;
+
+            public function create(CreateProductCommand $command, DateTimeImmutable $occurredAt): int
+            {
+                throw new \LogicException('create is not expected in this test.');
+            }
+        };
+
+        return new VariantManagementService($reader, $variants, $products, new UnusedProductConfigurationRepository(), $transactions, $clock);
     }
 }

@@ -447,7 +447,7 @@ The Content tables use their domain fields (`name`, optional descriptions, or la
 
 ### 11.4 Nullable scope keys and default uniqueness
 
-For image assignments, ordinary MySQL UNIQUE keys containing NULL do not guarantee the required identity. Provide stored generated identity columns for nullable `variant_id`, `role_id`, `language_code`, and `platform` (using reserved sentinels that CHECK constraints make impossible as real values), and use them in the target/asset/scope UNIQUE key. The identity key excludes `deleted_at` and remains stable across history.
+For image assignments, ordinary MySQL UNIQUE keys containing NULL do not guarantee the required identity. Provide stored generated identity columns for nullable `variant_id`, `role_id`, `language_code`, and `platform` (using checked sentinels for numeric IDs and explicit NULL flags for collated text), and use them in the target/asset/scope UNIQUE key. The identity key excludes `deleted_at` and remains stable across history.
 
 Generate deterministic exact-scope keys using the target and role identities and MySQL collation weights with trailing pad weights removed for language and platform. The scope must distinguish Product-level target from Variant-level target and distinguish NULL from every accepted non-NULL value. Use that same scope contract for ordering and default uniqueness.
 

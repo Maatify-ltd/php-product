@@ -284,7 +284,7 @@ $variants->updateIdentifiers(new UpdateVariantIdentifiersCommand($variantId, Var
 
 - **Input:** an `UpdateVariantDisplayOrderCommand`, `UpdateOptionDisplayOrderCommand`, `UpdateOptionValueDisplayOrderCommand`, or `UpdateImageAssignmentDisplayOrderCommand`: the row identity and a position of at least 1.
 - **Public call:** `updateDisplayOrder($command)` on the Variant, Option, Option Value, or Image Assignment Management service.
-- **Result:** `void`; the row is at the requested position within its scope and the other rows of that scope shifted to keep the positions contiguous. Read the positions back through the management reads (`displayOrder`).
+- **Result:** `void`; the row is at the requested position within its scope and other rows in the affected range shift by one. Gaps left by soft deletion can remain after the move. Read the positions back through the management reads (`displayOrder`).
 - **Boundary:** a Variant or an Option moves within its Product, a Value within its Option, an assignment within its exact `(target, role, language, platform)` scope; nothing outside that scope changes. A position above the maximum is clamped to it, and the current position writes nothing. The move goes through the shared `maatify/php-persistence` Ordering API and joins a Host transaction you hold on the connection. A soft-deleted row or owner is a `ProductBusinessRuleException`; a missing identity is the family's not-found exception. A restored row always goes to the end of its scope, because a newer row may hold its old position.
 
 ```php

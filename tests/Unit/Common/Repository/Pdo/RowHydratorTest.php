@@ -63,7 +63,28 @@ final class RowHydratorTest extends TestCase
 
     public function testAnUnparsableTimestampKeepsTheParserFailureAsThePreviousException(): void
     {
-        $hydrator = new RowHydrator(new class implements ClockInterface {
+        $hydrator = self::hydrator();
+
+        try {
+            $hydrator->timestamp(['created_at' => 'not a timestamp'], 'created_at');
+            self::fail('An unparsable timestamp must break the contract.');
+        } catch (ProductPersistenceException $failure) {
+            self::assertSame('Product storage column "created_at" contains an invalid value.', $failure->getMessage());
+            self::assertInstanceOf(Exception::class, $failure->getPrevious());
+            self::assertNotInstanceOf(ProductPersistenceException::class, $failure->getPrevious());
+        }
+    }
+
+    public function testAnInvalidStoredCalendarDateIsNotNormalized(): void
+    {
+        $this->expectException(ProductPersistenceException::class);
+
+        self::hydrator()->timestamp(['created_at' => '0000-00-00 00:00:00'], 'created_at');
+    }
+
+    private static function hydrator(): RowHydrator
+    {
+        return new RowHydrator(new class implements ClockInterface {
             public function now(): DateTimeImmutable
             {
                 return new DateTimeImmutable('2026-01-01 00:00:00', new DateTimeZone('UTC'));
@@ -74,14 +95,5 @@ final class RowHydratorTest extends TestCase
                 return new DateTimeZone('UTC');
             }
         });
-
-        try {
-            $hydrator->timestamp(['created_at' => 'not a timestamp'], 'created_at');
-            self::fail('An unparsable timestamp must break the contract.');
-        } catch (ProductPersistenceException $failure) {
-            self::assertSame('Product storage column "created_at" contains an invalid value.', $failure->getMessage());
-            self::assertInstanceOf(Exception::class, $failure->getPrevious());
-            self::assertNotInstanceOf(ProductPersistenceException::class, $failure->getPrevious());
-        }
     }
 }

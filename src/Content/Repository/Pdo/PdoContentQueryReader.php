@@ -7,10 +7,6 @@ namespace Maatify\Product\Content\Repository\Pdo;
 use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
 use Maatify\PhpPersistence\Pagination\DTO\PageResultDTO;
 use Maatify\PhpPersistence\Pagination\Config\PaginationConfig;
-use Maatify\PhpPersistence\Pagination\Criteria\PdoPaginationQueryDescriptor;
-use Maatify\PhpPersistence\Pagination\Repository\PdoPaginator;
-use Maatify\PhpPersistence\Pagination\Enum\SortDirectionEnum;
-use Maatify\PhpPersistence\Pagination\ValueObject\SortWhitelist;
 use Maatify\Product\Common\Enum\ProductDeletedStateEnum;
 use Maatify\Product\Common\Repository\Pdo\ManagementListQuery;
 use Maatify\Product\Common\Repository\Pdo\RowHydrator;
@@ -45,21 +41,12 @@ final readonly class PdoContentQueryReader implements ContentQueryReaderInterfac
         ClockInterface $clock,
     ) {
         $this->row = new RowHydrator($clock);
-        $this->pagination = new PaginationConfig(
-            sortWhitelist: new SortWhitelist([
-                'language_code' => 'language_code',
-                'id' => 'id',
-                'created_at' => 'created_at',
-                'updated_at' => 'updated_at',
-            ]),
-            defaultSortBy: 'language_code',
-            defaultSortDirection: SortDirectionEnum::ASC,
-            tieBreakerSortBy: 'id',
-            tieBreakerDirection: SortDirectionEnum::ASC,
-            defaultPerPage: 20,
-            minPerPage: 1,
-            maxPerPage: 100,
-        );
+        $this->pagination = ManagementListQuery::config([
+            'language_code' => 'language_code',
+            'id' => 'id',
+            'created_at' => 'created_at',
+            'updated_at' => 'updated_at',
+        ], 'language_code');
     }
 
     public function findById(int $contentId): ?ContentRecordDTO
@@ -100,9 +87,13 @@ final readonly class PdoContentQueryReader implements ContentQueryReaderInterfac
         $from = ' FROM `' . $this->owner->table() . '` WHERE ' . $where;
         $count = 'SELECT COUNT(*)' . $from;
 
-        return (new PdoPaginator())->paginate(
+        return ManagementListQuery::paginate(
             $this->pdo,
-            new PdoPaginationQueryDescriptor($count, $params, $count, $params, 'SELECT ' . $this->columns('') . $from, $params),
+            $count,
+            $params,
+            $count,
+            $params,
+            'SELECT ' . $this->columns('') . $from,
             $request,
             $this->pagination,
             fn(array $row): object => $mapper($this->hydrate($row)),

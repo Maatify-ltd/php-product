@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace Maatify\Product\Variant\Repository\Pdo;
 
+use Closure;
 use DateTimeImmutable;
 use Maatify\PhpPersistence\Ordering\Config\ScopedOrderingConfig;
 use Maatify\PhpPersistence\Ordering\Repository\ScopedOrderingManager;
+use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
 use Maatify\Product\Common\Exception\ProductStorageFailureFactory;
 use Maatify\Product\Common\Repository\Pdo\DigitString;
 use Maatify\Product\Common\Repository\Pdo\DuplicateKey;
+use Maatify\Product\Common\Repository\Pdo\OwnerIdentityLookup;
 use Maatify\Product\Common\Repository\Pdo\RowHydrator;
 use Maatify\Product\Variant\DTO\VariantLifecycleStateDTO;
 use Maatify\Product\Variant\Enum\VariantStatusEnum;
@@ -37,10 +40,16 @@ final readonly class PdoVariantCommandRepository implements VariantCommandReposi
     private const string PRODUCT_TABLE = 'maa_product_products';
     private const string VARIANT_TABLE = 'maa_product_variants';
 
+    private OwnerIdentityLookup $ownerLookup;
+
+    /** @param PDO|(Closure(): PDO)|null $ownerLookupPdo */
     public function __construct(
         private PDO $pdo,
         private ScopedOrderingManager $orderingManager,
-    ) {}
+        PDO|Closure|null $ownerLookupPdo = null,
+    ) {
+        $this->ownerLookup = new OwnerIdentityLookup($pdo, $ownerLookupPdo);
+    }
 
     public function createEmptyComposition(int $productId, DateTimeImmutable $occurredAt): int
     {
@@ -79,16 +88,33 @@ final readonly class PdoVariantCommandRepository implements VariantCommandReposi
         return $id;
     }
 
-    public function lockForUpdate(int $variantId): ?VariantLifecycleStateDTO
+    public function lockForUpdate(int $variantId, ?int $productId = null): ?VariantLifecycleStateDTO
     {
+        $from = '`' . self::VARIANT_TABLE . '`';
+        $where = '`id` = :id';
+        $params = ['id' => $variantId];
+        if ($productId !== null) {
+            // An exact unique-key probe must not take the primary record lock of another Product.
+            $from .= ' FORCE INDEX (`uq_maa_product_variants_id_product`)';
+            $where .= ' AND `product_id` = :product_id';
+            $params['product_id'] = $productId;
+        }
         $statement = $this->pdo->prepare(
-            'SELECT `id`, `product_id`, `status`, `sku`, `barcode`, (`deleted_at` IS NOT NULL) AS `deleted` FROM `' . self::VARIANT_TABLE . '` WHERE `id` = :id FOR UPDATE',
+            'SELECT `id`, `product_id`, `status`, `sku`, `barcode`, (`deleted_at` IS NOT NULL) AS `deleted` FROM '
+            . $from . ' WHERE ' . $where . ' FOR UPDATE',
         );
-        $statement->execute(['id' => $variantId]);
+        $statement->execute($params);
 
         /** @var array<string, mixed>|false $row */
         $row = $statement->fetch(PDO::FETCH_ASSOC);
         if ($row === false) {
+            if ($productId !== null) {
+                $owner = $this->ownerLookup->find('SELECT `product_id` FROM `' . self::VARIANT_TABLE . '` WHERE `id` = :id', $variantId);
+                if ($owner !== false && RowHydrator::positiveInt($owner, 'product_id') !== $productId) {
+                    throw ProductInvalidArgumentException::variantNotOfProduct($variantId, $productId);
+                }
+            }
+
             return null;
         }
 

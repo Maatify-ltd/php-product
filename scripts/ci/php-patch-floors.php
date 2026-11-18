@@ -24,3 +24,12 @@ function pinnedPhpPatchFloors(): array
 
     return $floors;
 }
+
+/** A qualifying interpreter is a stable release of the expected minor at or above its pinned floor. */
+function isStablePhpPatchAtFloor(string $version, string $minor, ?string $floor): bool
+{
+    return $floor !== null
+        && preg_match('/\A[0-9]+\.[0-9]+\.[0-9]+\z/', $version) === 1
+        && str_starts_with($version, $minor . '.')
+        && version_compare($version, $floor, '>=');
+}

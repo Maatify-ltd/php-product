@@ -10,7 +10,7 @@
 
 [![Status: Release Candidate](https://img.shields.io/badge/Status-Release%20Candidate-blue)](#installation) [![Version: 1.0.0-rc.1](https://img.shields.io/badge/Version-1.0.0--rc.1-blue)](https://packagist.org/packages/maatify/php-product#v1.0.0-rc.1) [![PHP](https://img.shields.io/badge/PHP-%3E%3D8.4.27%20%3C8.5.0%20%7C%7C%20%3E%3D8.5.12%20%3C8.6.0-8892BF)](composer.json) [![License](https://img.shields.io/badge/License-Proprietary-green)](LICENSE) [![PHPStan Level Max](https://img.shields.io/badge/PHPStan-Level%20Max-brightgreen)](https://github.com/Maatify-ltd/php-product/actions/runs/43544696773)
 
-[![Packagist](https://img.shields.io/badge/Registry-Packagist-orange)](https://packagist.org/packages/maatify/php-product) [![Monthly Downloads](https://img.shields.io/packagist/dm/maatify/php-product)](https://packagist.org/packages/maatify/php-product/stats) [![Total Downloads](https://img.shields.io/packagist/dt/maatify/php-product)](https://packagist.org/packages/maatify/php-product/stats) [![Maatify Ecosystem](https://img.shields.io/badge/Maatify-Ecosystem-blueviolet)](https://github.com/Maatify)
+[![Packagist](https://img.shields.io/badge/Registry-Packagist-orange)](https://packagist.org/packages/maatify/php-product) [![Monthly Downloads](https://img.shields.io/packagist/dm/maatify/php-product)](https://packagist.org/packages/maatify/php-product/stats) [![Total Downloads](https://img.shields.io/packagist/dt/maatify/php-product)](https://packagist.org/packages/maatify/php-product/stats) [![Maatify Ecosystem](https://img.shields.io/badge/Maatify-Ecosystem-blueviolet)](https://github.com/Maatify-ltd)
 
 [![Usage Guide](https://img.shields.io/badge/Docs-Usage%20Guide-informational)](docs/guides/USAGE_GUIDE.md) [![Examples](https://img.shields.io/badge/Docs-Examples-informational)](examples/) [![Package Reference](https://img.shields.io/badge/Docs-Package%20Reference-informational)](PRODUCT_PACKAGE_REFERENCE.md) [![Changelog](https://img.shields.io/badge/Docs-Changelog-informational)](CHANGELOG.md) [![Security Policy](https://img.shields.io/badge/Docs-Security%20Policy-informational)](SECURITY.md) [![Contributing Guide](https://img.shields.io/badge/Docs-Contributing%20Guide-informational)](https://github.com/Maatify-ltd/php-product/blob/main/CONTRIBUTING.md)
 
@@ -26,7 +26,7 @@ Framework-agnostic PHP library for managing Products, Variants, and configurable
 - Resolve shopper selections to visible Variants and paginate visible Variants, Options, Values, and exact-scope images.
 - Manage localized Content, Image Roles, and Image Assignments. The Host owns pricing, inventory, category mapping, and media storage.
 
-## Requirements
+## Requirements for the published release candidate
 
 - PHP `>=8.4.27 <8.5.0 || >=8.5.12 <8.6.0` with `ext-pdo`, `ext-pdo_mysql`, and `ext-mbstring`
 - MySQL `8.0.16` or later (verified on `8.0.16` and `8.0.46`)
@@ -40,7 +40,7 @@ Product release candidate [`1.0.0-rc.1`](https://packagist.org/packages/maatify/
 composer require maatify/php-product:1.0.0-rc.1 maatify/php-persistence:1.0.0-rc.1
 ```
 
-Keep `minimum-stability: stable` and permit these exact pre-release versions in the consumer root. See [License](#license) for the free license required before use.
+Keep `minimum-stability: stable` and permit these exact pre-release versions in the consumer root. The development checkout uses Persistence `1.0.0-rc.2` under the [trial plan](docs/verification/CI_GATES.md#persistence-rc-trial-plan). See [License](#license) for the free license required before use.
 
 Then install the schema once into your database:
 

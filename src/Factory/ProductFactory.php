@@ -191,7 +191,8 @@ final class ProductFactory
 
         return new VariantManagementService(
             new PdoVariantQueryReader($this->pdo, $this->clock),
-            new PdoVariantCommandRepository($this->pdo, $ordering),
+            new PdoVariantCommandRepository($this->pdo, $ordering, $this->ownerLookup),
+            new PdoProductCommandRepository($this->pdo),
             new PdoProductConfigurationRepository($this->pdo, $ordering, $this->ownerLookup),
             new PdoSavepointTransactionRunner($this->pdo),
             $this->clock,
@@ -346,7 +347,7 @@ final class ProductFactory
             new PdoImageAssignmentCommandRepository($this->pdo, $ordering, $this->ownerLookup),
             new PdoImageAssignmentQueryReader($this->pdo, $this->clock),
             new PdoProductCommandRepository($this->pdo),
-            new PdoVariantCommandRepository($this->pdo, $ordering),
+            new PdoVariantCommandRepository($this->pdo, $ordering, $this->ownerLookup),
             new PdoImageRoleCommandRepository($this->pdo),
             new PdoSavepointTransactionRunner($this->pdo),
             $this->clock,

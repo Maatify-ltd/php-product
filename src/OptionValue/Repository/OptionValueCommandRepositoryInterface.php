@@ -28,9 +28,13 @@ interface OptionValueCommandRepositoryInterface
     public function create(CreateOptionValueCommand $command, DateTimeImmutable $occurredAt): int;
 
     /**
-     * The Product an Option Value belongs to through its Option, whatever the Value's state, or null when none has that identity.
+     * The immutable owner identities, whatever the Value's state, or null when it is absent.
+     * @return array{productId: positive-int, optionId: positive-int}|null
      */
-    public function findProductId(int $optionValueId): ?int;
+    public function findOwners(int $optionValueId): ?array;
+
+    /** Lock the Value after locking its Product and Option. Returns null for a missing Value. */
+    public function lockDeletedState(int $optionValueId): ?bool;
 
     /**
      * Writes the status and `updated_at` of a non-deleted Option Value. Returns whether a row was changed.

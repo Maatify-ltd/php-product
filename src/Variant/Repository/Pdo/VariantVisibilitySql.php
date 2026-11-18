@@ -5,10 +5,7 @@ declare(strict_types=1);
 namespace Maatify\Product\Variant\Repository\Pdo;
 
 /**
- * The single source of the consumer-visibility SQL of a Variant, shared by the Variant reads and
- * by the consumer reads of Options and Option Values that depend on it, including the product-wide unrepresented-Value rule. Every alias it
- * receives is a trusted package constant, never caller input; the subqueries it adds use their own
- * aliases, so it can be embedded in any query that names the Variant row.
+ * Product-scoped visibility relations for the Variant, Option, and Option Value read adapters.
  *
  * @internal Not part of the Public Runtime API.
  */
@@ -16,28 +13,47 @@ final class VariantVisibilitySql
 {
     private function __construct() {}
 
-    /**
-     * Consumer visibility of the Variant aliased `$v`: its Product and the Variant itself are
-     * active and not deleted, its own composition is valid, and the Product's configuration is
-     * valid as a whole: no active Value of an active Option is left unrepresented by an active,
-     * valid Variant. The product-wide rule fails closed, so a broken configuration hides every
-     * Variant of the Product from the single get and from the list alike.
-     */
-    public static function visiblePredicate(string $v): string
+    /** Seed the visibility relation from a Product identity. */
+    public static function forProduct(): string
     {
-        return $v . '.`deleted_at` IS NULL AND ' . $v . '.`status` = \'active\' '
-            . 'AND EXISTS (SELECT 1 FROM `maa_product_products` p WHERE p.`id` = ' . $v . '.`product_id` '
-            . 'AND p.`deleted_at` IS NULL AND p.`status` = \'active\') '
-            . 'AND ' . self::validCompositionPredicate($v, 'a')
-            . ' AND NOT EXISTS (SELECT 1 FROM `maa_product_option_values` uv '
-            . 'JOIN `maa_product_options` uo ON uo.`id` = uv.`option_id` WHERE '
-            . 'uo.`product_id` = ' . $v . '.`product_id` AND uo.`deleted_at` IS NULL AND uo.`status` = \'active\' '
-            . 'AND uv.`deleted_at` IS NULL AND uv.`status` = \'active\' '
-            . 'AND NOT EXISTS (SELECT 1 FROM `maa_product_variants` rv '
-            . 'JOIN `maa_product_variant_option_values` rp ON rp.`variant_id` = rv.`id` WHERE '
-            . 'rp.`option_value_id` = uv.`id` AND rv.`product_id` = ' . $v . '.`product_id` '
-            . 'AND rv.`deleted_at` IS NULL AND rv.`status` = \'active\' '
-            . 'AND ' . self::validCompositionPredicate('rv', 'b') . '))';
+        return self::visibility('SELECT id AS product_id, id AS subject_id FROM maa_product_products WHERE id = :product_id');
+    }
+
+    /** Seed the visibility relation from a Variant identity. */
+    public static function forVariant(): string
+    {
+        return self::visibility('SELECT product_id, id AS subject_id FROM maa_product_variants WHERE id = :variant_id');
+    }
+
+    /** Seed the visibility relation from an Option identity. */
+    public static function forOption(): string
+    {
+        return self::visibility('SELECT product_id, id AS subject_id FROM maa_product_options WHERE id = :option_id');
+    }
+
+    /**
+     * The distinct relations prevent MySQL from merging the Product-wide coverage check into the
+     * per-Variant read. Each relation is bounded by the one Product in the supplied scope query.
+     */
+    private static function visibility(string $scope): string
+    {
+        return 'WITH visibility_scope AS (' . $scope . '), '
+            . 'valid_variants AS (SELECT DISTINCT candidate.id, candidate.product_id '
+            . 'FROM visibility_scope scope JOIN maa_product_variants candidate ON candidate.product_id = scope.product_id '
+            . 'WHERE candidate.deleted_at IS NULL AND candidate.status = \'active\' AND ' . self::validCompositionPredicate('candidate', 'a') . '), '
+            . 'represented_values AS (SELECT DISTINCT pair.option_value_id FROM valid_variants variant '
+            . 'STRAIGHT_JOIN maa_product_variant_option_values pair FORCE INDEX (uq_maa_product_variant_option_values_variant_option) '
+            . 'ON pair.variant_id = variant.id), '
+            . 'eligible_product AS (SELECT DISTINCT product.id FROM visibility_scope scope '
+            . 'JOIN maa_product_products product ON product.id = scope.product_id '
+            . 'WHERE product.deleted_at IS NULL AND product.status = \'active\' '
+            . 'AND NOT EXISTS (SELECT 1 FROM maa_product_options opt '
+            . 'JOIN maa_product_option_values val ON val.option_id = opt.id '
+            . 'WHERE opt.product_id = product.id AND opt.deleted_at IS NULL AND opt.status = \'active\' '
+            . 'AND val.deleted_at IS NULL AND val.status = \'active\' '
+            . 'AND NOT EXISTS (SELECT 1 FROM represented_values covered WHERE covered.option_value_id = val.id))), '
+            . 'visible_variants AS (SELECT variant.id FROM valid_variants variant '
+            . 'JOIN eligible_product product ON product.id = variant.product_id) ';
     }
 
     /**

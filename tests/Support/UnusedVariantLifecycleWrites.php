@@ -15,7 +15,7 @@ use Maatify\Product\Variant\Enum\VariantStatusEnum;
  */
 trait UnusedVariantLifecycleWrites
 {
-    public function lockForUpdate(int $variantId): ?VariantLifecycleStateDTO
+    public function lockForUpdate(int $variantId, ?int $productId = null): ?VariantLifecycleStateDTO
     {
         throw new LogicException('lockForUpdate is not expected in this test.');
     }
