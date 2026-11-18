@@ -27,6 +27,48 @@ use Maatify\Product\Variant\Exception\VariantNotFoundException;
  */
 final class ImageAssignmentCommandTest extends RuntimeTestCase
 {
+    public function testNullLanguageAndPlatformDoNotCollideWithUnicodeScopesInThePublicApi(): void
+    {
+        $product = $this->namedProduct('NULL-SCOPE');
+        $service = $this->imageAssignmentManagementService();
+        $unscoped = new CreateImageAssignmentCommand($product->productId, null, 1);
+        $unscopedId = $service->create($unscoped)->assignmentId;
+        $service->softDelete($unscopedId);
+        $scope = "\u{0301}";
+
+        $languageId = $service->create(new CreateImageAssignmentCommand($product->productId, null, 1, languageCode: $scope))->assignmentId;
+        $platformId = $service->create(new CreateImageAssignmentCommand($product->productId, null, 1, platform: $scope))->assignmentId;
+
+        self::assertSame($scope, $service->getByIdForManagement($languageId)->languageCode);
+        self::assertSame($scope, $service->getByIdForManagement($platformId)->platform);
+        self::assertSame(1, $service->getByIdForManagement($languageId)->displayOrder);
+        self::assertSame(1, $service->getByIdForManagement($platformId)->displayOrder);
+        $this->assertThrows(ImageAssignmentAlreadyExistsException::class, fn() => $service->create($unscoped));
+    }
+
+    public function testRejectingAVariantFromAnotherProductDoesNotWaitForItsRecordLock(): void
+    {
+        $target = $this->namedProduct('TARGET');
+        $foreign = $this->namedProduct('OTHER');
+        $locker = self::connect(self::$database);
+        $originalTimeout = (int) self::scalar('SELECT @@innodb_lock_wait_timeout');
+        self::$pdo->exec('SET SESSION innodb_lock_wait_timeout = 1');
+        $locker->beginTransaction();
+        try {
+            $locked = $locker->prepare('SELECT id FROM maa_product_variants WHERE id = :id FOR UPDATE');
+            $locked->execute(['id' => $foreign->variantId]);
+            $locked->closeCursor();
+
+            $this->assertThrows(ProductInvalidArgumentException::class, fn() => $this->imageAssignmentManagementService()->create(
+                new CreateImageAssignmentCommand($target->productId, $foreign->variantId, 1),
+            ));
+            self::assertSame(0, self::rowCount('maa_product_image_assignments'));
+        } finally {
+            $locker->rollBack();
+            self::$pdo->exec('SET SESSION innodb_lock_wait_timeout = ' . $originalTimeout);
+        }
+    }
+
     public function testRoleLifecycle(): void
     {
         $roles = $this->imageRoleManagementService();

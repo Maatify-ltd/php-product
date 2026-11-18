@@ -13,6 +13,7 @@ use Maatify\Product\Common\Repository\Pdo\DigitString;
 use Maatify\Product\Common\Repository\Pdo\DuplicateKey;
 use Maatify\Product\Common\Repository\Pdo\OwnerIdentityLookup;
 use Maatify\Product\Common\Repository\Pdo\RowHydrator;
+use Maatify\Product\Common\Repository\Pdo\StorageTimestamp;
 use Maatify\Product\OptionValue\Enum\OptionValueStatusEnum;
 use Maatify\Product\OptionValue\Exception\OptionValueCodeAlreadyExistsException;
 use Maatify\Product\OptionValue\Management\Command\CreateOptionValueCommand;
@@ -51,7 +52,7 @@ final readonly class PdoOptionValueCommandRepository implements OptionValueComma
             self::orderingConfig(),
             $command->optionId,
         );
-        $timestamp = $occurredAt->format('Y-m-d H:i:s');
+        $timestamp = StorageTimestamp::format($occurredAt);
         $statement = $this->pdo->prepare(
             'INSERT INTO `' . self::TABLE . '` (`option_id`, `code`, `status`, `display_order`, `created_at`, `updated_at`, `deleted_at`) '
             . 'VALUES (:option_id, :code, \'inactive\', :display_order, :created_at, :updated_at, NULL)',
@@ -80,15 +81,31 @@ final readonly class PdoOptionValueCommandRepository implements OptionValueComma
         return $id;
     }
 
-    public function findProductId(int $optionValueId): ?int
+    public function findOwners(int $optionValueId): ?array
     {
         $row = $this->ownerLookup->find(
-            'SELECT o.`product_id` FROM `' . self::TABLE . '` ov JOIN `maa_product_options` o ON o.`id` = ov.`option_id` WHERE '
+            'SELECT o.`product_id`, ov.`option_id` FROM `' . self::TABLE . '` ov JOIN `maa_product_options` o ON o.`id` = ov.`option_id` WHERE '
             . 'ov.`id` = :id LIMIT 1',
             $optionValueId,
         );
 
-        return $row === false ? null : RowHydrator::positiveInt($row, 'product_id');
+        return $row === false ? null : [
+            'productId' => RowHydrator::positiveInt($row, 'product_id'),
+            'optionId' => RowHydrator::positiveInt($row, 'option_id'),
+        ];
+    }
+
+    public function lockDeletedState(int $optionValueId): ?bool
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT (`deleted_at` IS NOT NULL) AS `deleted` FROM `' . self::TABLE . '` WHERE `id` = :id FOR UPDATE',
+        );
+        $statement->execute(['id' => $optionValueId]);
+
+        /** @var array<string, mixed>|false $row */
+        $row = $statement->fetch(PDO::FETCH_ASSOC);
+
+        return $row === false ? null : RowHydrator::flag($row, 'deleted');
     }
 
     public function updateStatus(int $optionValueId, OptionValueStatusEnum $status, DateTimeImmutable $occurredAt): bool
@@ -98,7 +115,7 @@ final readonly class PdoOptionValueCommandRepository implements OptionValueComma
         );
         $statement->execute([
             'status' => $status->value,
-            'updated_at' => $occurredAt->format('Y-m-d H:i:s'),
+            'updated_at' => StorageTimestamp::format($occurredAt),
             'id' => $optionValueId,
         ]);
 
@@ -110,7 +127,7 @@ final readonly class PdoOptionValueCommandRepository implements OptionValueComma
         $statement = $this->pdo->prepare(
             'UPDATE `' . self::TABLE . '` SET `deleted_at` = :deleted_at, `updated_at` = :updated_at WHERE `id` = :id AND `deleted_at` IS NULL',
         );
-        $timestamp = $occurredAt->format('Y-m-d H:i:s');
+        $timestamp = StorageTimestamp::format($occurredAt);
         $statement->execute(['deleted_at' => $timestamp, 'updated_at' => $timestamp, 'id' => $optionValueId]);
 
         return $statement->rowCount() > 0;
@@ -124,7 +141,7 @@ final readonly class PdoOptionValueCommandRepository implements OptionValueComma
         );
         $statement->execute([
             'display_order' => $this->orderingManager->getNextPositionForUpdate($this->pdo, self::orderingConfig(), $optionId),
-            'updated_at' => $occurredAt->format('Y-m-d H:i:s'),
+            'updated_at' => StorageTimestamp::format($occurredAt),
             'id' => $optionValueId,
         ]);
 
@@ -133,7 +150,7 @@ final readonly class PdoOptionValueCommandRepository implements OptionValueComma
 
     public function updateDisplayOrder(int $optionValueId, int $optionId, int $displayOrder, DateTimeImmutable $occurredAt): bool
     {
-        return $this->orderingManager->moveWithinScope($this->pdo, self::orderingConfig(), $optionId, $optionValueId, $displayOrder, $occurredAt->format('Y-m-d H:i:s'));
+        return $this->orderingManager->moveWithinScope($this->pdo, self::orderingConfig(), $optionId, $optionValueId, $displayOrder, StorageTimestamp::format($occurredAt));
     }
 
     /**

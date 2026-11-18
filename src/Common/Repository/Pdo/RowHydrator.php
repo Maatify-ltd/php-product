@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Maatify\Product\Common\Repository\Pdo;
 
 use DateTimeImmutable;
-use Exception;
 use Maatify\Product\Common\Exception\ProductPersistenceException;
 use Maatify\Product\Common\Exception\ProductStorageFailureFactory;
 use Maatify\SharedCommon\Contracts\ClockInterface;
@@ -120,18 +119,14 @@ final readonly class RowHydrator
     }
 
     /**
-     * A stored `DATETIME` read in the Host Clock timezone; a value that cannot be parsed breaks the
-     * contract, with the parser's failure kept as the previous exception.
+     * Converts the stored UTC instant to the reading Host Clock's timezone.
      *
      * @param array<string, mixed> $row
      */
     public function timestamp(array $row, string $column): DateTimeImmutable
     {
-        try {
-            return new DateTimeImmutable(self::string($row, $column), $this->clock->getTimezone());
-        } catch (Exception $exception) {
-            throw ProductStorageFailureFactory::invalidStorageValue($column, $exception);
-        }
+        return StorageTimestamp::parse(self::string($row, $column), $column)
+            ->setTimezone($this->clock->getTimezone());
     }
 
     /**

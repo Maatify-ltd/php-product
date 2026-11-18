@@ -67,6 +67,18 @@ final class ImageAssignmentTest extends SchemaTestCase
         self::assertSame(6, (int) self::scalar('SELECT COUNT(*) FROM maa_product_image_assignments WHERE media_asset_id = 10'));
     }
 
+    public function testNullLanguageAndPlatformAreDistinctFromTextWithNoCollationWeight(): void
+    {
+        $unscoped = $this->assignment([]);
+        $this->execute('UPDATE maa_product_image_assignments SET deleted_at = :t WHERE id = :i', ['t' => self::TS, 'i' => $unscoped]);
+        foreach (['language_code', 'platform'] as $dimension) {
+            $scope = [$dimension => "\u{0301}"];
+            self::assertGreaterThan(0, $this->assignment($scope));
+            $this->assertInsertRejected(self::DUPLICATE_KEY, self::TABLE, $this->row($scope));
+        }
+        $this->assertInsertRejected(self::DUPLICATE_KEY, self::TABLE, $this->row([]));
+    }
+
     public function testMediaAssetIdContract(): void
     {
         foreach ([0] as $bad) {

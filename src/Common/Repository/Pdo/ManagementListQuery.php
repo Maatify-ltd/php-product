@@ -12,7 +12,9 @@ use Maatify\PhpPersistence\Pagination\Repository\PdoPaginator;
 use Maatify\PhpPersistence\Pagination\Enum\SortDirectionEnum;
 use Maatify\PhpPersistence\Pagination\ValueObject\SortWhitelist;
 use Maatify\Product\Common\Enum\ProductDeletedStateEnum;
+use Maatify\Product\Common\Exception\ProductPersistenceException;
 use PDO;
+use Throwable;
 
 /**
  * Shared mechanics of the management list reads: the bounded unpaginated fetch with its limit bound
@@ -110,12 +112,51 @@ final class ManagementListQuery
         PaginationConfig $config,
         callable $mapper,
     ): PageResultDTO {
-        return (new PdoPaginator())->paginate(
+        $read = static fn(): PageResultDTO => (new PdoPaginator())->paginate(
             $pdo,
             new PdoPaginationQueryDescriptor($totalSql, $totalParams, $filteredSql, $filteredParams, $dataSql, $filteredParams),
             $request,
             $config,
             $mapper,
         );
+
+        if ($pdo->inTransaction()) {
+            return $read();
+        }
+
+        // PDO's autocommit attribute can be stale when the Host changes the session through SQL.
+        $session = $pdo->query('SELECT @@SESSION.autocommit');
+        if ($session === false) {
+            throw new ProductPersistenceException('Could not read the MySQL session autocommit state.');
+        }
+        $autocommit = $session->fetchColumn();
+        $session->closeCursor();
+
+        if ($autocommit === 0 || $autocommit === '0') {
+            return $read();
+        }
+        if ($autocommit !== 1 && $autocommit !== '1') {
+            throw new ProductPersistenceException('Could not read the MySQL session autocommit state.');
+        }
+
+        // SET TRANSACTION applies to the next transaction only; it does not change the session default.
+        if ($pdo->exec('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY') === false || !$pdo->beginTransaction()) {
+            throw new ProductPersistenceException('Could not start a consistent pagination read.');
+        }
+        try {
+            $page = $read();
+            if (!$pdo->commit()) {
+                throw new ProductPersistenceException('Could not finish a consistent pagination read.');
+            }
+
+            return $page;
+        } catch (Throwable $failure) {
+            try {
+                $pdo->rollBack();
+            } catch (Throwable) {
+                // Keep the original query or transaction failure.
+            }
+            throw $failure;
+        }
     }
 }

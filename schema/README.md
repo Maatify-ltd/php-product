@@ -12,23 +12,11 @@ public package contract; this file only indexes and explains the SQL asset.
 
 | File | Purpose |
 |---|---|
-| [`product.sql`](product.sql) | Creates exactly the ten Product tables. It is the only install asset; there are no migrations. |
+| [`product.sql`](product.sql) | Creates exactly the ten Product tables. Use this for new installations. |
 
-For an existing trial database installed from an earlier Product development snapshot, pause Product writes and add the revision column before running this code. This keeps existing rows and initializes their revisions to 1. Discard editor drafts created before the upgrade.
-
-```sql
-ALTER TABLE `maa_product_products`
-    ADD COLUMN `configuration_revision` BIGINT NOT NULL DEFAULT 1
-        COMMENT 'Product configuration revision for stale write detection' AFTER `updated_at`,
-    ADD CONSTRAINT `chk_maa_product_products_configuration_revision` CHECK (`configuration_revision` > 0);
-```
-
-The Image Assignment scope key also changed after the earlier trial snapshots.
-Use a fresh schema for trial databases that can be rebuilt. For a trial database
-that must retain data, pause Product writes and reconcile equivalent scopes
-(including duplicate defaults and ordering positions) before replacing the
-generated scope columns and their indexes with the definitions in `product.sql`.
-Apply the schema and application updates together.
+Use the schema shipped with the release candidate you are installing. Product's
+pre-stable release candidates are provisioned with fresh Product tables in an
+empty database.
 
 ## Requirements
 
@@ -92,8 +80,9 @@ Creation order follows foreign-key dependency.
   barcode reserved until the value is cleared or replaced.
 - **Nullable scope.** `NULL` is an exact scope, never a wildcard or fallback.
   Content and image-assignment identities use generated NULL-safe columns (`NULL` maps to
-  `''` or `0`), and `CHECK` constraints make those sentinels impossible as real
-  values.
+  a fallback value) and a separate flag for nullable text, so the
+  collation cannot make a non-NULL language or platform collide with NULL.
+  Positive-ID checks reserve `0` for NULL numeric scopes.
 - **Media.** `media_asset_id` is `BIGINT UNSIGNED` with `CHECK (> 0)` and no
   foreign key. At most one active default exists per exact target and
   role/language/platform scope; a soft-deleted row can never be default, enforced
@@ -106,8 +95,9 @@ Creation order follows foreign-key dependency.
 - **Ordering.** `display_order` exists only on Options, Option Values, Variants,
   and image assignments, is positive, has no database default, and is assigned by
   the application through `maatify/php-persistence`. `Product` has none (`DEC-006`).
-- **Timestamps.** `created_at`, `updated_at`, and `deleted_at` come from the Host
-  Clock; the schema has no `CURRENT_TIMESTAMP` default or `ON UPDATE` clause.
+- **Timestamps.** The application supplies `created_at`, `updated_at`, and
+  `deleted_at` from the Host Clock. The columns use UTC `DATETIME(6)` to preserve
+  instants independently of the MySQL session timezone.
 
 ## What the schema does not prove
 

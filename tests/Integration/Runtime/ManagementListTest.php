@@ -7,6 +7,7 @@ namespace Maatify\Product\Tests\Integration\Runtime;
 use Maatify\PhpPersistence\Pagination\Criteria\PageRequest;
 use Maatify\Product\Common\Enum\ProductDeletedStateEnum;
 use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
+use Maatify\Product\Factory\ProductFactory;
 use Maatify\Product\ImageAssignment\Management\Command\CreateImageAssignmentCommand;
 use Maatify\Product\ImageAssignment\Management\Criteria\ImageAssignmentListCriteriaDTO;
 use Maatify\Product\ImageAssignment\ValueObject\ImageAssignmentLanguageFilter;
@@ -27,8 +28,11 @@ use Maatify\Product\Product\Enum\ProductStatusEnum;
 use Maatify\Product\Product\Exception\ProductNotFoundException;
 use Maatify\Product\Product\Management\Command\CreateProductCommand;
 use Maatify\Product\Product\Management\Criteria\ProductListCriteriaDTO;
+use Maatify\Product\Tests\Support\AfterCountStatement;
 use Maatify\Product\Variant\Enum\VariantStatusEnum;
 use Maatify\Product\Variant\Management\Criteria\VariantListCriteriaDTO;
+use PDO;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * Management lists, search, pagination, business-key reads, and the exact image-assignment
@@ -38,6 +42,91 @@ use Maatify\Product\Variant\Management\Criteria\VariantListCriteriaDTO;
  */
 final class ManagementListTest extends RuntimeTestCase
 {
+    public function testAnAutocommitPageKeepsOneSnapshotAcrossCountsAndRows(): void
+    {
+        $this->namedProduct('BASE');
+        $reader = self::connect(self::$database);
+        $inserted = false;
+        $afterCount = function () use (&$inserted): void {
+            if (!$inserted) {
+                $inserted = true;
+                $this->productManagementService()->create(new CreateProductCommand('BETWEEN-COUNTS'));
+            }
+        };
+        $reader->setAttribute(PDO::ATTR_STATEMENT_CLASS, [AfterCountStatement::class, [$afterCount]]);
+        $products = ProductFactory::createProductManagementService($reader, self::clock());
+
+        $page = $products->paginateForManagement(new ProductListCriteriaDTO(), new PageRequest(1, 20));
+
+        self::assertTrue($inserted);
+        self::assertSame(1, $page->total);
+        self::assertSame(1, $page->filtered);
+        self::assertCount(1, $page->data);
+        self::assertFalse($reader->inTransaction());
+
+        $reader->exec('SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED');
+        $reader->beginTransaction();
+        try {
+            $hostPage = $products->paginateForManagement(new ProductListCriteriaDTO(), new PageRequest(1, 20));
+
+            self::assertSame(2, $hostPage->total);
+            self::assertTrue($reader->inTransaction());
+            $isolation = $reader->query('SELECT @@transaction_isolation');
+            self::assertNotFalse($isolation);
+            self::assertSame('READ-COMMITTED', $isolation->fetchColumn());
+        } finally {
+            $reader->rollBack();
+        }
+    }
+
+    /** @return iterable<string, array{bool, bool}> */
+    public static function sqlAutocommitModes(): iterable
+    {
+        yield 'autocommit disabled by SQL' => [true, false];
+        yield 'autocommit enabled by SQL' => [false, true];
+    }
+
+    #[DataProvider('sqlAutocommitModes')]
+    public function testPaginationUsesMySqlSessionAutocommit(bool $pdoAutocommit, bool $mysqlAutocommit): void
+    {
+        $this->namedProduct('BASE');
+        $reader = self::connect(self::$database);
+        $reader->exec('SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+        $reader->setAttribute(PDO::ATTR_AUTOCOMMIT, $pdoAutocommit);
+        $reader->setAttribute(PDO::ATTR_STRINGIFY_FETCHES, !$mysqlAutocommit);
+        $reader->exec($mysqlAutocommit ? 'SET SESSION autocommit = 1' : 'SET SESSION autocommit = 0');
+        self::assertSame($pdoAutocommit, $reader->getAttribute(PDO::ATTR_AUTOCOMMIT));
+        self::assertFalse($reader->inTransaction());
+
+        $inserted = false;
+        $afterCount = function () use (&$inserted): void {
+            if (!$inserted) {
+                $inserted = true;
+                $this->productManagementService()->create(new CreateProductCommand('BETWEEN-COUNTS'));
+            }
+        };
+        $reader->setAttribute(PDO::ATTR_STATEMENT_CLASS, [AfterCountStatement::class, [$afterCount]]);
+        $products = ProductFactory::createProductManagementService($reader, self::clock());
+
+        try {
+            $page = $products->paginateForManagement(new ProductListCriteriaDTO(), new PageRequest());
+
+            self::assertTrue($inserted);
+            self::assertSame(1, $page->total);
+            self::assertSame(1, $page->filtered);
+            self::assertCount(1, $page->data);
+            self::assertSame(!$mysqlAutocommit, $reader->inTransaction());
+
+            // In implicit Host mode, a follow-up read must use the same snapshot as the page.
+            $following = $reader->query('SELECT COUNT(*) FROM maa_product_products');
+            self::assertNotFalse($following);
+            $count = $following->fetchColumn();
+            self::assertSame($mysqlAutocommit ? 2 : 1, (int) $count);
+        } finally {
+            $reader->exec('ROLLBACK');
+        }
+    }
+
     public function testProductsAreListedSearchedAndPaginated(): void
     {
         $service = $this->productManagementService();

@@ -35,9 +35,10 @@ interface VariantCommandRepositoryInterface
 
     /**
      * Locks the Variant row (`SELECT ... FOR UPDATE`) and returns its lifecycle state, or null when
-     * no Variant has that identity. The owning Product must already be locked.
+     * no Variant has that identity. The owning Product must already be locked. When a Product
+     * ID is supplied, lock only rows belonging to it and reject a known foreign identity.
      */
-    public function lockForUpdate(int $variantId): ?VariantLifecycleStateDTO;
+    public function lockForUpdate(int $variantId, ?int $productId = null): ?VariantLifecycleStateDTO;
 
     /**
      * Sets the status of a non-deleted Variant. Returns whether a row was changed.

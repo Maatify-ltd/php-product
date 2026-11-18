@@ -21,6 +21,46 @@ use PDOException;
  */
 final class VariantIdentifiersTest extends RuntimeTestCase
 {
+    public function testUpdatingSkuDoesNotLockTheProductsOptionRows(): void
+    {
+        $product = $this->namedProduct('SKU-SCOPE');
+        $option = $this->preparedOption($product->productId, 'history', 'History');
+        $locker = self::connect(self::$database);
+        $originalTimeout = (int) self::scalar('SELECT @@innodb_lock_wait_timeout');
+        self::$pdo->exec('SET SESSION innodb_lock_wait_timeout = 1');
+        $locker->beginTransaction();
+        try {
+            $locked = $locker->prepare('SELECT id FROM maa_product_options WHERE id = :id FOR UPDATE');
+            $locked->execute(['id' => $option]);
+            $locked->closeCursor();
+
+            $service = $this->variantManagementService();
+            $service->updateIdentifiers(self::change($product->variantId, VariantIdentifierChange::set('SCOPE'), VariantIdentifierChange::unchanged()));
+            self::assertSame('SCOPE', $service->getByIdForManagement($product->variantId)->sku);
+        } finally {
+            $locker->rollBack();
+            self::$pdo->exec('SET SESSION innodb_lock_wait_timeout = ' . $originalTimeout);
+        }
+    }
+
+    public function testSkuConflictIsTypedWithLocalizedMysqlDiagnostics(): void
+    {
+        $a = $this->namedProduct('SKU-A');
+        $b = $this->namedProduct('SKU-B');
+        $service = $this->variantManagementService();
+        $service->updateIdentifiers(self::change($a->variantId, VariantIdentifierChange::set('SAME'), VariantIdentifierChange::unchanged()));
+        $original = self::scalar('SELECT @@lc_messages');
+        try {
+            self::$pdo->exec("SET SESSION lc_messages = 'fr_FR'");
+            $this->assertThrows(VariantSkuAlreadyExistsException::class, fn() => $service->updateIdentifiers(
+                self::change($b->variantId, VariantIdentifierChange::set('SAME'), VariantIdentifierChange::unchanged()),
+            ));
+        } finally {
+            $restore = self::$pdo->prepare('SET SESSION lc_messages = :locale');
+            $restore->execute(['locale' => $original]);
+        }
+    }
+
     public function testIdentifiersAreSetReplacedClearedAndReleased(): void
     {
         $a = $this->namedProduct('A');

@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace Maatify\Product\Variant\Repository\Pdo;
 
+use Closure;
 use DateTimeImmutable;
 use Maatify\PhpPersistence\Ordering\Config\ScopedOrderingConfig;
 use Maatify\PhpPersistence\Ordering\Repository\ScopedOrderingManager;
+use Maatify\Product\Common\Exception\ProductInvalidArgumentException;
 use Maatify\Product\Common\Exception\ProductStorageFailureFactory;
 use Maatify\Product\Common\Repository\Pdo\DigitString;
 use Maatify\Product\Common\Repository\Pdo\DuplicateKey;
+use Maatify\Product\Common\Repository\Pdo\OwnerIdentityLookup;
 use Maatify\Product\Common\Repository\Pdo\RowHydrator;
+use Maatify\Product\Common\Repository\Pdo\StorageTimestamp;
 use Maatify\Product\Variant\DTO\VariantLifecycleStateDTO;
 use Maatify\Product\Variant\Enum\VariantStatusEnum;
 use Maatify\Product\Variant\Exception\VariantBarcodeAlreadyExistsException;
@@ -37,10 +41,16 @@ final readonly class PdoVariantCommandRepository implements VariantCommandReposi
     private const string PRODUCT_TABLE = 'maa_product_products';
     private const string VARIANT_TABLE = 'maa_product_variants';
 
+    private OwnerIdentityLookup $ownerLookup;
+
+    /** @param PDO|(Closure(): PDO)|null $ownerLookupPdo */
     public function __construct(
         private PDO $pdo,
         private ScopedOrderingManager $orderingManager,
-    ) {}
+        PDO|Closure|null $ownerLookupPdo = null,
+    ) {
+        $this->ownerLookup = new OwnerIdentityLookup($pdo, $ownerLookupPdo);
+    }
 
     public function createEmptyComposition(int $productId, DateTimeImmutable $occurredAt): int
     {
@@ -61,7 +71,7 @@ final readonly class PdoVariantCommandRepository implements VariantCommandReposi
             . 'VALUES (:product_id, :fingerprint, NULL, NULL, :status, :display_order, '
             . ':created_at, :updated_at, NULL)',
         );
-        $timestamp = $occurredAt->format('Y-m-d H:i:s');
+        $timestamp = StorageTimestamp::format($occurredAt);
         $statement->execute([
             'product_id' => $productId,
             'fingerprint' => CompositionFingerprint::forEmptyComposition()->value,
@@ -79,16 +89,33 @@ final readonly class PdoVariantCommandRepository implements VariantCommandReposi
         return $id;
     }
 
-    public function lockForUpdate(int $variantId): ?VariantLifecycleStateDTO
+    public function lockForUpdate(int $variantId, ?int $productId = null): ?VariantLifecycleStateDTO
     {
+        $from = '`' . self::VARIANT_TABLE . '`';
+        $where = '`id` = :id';
+        $params = ['id' => $variantId];
+        if ($productId !== null) {
+            // An exact unique-key probe must not take the primary record lock of another Product.
+            $from .= ' FORCE INDEX (`uq_maa_product_variants_id_product`)';
+            $where .= ' AND `product_id` = :product_id';
+            $params['product_id'] = $productId;
+        }
         $statement = $this->pdo->prepare(
-            'SELECT `id`, `product_id`, `status`, `sku`, `barcode`, (`deleted_at` IS NOT NULL) AS `deleted` FROM `' . self::VARIANT_TABLE . '` WHERE `id` = :id FOR UPDATE',
+            'SELECT `id`, `product_id`, `status`, `sku`, `barcode`, (`deleted_at` IS NOT NULL) AS `deleted` FROM '
+            . $from . ' WHERE ' . $where . ' FOR UPDATE',
         );
-        $statement->execute(['id' => $variantId]);
+        $statement->execute($params);
 
         /** @var array<string, mixed>|false $row */
         $row = $statement->fetch(PDO::FETCH_ASSOC);
         if ($row === false) {
+            if ($productId !== null) {
+                $owner = $this->ownerLookup->find('SELECT `product_id` FROM `' . self::VARIANT_TABLE . '` WHERE `id` = :id', $variantId);
+                if ($owner !== false && RowHydrator::positiveInt($owner, 'product_id') !== $productId) {
+                    throw ProductInvalidArgumentException::variantNotOfProduct($variantId, $productId);
+                }
+            }
+
             return null;
         }
 
@@ -110,7 +137,7 @@ final readonly class PdoVariantCommandRepository implements VariantCommandReposi
         );
         $statement->execute([
             'status' => $status->value,
-            'updated_at' => $occurredAt->format('Y-m-d H:i:s'),
+            'updated_at' => StorageTimestamp::format($occurredAt),
             'id' => $variantId,
         ]);
 
@@ -124,7 +151,7 @@ final readonly class PdoVariantCommandRepository implements VariantCommandReposi
             . '`id` = :id AND `deleted_at` IS NULL',
         );
         try {
-            $statement->execute(['sku' => $sku, 'barcode' => $barcode, 'updated_at' => $occurredAt->format('Y-m-d H:i:s'), 'id' => $variantId]);
+            $statement->execute(['sku' => $sku, 'barcode' => $barcode, 'updated_at' => StorageTimestamp::format($occurredAt), 'id' => $variantId]);
         } catch (PDOException $exception) {
             $key = DuplicateKey::keyName($exception);
             if ($sku !== null && $key === 'uq_maa_product_variants_sku') {
@@ -146,7 +173,7 @@ final readonly class PdoVariantCommandRepository implements VariantCommandReposi
             'UPDATE `' . self::VARIANT_TABLE . '` SET `deleted_at` = :deleted_at, `updated_at` = :updated_at WHERE '
             . '`id` = :id AND `deleted_at` IS NULL',
         );
-        $timestamp = $occurredAt->format('Y-m-d H:i:s');
+        $timestamp = StorageTimestamp::format($occurredAt);
         $statement->execute(['deleted_at' => $timestamp, 'updated_at' => $timestamp, 'id' => $variantId]);
 
         return $statement->rowCount() > 0;
@@ -160,7 +187,7 @@ final readonly class PdoVariantCommandRepository implements VariantCommandReposi
         );
         $statement->execute([
             'display_order' => $this->orderingManager->getNextPositionForUpdate($this->pdo, self::orderingConfig(), $productId),
-            'updated_at' => $occurredAt->format('Y-m-d H:i:s'),
+            'updated_at' => StorageTimestamp::format($occurredAt),
             'id' => $variantId,
         ]);
 
@@ -169,7 +196,7 @@ final readonly class PdoVariantCommandRepository implements VariantCommandReposi
 
     public function updateDisplayOrder(int $variantId, int $productId, int $displayOrder, DateTimeImmutable $occurredAt): bool
     {
-        return $this->orderingManager->moveWithinScope($this->pdo, self::orderingConfig(), $productId, $variantId, $displayOrder, $occurredAt->format('Y-m-d H:i:s'));
+        return $this->orderingManager->moveWithinScope($this->pdo, self::orderingConfig(), $productId, $variantId, $displayOrder, StorageTimestamp::format($occurredAt));
     }
 
     /**

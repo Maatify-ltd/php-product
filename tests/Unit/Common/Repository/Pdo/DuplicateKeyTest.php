@@ -9,7 +9,7 @@ use PDOException;
 use PHPUnit\Framework\TestCase;
 
 /**
- * The violated key of a duplicate-key error is read from the trailing `for key '...'` clause only.
+ * Duplicate-key classification uses the quoted key in the MySQL diagnostic, including localized layouts.
  */
 final class DuplicateKeyTest extends TestCase
 {
@@ -28,6 +28,13 @@ final class DuplicateKeyTest extends TestCase
         self::assertTrue(DuplicateKey::isOnKey($error, 'uq_maa_product_variants_barcode'));
         self::assertFalse(DuplicateKey::isOnKey($error, 'uq_maa_product_variants_sku'), 'Equality, not a substring.');
         self::assertFalse(DuplicateKey::isOnKey(self::error(1062, "Duplicate entry 'v' for key 'uq_a_identity_x'"), 'uq_a_identity'));
+    }
+
+    public function testLocalizedDiagnosticUsesTheFinalQuotedKey(): void
+    {
+        self::assertSame('uq_name', DuplicateKey::keyName(self::error(1062, "Duplicata du champ 'x' pour la clef 'maa_t.uq_name'")));
+        self::assertSame('uq_name', DuplicateKey::keyName(self::error(1062, "'x' は索引 'maa_t.uq_name' で重複しています。")));
+        self::assertNull(DuplicateKey::keyName(self::error(1062, "Only one quoted value 'uq_name'")));
     }
 
     public function testOtherErrorsHaveNoKey(): void

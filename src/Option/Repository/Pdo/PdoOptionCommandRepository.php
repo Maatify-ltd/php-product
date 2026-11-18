@@ -13,6 +13,7 @@ use Maatify\Product\Common\Repository\Pdo\DigitString;
 use Maatify\Product\Common\Repository\Pdo\DuplicateKey;
 use Maatify\Product\Common\Repository\Pdo\OwnerIdentityLookup;
 use Maatify\Product\Common\Repository\Pdo\RowHydrator;
+use Maatify\Product\Common\Repository\Pdo\StorageTimestamp;
 use Maatify\Product\Option\DTO\OptionStateDTO;
 use Maatify\Product\Option\Enum\OptionStatusEnum;
 use Maatify\Product\Option\Exception\OptionCodeAlreadyExistsException;
@@ -52,7 +53,7 @@ final readonly class PdoOptionCommandRepository implements OptionCommandReposito
             self::orderingConfig(),
             $command->productId,
         );
-        $timestamp = $occurredAt->format('Y-m-d H:i:s');
+        $timestamp = StorageTimestamp::format($occurredAt);
         $statement = $this->pdo->prepare(
             'INSERT INTO `' . self::TABLE . '` (`product_id`, `code`, `status`, `display_order`, `created_at`, `updated_at`, `deleted_at`) '
             . 'VALUES (:product_id, :code, \'inactive\', :display_order, :created_at, :updated_at, NULL)',
@@ -120,7 +121,7 @@ final readonly class PdoOptionCommandRepository implements OptionCommandReposito
         );
         $statement->execute([
             'status' => $status->value,
-            'updated_at' => $occurredAt->format('Y-m-d H:i:s'),
+            'updated_at' => StorageTimestamp::format($occurredAt),
             'id' => $optionId,
         ]);
 
@@ -132,7 +133,7 @@ final readonly class PdoOptionCommandRepository implements OptionCommandReposito
         $statement = $this->pdo->prepare(
             'UPDATE `' . self::TABLE . '` SET `deleted_at` = :deleted_at, `updated_at` = :updated_at WHERE `id` = :id AND `deleted_at` IS NULL',
         );
-        $timestamp = $occurredAt->format('Y-m-d H:i:s');
+        $timestamp = StorageTimestamp::format($occurredAt);
         $statement->execute(['deleted_at' => $timestamp, 'updated_at' => $timestamp, 'id' => $optionId]);
 
         return $statement->rowCount() > 0;
@@ -146,7 +147,7 @@ final readonly class PdoOptionCommandRepository implements OptionCommandReposito
         );
         $statement->execute([
             'display_order' => $this->orderingManager->getNextPositionForUpdate($this->pdo, self::orderingConfig(), $productId),
-            'updated_at' => $occurredAt->format('Y-m-d H:i:s'),
+            'updated_at' => StorageTimestamp::format($occurredAt),
             'id' => $optionId,
         ]);
 
@@ -155,7 +156,7 @@ final readonly class PdoOptionCommandRepository implements OptionCommandReposito
 
     public function updateDisplayOrder(int $optionId, int $productId, int $displayOrder, DateTimeImmutable $occurredAt): bool
     {
-        return $this->orderingManager->moveWithinScope($this->pdo, self::orderingConfig(), $productId, $optionId, $displayOrder, $occurredAt->format('Y-m-d H:i:s'));
+        return $this->orderingManager->moveWithinScope($this->pdo, self::orderingConfig(), $productId, $optionId, $displayOrder, StorageTimestamp::format($occurredAt));
     }
 
     /**

@@ -6,7 +6,7 @@ set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 fixture="$root/consumer-verification"
 
-for file in composer.json.template verify.php; do
+for file in composer.json.template verify.php BarrierProcessGroup.php; do
     [ -f "$fixture/$file" ] || { echo "Consumer verification fixture is incomplete: $file" >&2; exit 1; }
 done
 

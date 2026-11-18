@@ -87,8 +87,8 @@ interface ImageAssignmentManagementServiceInterface
     /**
      * Moves a non-deleted assignment to a position within its exact `(target, role, language, platform)`
      * scope through the shared Ordering API: a position above the current maximum is clamped to it, the
-     * current position changes nothing, and the other assignments of the scope shift to keep the positions
-     * contiguous. The moved row's `updated_at` is stamped. Other scopes are never touched. The Product row
+     * current position changes nothing, and the other assignments in the affected range shift by one
+     * position. Gaps can remain after the move. The moved row's `updated_at` is stamped. Other scopes are never touched. The Product row
      * is locked first, then the target Variant when there is one, then the assignment.
      *
      * @throws ImageAssignmentNotFoundException When no assignment has that identity.

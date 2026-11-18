@@ -75,8 +75,8 @@ final readonly class PdoVariantQueryReader implements VariantQueryReaderInterfac
     public function findVisibleById(int $variantId): ?VariantDTO
     {
         $variants = $this->fetch(
-            'SELECT ' . self::COLUMNS . ' FROM `maa_product_variants` v WHERE '
-            . 'v.`id` = :variant_id AND ' . VariantVisibilitySql::visiblePredicate('v') . ' LIMIT 1',
+            VariantVisibilitySql::forVariant() . 'SELECT ' . self::COLUMNS . self::visibleFrom()
+            . ' WHERE v.id = (SELECT subject_id FROM visibility_scope) LIMIT 1',
             ['variant_id' => $variantId],
         );
 
@@ -122,7 +122,7 @@ final readonly class PdoVariantQueryReader implements VariantQueryReaderInterfac
     {
         return $this->hydrate(ManagementListQuery::fetchBounded(
             $this->pdo,
-            'SELECT ' . self::COLUMNS . self::visibleFrom() . ' ORDER BY v.`display_order` ASC, v.`id` ASC LIMIT :list_limit',
+            VariantVisibilitySql::forProduct() . 'SELECT ' . self::COLUMNS . self::visibleFrom() . ' ORDER BY v.`display_order` ASC, v.`id` ASC LIMIT :list_limit',
             ['product_id' => $productId],
             $criteria->maxResults,
         ));
@@ -132,7 +132,8 @@ final readonly class PdoVariantQueryReader implements VariantQueryReaderInterfac
     {
         $from = self::visibleFrom();
         $params = ['product_id' => $productId];
-        $count = 'SELECT COUNT(*)' . $from;
+        $visibility = VariantVisibilitySql::forProduct();
+        $count = $visibility . 'SELECT COUNT(*)' . $from;
 
         $page = ManagementListQuery::paginate(
             $this->pdo,
@@ -140,7 +141,7 @@ final readonly class PdoVariantQueryReader implements VariantQueryReaderInterfac
             $params,
             $count,
             $params,
-            'SELECT ' . self::COLUMNS . $from,
+            $visibility . 'SELECT ' . self::COLUMNS . $from,
             new PageRequest($request->page, $request->perPage),
             ManagementListQuery::config(['display_order' => 'v.display_order', 'id' => 'v.id'], 'display_order'),
             static fn(array $row): array => $row,
@@ -151,8 +152,7 @@ final readonly class PdoVariantQueryReader implements VariantQueryReaderInterfac
 
     private static function visibleFrom(): string
     {
-        return ' FROM `maa_product_variants` v WHERE '
-            . 'v.`product_id` = :product_id AND ' . VariantVisibilitySql::visiblePredicate('v');
+        return ' FROM visible_variants visible JOIN maa_product_variants v ON v.id = visible.id';
     }
 
     /**

@@ -39,6 +39,35 @@ use PDOException;
  */
 final class ContentCommandTest extends RuntimeTestCase
 {
+    public function testCollationEquivalentEmptyLanguageKeepsItsOwnIdentityForEveryContentOwner(): void
+    {
+        $product = $this->productManagementService()->create(new CreateProductCommand('NULL-SCOPE'));
+        $optionId = $this->optionManagementService()->create(new CreateOptionCommand($product->productId, 'color'))->optionId;
+        $valueId = $this->optionValueManagementService()->create(new CreateOptionValueCommand($optionId, 'red'))->optionValueId;
+        $products = $this->productContentManagementService();
+        $options = $this->optionContentManagementService();
+        $values = $this->optionValueContentManagementService();
+        $language = "\u{0301}";
+        $productContent = $products->create(new CreateProductContentCommand($product->productId, null, 'Product'))->contentId;
+        $optionContent = $options->create(new CreateOptionContentCommand($optionId, null, 'Color'))->contentId;
+        $valueContent = $values->create(new CreateOptionValueContentCommand($valueId, null, 'Red'))->contentId;
+
+        $products->softDelete($productContent);
+        $options->softDelete($optionContent);
+        $values->softDelete($valueContent);
+
+        $productScoped = $products->create(new CreateProductContentCommand($product->productId, $language, 'Product'))->contentId;
+        $optionScoped = $options->create(new CreateOptionContentCommand($optionId, $language, 'Color'))->contentId;
+        $valueScoped = $values->create(new CreateOptionValueContentCommand($valueId, $language, 'Red'))->contentId;
+
+        self::assertSame($language, $products->getByIdForManagement($productScoped)->languageCode);
+        self::assertSame($language, $options->getByIdForManagement($optionScoped)->languageCode);
+        self::assertSame($language, $values->getByIdForManagement($valueScoped)->languageCode);
+        $this->assertThrows(ProductContentAlreadyExistsException::class, fn() => $products->create(new CreateProductContentCommand($product->productId, null, 'Another Product name')));
+        $this->assertThrows(OptionContentAlreadyExistsException::class, fn() => $options->create(new CreateOptionContentCommand($optionId, null, 'Another Color label')));
+        $this->assertThrows(OptionValueContentAlreadyExistsException::class, fn() => $values->create(new CreateOptionValueContentCommand($valueId, null, 'Another Red label')));
+    }
+
     public function testEveryOwnerTakesAnUnlocalizedAndALocalizedRecordOncePerIdentity(): void
     {
         $productId = $this->productManagementService()->create(new CreateProductCommand('P'))->productId;

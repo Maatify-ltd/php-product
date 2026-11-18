@@ -12,6 +12,7 @@ use Maatify\Product\Common\Exception\ProductStorageFailureFactory;
 use Maatify\Product\Common\Repository\Pdo\DigitString;
 use Maatify\Product\Common\Repository\Pdo\OwnerIdentityLookup;
 use Maatify\Product\Common\Repository\Pdo\RowHydrator;
+use Maatify\Product\Common\Repository\Pdo\StorageTimestamp;
 use Maatify\Product\Option\DTO\OptionStateDTO;
 use Maatify\Product\OptionValue\DTO\OptionValueStateDTO;
 use Maatify\Product\Product\DTO\ProductConfigurationSnapshotDTO;
@@ -231,7 +232,7 @@ final readonly class PdoProductConfigurationRepository implements ProductConfigu
         );
         $statement->execute([
             'display_order' => $this->orderingManager->getNextPositionForUpdate($this->pdo, self::variantOrderingConfig(), $productId),
-            'updated_at' => $occurredAt->format('Y-m-d H:i:s'),
+            'updated_at' => StorageTimestamp::format($occurredAt),
             'id' => $variantId,
         ]);
 
@@ -249,7 +250,7 @@ final readonly class PdoProductConfigurationRepository implements ProductConfigu
             self::variantOrderingConfig(),
             $productId,
         );
-        $timestamp = $occurredAt->format('Y-m-d H:i:s');
+        $timestamp = StorageTimestamp::format($occurredAt);
         $insert = $this->pdo->prepare(
             'INSERT INTO `maa_product_variants` (`product_id`, `composition_fingerprint`, `sku`, `barcode`, `status`, '
             . '`display_order`, `created_at`, `updated_at`, `deleted_at`) '
@@ -308,7 +309,7 @@ final readonly class PdoProductConfigurationRepository implements ProductConfigu
     private function updateStatusOf(string $table, array $ids, bool $active, DateTimeImmutable $occurredAt): void
     {
         $status = $active ? 'active' : 'inactive';
-        $updatedAt = $occurredAt->format('Y-m-d H:i:s');
+        $updatedAt = StorageTimestamp::format($occurredAt);
         foreach (array_chunk($ids, self::ID_BATCH_SIZE) as $batch) {
             $statement = $this->pdo->prepare(
                 'UPDATE `' . $table . '` SET `status` = ?, `updated_at` = ? WHERE `deleted_at` IS NULL AND `id` IN (' . self::placeholders($batch) . ')',

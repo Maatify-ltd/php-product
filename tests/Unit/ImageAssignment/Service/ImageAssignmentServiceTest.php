@@ -444,7 +444,7 @@ final class ImageAssignmentServiceTest extends TestCase
                 throw new LogicException('createEmptyComposition is not expected in this test.');
             }
 
-            public function lockForUpdate(int $variantId): ?VariantLifecycleStateDTO
+            public function lockForUpdate(int $variantId, ?int $productId = null): ?VariantLifecycleStateDTO
             {
                 $this->calls->record('variant:lock:' . $variantId);
 

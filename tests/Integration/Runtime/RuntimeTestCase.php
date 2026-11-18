@@ -51,8 +51,8 @@ use Throwable;
  */
 abstract class RuntimeTestCase extends DatabaseTestCase
 {
-    protected const string SEED_TS = '2026-01-01 00:00:00';
-    public const string LATER_TS = '2099-01-01 00:00:00';
+    protected const string SEED_TS = '2026-01-01 00:00:00.000000';
+    public const string LATER_TS = '2099-01-01 00:00:00.000000';
 
     private const array TABLES_CHILD_FIRST = [
         'maa_product_image_assignments',

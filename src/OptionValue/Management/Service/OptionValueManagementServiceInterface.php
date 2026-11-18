@@ -68,7 +68,7 @@ interface OptionValueManagementServiceInterface
     /**
      * Moves a non-deleted Option Value to a position within its Option's order through the shared Ordering API: a
      * position above the current maximum is clamped to it, the current position changes nothing, and the
-     * other rows of the scope shift to keep the positions contiguous. The moved row's `updated_at` is stamped.
+     * other rows in the affected range shift by one position. Gaps can remain after the move. The moved row's `updated_at` is stamped.
      * Ordering never changes the configuration's validity, so no invariant is revalidated.
      *
      * @throws OptionValueNotFoundException When no Option Value has that identity.

@@ -12,7 +12,7 @@ use Maatify\Product\OptionValue\DTO\OptionValueCollectionDTO;
 use Maatify\Product\OptionValue\Repository\OptionValueQueryReaderInterface;
 
 /**
- * Serves the consumer read of Option Values. Reads write nothing and open no transaction.
+ * Serves the consumer read of Option Values. Reads write nothing.
  *
  * @internal Not part of the Public Runtime API.
  */

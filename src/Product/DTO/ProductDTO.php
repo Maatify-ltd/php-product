@@ -12,10 +12,8 @@ use Maatify\Product\Product\Enum\ProductStatusEnum;
 /**
  * Snapshot of a stored Product.
  *
- * Timestamps are the stored values exactly as the Host Clock produced them at write
- * time, hydrated in the Host Clock timezone; the package applies no timezone
- * normalization and makes no UTC claim. `deletedAt` is null while the Product is not
- * soft deleted.
+ * Timestamps represent the stored instants in the reading Host Clock's timezone.
+ * `deletedAt` is null while the Product is live.
  */
 final readonly class ProductDTO implements JsonSerializable
 {

@@ -19,8 +19,7 @@ use Maatify\Product\Variant\ValueObject\CompositionFingerprint;
 use Maatify\Product\Variant\ValueObject\OptionValueSelection;
 
 /**
- * Serves the consumer reads and composition resolution of Variants. Reads write nothing and open
- * no transaction.
+ * Serves the consumer reads and composition resolution of Variants. Reads write nothing.
  *
  * @internal Not part of the Public Runtime API.
  */

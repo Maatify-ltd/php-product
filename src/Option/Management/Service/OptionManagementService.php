@@ -121,14 +121,22 @@ final readonly class OptionManagementService implements OptionManagementServiceI
         $occurredAt = $this->clock->now();
 
         $this->transactions->run(function () use ($command, $optionId, $occurredAt): void {
-            [$snapshot, $option] = $this->lockedOption($optionId);
-            if ($snapshot->productDeleted) {
-                throw ProductBusinessRuleException::ownerSoftDeleted('Option', $optionId, 'Product', $snapshot->productId);
+            $productId = $this->options->findProductId($optionId);
+            $product = $productId === null ? null : $this->products->lockForUpdate($productId);
+            if ($product === null) {
+                throw OptionNotFoundException::withId($optionId);
+            }
+            $option = $this->options->lockForUpdate($optionId);
+            if ($option === null) {
+                throw OptionNotFoundException::withId($optionId);
+            }
+            if ($product->deleted) {
+                throw ProductBusinessRuleException::ownerSoftDeleted('Option', $optionId, 'Product', $product->id);
             }
             if ($option->deleted) {
                 throw ProductBusinessRuleException::softDeleted('Option', $optionId);
             }
-            if (!$this->options->updateDisplayOrder($optionId, $snapshot->productId, $command->displayOrder, $occurredAt)) {
+            if (!$this->options->updateDisplayOrder($optionId, $product->id, $command->displayOrder, $occurredAt)) {
                 throw ProductStorageFailureFactory::lockedRowVanished('Option', $optionId);
             }
         });

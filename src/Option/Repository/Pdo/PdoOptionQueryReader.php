@@ -84,7 +84,7 @@ final readonly class PdoOptionQueryReader implements OptionQueryReaderInterface
     {
         return array_map($this->hydrate(...), ManagementListQuery::fetchBounded(
             $this->pdo,
-            'SELECT ' . self::COLUMNS . self::visibleFrom() . ' ORDER BY o.`display_order` ASC, o.`id` ASC LIMIT :list_limit',
+            VariantVisibilitySql::forProduct() . 'SELECT ' . self::COLUMNS . self::visibleFrom() . ' ORDER BY o.`display_order` ASC, o.`id` ASC LIMIT :list_limit',
             ['product_id' => $productId],
             $maxResults,
         ));
@@ -94,7 +94,8 @@ final readonly class PdoOptionQueryReader implements OptionQueryReaderInterface
     {
         $from = self::visibleFrom();
         $params = ['product_id' => $productId];
-        $count = 'SELECT COUNT(*)' . $from;
+        $visibility = VariantVisibilitySql::forProduct();
+        $count = $visibility . 'SELECT COUNT(*)' . $from;
 
         return ManagementListQuery::paginate(
             $this->pdo,
@@ -102,7 +103,7 @@ final readonly class PdoOptionQueryReader implements OptionQueryReaderInterface
             $params,
             $count,
             $params,
-            'SELECT ' . self::COLUMNS . $from,
+            $visibility . 'SELECT ' . self::COLUMNS . $from,
             new PageRequest($request->page, $request->perPage),
             ManagementListQuery::config(['display_order' => 'o.display_order', 'id' => 'o.id'], 'display_order'),
             $this->hydrate(...),
@@ -111,11 +112,10 @@ final readonly class PdoOptionQueryReader implements OptionQueryReaderInterface
 
     private static function visibleFrom(): string
     {
-        return ' FROM `' . self::TABLE . '` o WHERE o.`product_id` = :product_id '
+        return ' FROM `' . self::TABLE . '` o WHERE o.`product_id` = (SELECT subject_id FROM visibility_scope) '
             . 'AND o.`deleted_at` IS NULL AND o.`status` = \'active\' '
             . 'AND ' . VariantVisibilitySql::labelled('maa_product_option_contents', 'option_id', 'o') . ' '
-            . 'AND EXISTS (SELECT 1 FROM `maa_product_variants` vv WHERE vv.`product_id` = o.`product_id` AND '
-            . VariantVisibilitySql::visiblePredicate('vv') . ') ';
+            . 'AND EXISTS (SELECT 1 FROM visible_variants) ';
     }
 
 

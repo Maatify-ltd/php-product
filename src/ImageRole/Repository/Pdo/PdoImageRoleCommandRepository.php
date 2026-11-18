@@ -9,6 +9,7 @@ use Maatify\Product\Common\Exception\ProductStorageFailureFactory;
 use Maatify\Product\Common\Repository\Pdo\DigitString;
 use Maatify\Product\Common\Repository\Pdo\DuplicateKey;
 use Maatify\Product\Common\Repository\Pdo\RowHydrator;
+use Maatify\Product\Common\Repository\Pdo\StorageTimestamp;
 use Maatify\Product\ImageRole\DTO\ImageRoleStateDTO;
 use Maatify\Product\ImageRole\Enum\ImageRoleStatusEnum;
 use Maatify\Product\ImageRole\Exception\ImageRoleKeyAlreadyExistsException;
@@ -34,7 +35,7 @@ final readonly class PdoImageRoleCommandRepository implements ImageRoleCommandRe
 
     public function create(CreateImageRoleCommand $command, DateTimeImmutable $occurredAt): int
     {
-        $timestamp = $occurredAt->format('Y-m-d H:i:s');
+        $timestamp = StorageTimestamp::format($occurredAt);
         $statement = $this->pdo->prepare(
             'INSERT INTO `' . self::TABLE . '` (`role_key`, `status`, `created_at`, `updated_at`, `deleted_at`) '
             . 'VALUES (:role_key, \'active\', :created_at, :updated_at, NULL)',
@@ -82,7 +83,7 @@ final readonly class PdoImageRoleCommandRepository implements ImageRoleCommandRe
         $statement = $this->pdo->prepare(
             'UPDATE `' . self::TABLE . '` SET `status` = :status, `updated_at` = :updated_at WHERE `id` = :id AND `deleted_at` IS NULL',
         );
-        $statement->execute(['status' => $status->value, 'updated_at' => $occurredAt->format('Y-m-d H:i:s'), 'id' => $roleId]);
+        $statement->execute(['status' => $status->value, 'updated_at' => StorageTimestamp::format($occurredAt), 'id' => $roleId]);
 
         return $statement->rowCount() > 0;
     }
@@ -92,7 +93,7 @@ final readonly class PdoImageRoleCommandRepository implements ImageRoleCommandRe
         $statement = $this->pdo->prepare(
             'UPDATE `' . self::TABLE . '` SET `deleted_at` = :deleted_at, `updated_at` = :updated_at WHERE `id` = :id AND `deleted_at` IS NULL',
         );
-        $timestamp = $occurredAt->format('Y-m-d H:i:s');
+        $timestamp = StorageTimestamp::format($occurredAt);
         $statement->execute(['deleted_at' => $timestamp, 'updated_at' => $timestamp, 'id' => $roleId]);
 
         return $statement->rowCount() > 0;
@@ -103,7 +104,7 @@ final readonly class PdoImageRoleCommandRepository implements ImageRoleCommandRe
         $statement = $this->pdo->prepare(
             'UPDATE `' . self::TABLE . '` SET `deleted_at` = NULL, `updated_at` = :updated_at WHERE `id` = :id AND `deleted_at` IS NOT NULL',
         );
-        $statement->execute(['updated_at' => $occurredAt->format('Y-m-d H:i:s'), 'id' => $roleId]);
+        $statement->execute(['updated_at' => StorageTimestamp::format($occurredAt), 'id' => $roleId]);
 
         return $statement->rowCount() > 0;
     }

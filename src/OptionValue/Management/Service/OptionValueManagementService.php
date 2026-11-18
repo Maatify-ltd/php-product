@@ -127,12 +127,26 @@ final readonly class OptionValueManagementService implements OptionValueManageme
         $occurredAt = $this->clock->now();
 
         $this->transactions->run(function () use ($command, $optionValueId, $occurredAt): void {
-            [$snapshot, $value] = $this->lockedValue($optionValueId);
-            $this->assertOwnersLive($snapshot, $value);
-            if ($value->deleted) {
+            $owners = $this->values->findOwners($optionValueId);
+            $product = $owners === null ? null : $this->products->lockForUpdate($owners['productId']);
+            if ($owners === null || $product === null) {
+                throw OptionValueNotFoundException::withId($optionValueId);
+            }
+            $option = $this->options->lockForUpdate($owners['optionId']);
+            $deleted = $this->values->lockDeletedState($optionValueId);
+            if ($deleted === null) {
+                throw OptionValueNotFoundException::withId($optionValueId);
+            }
+            if ($product->deleted) {
+                throw ProductBusinessRuleException::ownerSoftDeleted('Option Value', $optionValueId, 'Product', $product->id);
+            }
+            if ($option === null || $option->deleted) {
+                throw ProductBusinessRuleException::ownerSoftDeleted('Option Value', $optionValueId, 'Option', $owners['optionId']);
+            }
+            if ($deleted) {
                 throw ProductBusinessRuleException::softDeleted('Option Value', $optionValueId);
             }
-            if (!$this->values->updateDisplayOrder($optionValueId, $value->optionId, $command->displayOrder, $occurredAt)) {
+            if (!$this->values->updateDisplayOrder($optionValueId, $owners['optionId'], $command->displayOrder, $occurredAt)) {
                 throw ProductStorageFailureFactory::lockedRowVanished('Option Value', $optionValueId);
             }
         });
@@ -198,7 +212,7 @@ final readonly class OptionValueManagementService implements OptionValueManageme
      */
     private function lockedValue(int $optionValueId): array
     {
-        $productId = $this->values->findProductId($optionValueId);
+        $productId = $this->values->findOwners($optionValueId)['productId'] ?? null;
         $snapshot = $productId === null ? null : $this->configuration->lockSnapshot($productId);
         $value = $snapshot?->optionValues[$optionValueId] ?? null;
         if ($snapshot === null || $value === null) {

@@ -11,7 +11,7 @@ use Maatify\Product\ImageAssignment\DTO\ImageAssignmentCollectionDTO;
 use Maatify\Product\ImageAssignment\Repository\ImageAssignmentQueryReaderInterface;
 
 /**
- * Serves the consumer read of Image Assignments. Reads write nothing and open no transaction.
+ * Serves the consumer read of Image Assignments. Reads write nothing.
  *
  * @internal Not part of the Public Runtime API.
  */

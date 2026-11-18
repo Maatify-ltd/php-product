@@ -65,7 +65,7 @@ final readonly class ImageAssignmentManagementService implements ImageAssignment
                 throw ProductBusinessRuleException::ownerSoftDeletedForCreate('Image Assignment', 'Product', $command->productId);
             }
             if ($command->variantId !== null) {
-                $variant = $this->variants->lockForUpdate($command->variantId);
+                $variant = $this->variants->lockForUpdate($command->variantId, $command->productId);
                 if ($variant === null) {
                     throw VariantNotFoundException::withId($command->variantId);
                 }

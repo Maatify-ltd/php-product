@@ -26,6 +26,20 @@ use Maatify\Product\Variant\Management\Command\UpdateVariantDisplayOrderCommand;
  */
 final class OrderingCommandTest extends RuntimeTestCase
 {
+    public function testMovingOptionsAfterSoftDeletionKeepsGapsOutsideTheShift(): void
+    {
+        $product = $this->namedProduct('GAPS')->productId;
+        [$first, $second, $third, $fourth, $fifth, $sixth] = $this->options($product, ['a', 'b', 'c', 'd', 'e', 'f']);
+        $service = $this->optionManagementService();
+        foreach ([$second, $third, $fifth] as $deleted) {
+            $service->softDelete($deleted);
+        }
+
+        $service->updateDisplayOrder(new UpdateOptionDisplayOrderCommand($first, 6));
+
+        self::assertSame([$fourth => 3, $sixth => 5, $first => 6], $this->positions('maa_product_options', 'product_id', $product));
+    }
+
     public function testOptionsMoveWithinTheirProductOnly(): void
     {
         $p = $this->namedProduct('P');
