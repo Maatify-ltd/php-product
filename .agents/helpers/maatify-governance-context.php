@@ -1,8 +1,6 @@
 #!/usr/bin/env php
 <?php
 
-declare(strict_types=1);
-
 /**
  * Maatify Governance Context - Deterministic Read-Only Helper
  *
@@ -16,9 +14,24 @@ declare(strict_types=1);
  *  - "selective-adoption": Consumer repository with a single usable STANDARDS_MANIFEST.md.
  */
 
+declare(strict_types=1);
+
+namespace Maatify\Standards\Tooling;
+
+use FilesystemIterator;
+use InvalidArgumentException;
+use RecursiveCallbackFilterIterator;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
+use SplFileInfo;
+use Throwable;
+
 final class GovernanceContextHelper
 {
-    private const CANONICAL_REPOSITORY_IDENTITY = 'github.com/maatify/php-engineering-standards';
+    private const CANONICAL_REPOSITORY_IDENTITIES = [
+        'github.com/maatify/php-engineering-standards',
+        'github.com/maatify-ltd/php-engineering-standards',
+    ];
 
     private string $rootDir;
     private string $validationMode;
@@ -207,7 +220,7 @@ final class GovernanceContextHelper
             return false;
         }
         $normalizedExpected = $this->normalizeGitUrl($expectedUpstreamRepo);
-        if ($normalizedExpected !== self::CANONICAL_REPOSITORY_IDENTITY) {
+        if (!in_array($normalizedExpected, self::CANONICAL_REPOSITORY_IDENTITIES, true)) {
             return false;
         }
 
@@ -221,7 +234,7 @@ final class GovernanceContextHelper
             if (count($parts) === 2) {
                 $url = trim($parts[1]);
                 $normalizedUrl = $this->normalizeGitUrl($url);
-                if ($normalizedUrl !== null && $normalizedUrl === self::CANONICAL_REPOSITORY_IDENTITY) {
+                if (in_array($normalizedUrl, self::CANONICAL_REPOSITORY_IDENTITIES, true)) {
                     $hasMatchingRemote = true;
                     break;
                 }
@@ -398,7 +411,7 @@ final class GovernanceContextHelper
                 }
             } else {
                 $normalizedManifestUpstream = $upstreamRepo !== null ? $this->normalizeGitUrl($upstreamRepo) : null;
-                if ($normalizedManifestUpstream !== self::CANONICAL_REPOSITORY_IDENTITY) {
+                if (!in_array($normalizedManifestUpstream, self::CANONICAL_REPOSITORY_IDENTITIES, true)) {
                     $this->errors[] = "invalid-manifest-upstream-repository: manifest Upstream Repository ('{$upstreamRepo}') does not match canonical standards repository identity";
                 }
                 if (!$this->verifyCanonicalSourceRepository($this->sourceRootDir, $upstreamRepo)) {
@@ -421,7 +434,7 @@ final class GovernanceContextHelper
             $content,
             $adoptionCommit,
             $exceptions,
-            $canonicalSourceVerified
+            $canonicalSourceVerified,
         );
 
         // 8. Governance Surfaces in consumer
@@ -595,7 +608,7 @@ final class GovernanceContextHelper
             }
         }
 
-        usort($activations, static fn (array $a, array $b): int => strcmp($a['profile_id'] . $a['scope'], $b['profile_id'] . $b['scope']));
+        usort($activations, static fn(array $a, array $b): int => strcmp($a['profile_id'] . $a['scope'], $b['profile_id'] . $b['scope']));
         return $activations;
     }
 
@@ -702,7 +715,7 @@ final class GovernanceContextHelper
             $this->errors[] = 'malformed-resolved-standards-table: unsupported header column count';
             return [];
         }
-        $normalizedHeaders = array_map(static fn (string $cell): string => strtolower(trim($cell, "`* \t")), $header);
+        $normalizedHeaders = array_map(static fn(string $cell): string => strtolower(trim($cell, "`* \t")), $header);
         $standardColumn = null;
         $versionColumn = null;
         $standardIdColumn = null;
@@ -753,7 +766,7 @@ final class GovernanceContextHelper
             && $provenanceColumn !== null && $provenanceColumn >= 0;
         if ((!$isTwoColumnSchema && !$isFourColumnSchema)
             || $versionColumn === null || $versionColumn < 0
-            || count(array_unique(array_filter([$standardColumn, $versionColumn, $standardIdColumn, $provenanceColumn], static fn ($column): bool => $column !== null))) !== count(array_filter([$standardColumn, $versionColumn, $standardIdColumn, $provenanceColumn], static fn ($column): bool => $column !== null))) {
+            || count(array_unique(array_filter([$standardColumn, $versionColumn, $standardIdColumn, $provenanceColumn], static fn($column): bool => $column !== null))) !== count(array_filter([$standardColumn, $versionColumn, $standardIdColumn, $provenanceColumn], static fn($column): bool => $column !== null))) {
             $this->errors[] = 'malformed-resolved-standards-table: header must identify the supported Standard/Version schema';
             return [];
         }
@@ -851,7 +864,7 @@ final class GovernanceContextHelper
     /** @param list<array{local_path: string, recorded_version: string, standard_id: ?string}> $standards */
     private function sortResolvedStandards(array $standards): array
     {
-        usort($standards, static fn (array $a, array $b): int => strcmp($a['local_path'], $b['local_path']));
+        usort($standards, static fn(array $a, array $b): int => strcmp($a['local_path'], $b['local_path']));
         return $standards;
     }
 
@@ -1050,7 +1063,7 @@ final class GovernanceContextHelper
         $separatorIndex = $headerIndex + 1;
         $separatorCells = isset($lines[$separatorIndex]) ? $this->parseDecisionIndexRow($lines[$separatorIndex]) : null;
         if ($separatorCells === null || count($separatorCells) !== count($expectedHeader)
-            || array_filter($separatorCells, static fn (string $cell): bool => preg_match('/^:?-{3,}:?$/D', $cell) !== 1) !== []
+            || array_filter($separatorCells, static fn(string $cell): bool => preg_match('/^:?-{3,}:?$/D', $cell) !== 1) !== []
         ) {
             $this->errors[] = 'malformed-decision-index: missing or invalid table separator';
             return [];
@@ -1128,7 +1141,7 @@ final class GovernanceContextHelper
             }
         }
 
-        usort($activeDecisions, static fn (array $a, array $b): int => strcmp($a['decision_id'], $b['decision_id']));
+        usort($activeDecisions, static fn(array $a, array $b): int => strcmp($a['decision_id'], $b['decision_id']));
         return $activeDecisions;
     }
 
@@ -1139,7 +1152,7 @@ final class GovernanceContextHelper
         if (!str_starts_with($line, '|') || !str_ends_with($line, '|')) {
             return null;
         }
-        $cells = array_map(static fn (string $cell): string => trim($cell, " `\t"), explode('|', substr($line, 1, -1)));
+        $cells = array_map(static fn(string $cell): string => trim($cell, " `\t"), explode('|', substr($line, 1, -1)));
         return $cells;
     }
 
@@ -1207,7 +1220,7 @@ final class GovernanceContextHelper
         string $content,
         ?string $defaultAdoptionCommit = null,
         array $exceptions = [],
-        bool $canonicalSourceVerified = false
+        bool $canonicalSourceVerified = false,
     ): ?array {
         if (!preg_match('/(?:^|\n)##+[ \t]+Pinned Operational Assets Set[ \t]*(?:\n|\r\n)(.*?)(?=\n##|\z)/is', $content, $sectionMatch)) {
             return null;
@@ -1282,7 +1295,7 @@ final class GovernanceContextHelper
                 }
 
                 $cols = array_map('trim', explode('|', trim($line, '|')));
-                $normalizedCols = array_map(static fn (string $c): string => strtolower(trim($c, '` *')), $cols);
+                $normalizedCols = array_map(static fn(string $c): string => strtolower(trim($c, '` *')), $cols);
                 if ($normalizedCols === ['kind', 'upstream path', 'local path', 'sha-256']) {
                     $headerFound = true;
                     continue;
@@ -1330,7 +1343,7 @@ final class GovernanceContextHelper
                 continue;
             }
 
-            $cols = array_map(static fn (string $c): string => trim($c, "` \t"), explode('|', trim($line, '|')));
+            $cols = array_map(static fn(string $c): string => trim($c, "` \t"), explode('|', trim($line, '|')));
             if (count($cols) !== 4) {
                 $this->errors[] = 'unsupported-or-ambiguous-operational-assets-representation: expected 4 columns, got ' . count($cols);
                 continue;
@@ -1339,8 +1352,10 @@ final class GovernanceContextHelper
             [$kind, $upstreamPath, $localPath, $sha256] = $cols;
             $assetSourceIdentity = $authoritativeSourceIdentity;
             if (!$invalidOperationalException) {
-                $matchingExceptions = array_values(array_filter($allValidRecords, static fn (array $record): bool =>
-                    $record['upstream_path'] === $upstreamPath && $record['local_path'] === $localPath
+                $matchingExceptions = array_values(array_filter(
+                    $allValidRecords,
+                    static fn(array $record): bool
+                    => $record['upstream_path'] === $upstreamPath && $record['local_path'] === $localPath,
                 ));
                 if (count($matchingExceptions) > 1) {
                     $this->errors[] = 'ambiguous-operational-asset-exception: multiple records apply to the same exact path pair';
@@ -1450,7 +1465,7 @@ final class GovernanceContextHelper
             return [];
         }
 
-        usort($assets, static fn (array $a, array $b): int => strcmp($a['local_path'], $b['local_path']));
+        usort($assets, static fn(array $a, array $b): int => strcmp($a['local_path'], $b['local_path']));
         return $assets;
     }
 
@@ -1477,12 +1492,12 @@ final class GovernanceContextHelper
         if (!preg_match($pattern, $line, $m) || !checkdate((int) substr($m[5], 5, 2), (int) substr($m[5], 8, 2), (int) substr($m[5], 0, 4))) {
             return null;
         }
-        $canonicalPath = static fn (string $path): bool =>
-            preg_match('/^[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*$/', $path) === 1;
+        $canonicalPath = static fn(string $path): bool
+            => preg_match('/^[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*$/', $path) === 1;
         if (!$canonicalPath($m[2]) || !$canonicalPath($m[3]) || !$this->isValidRelativePath($m[2]) || !$this->isValidRelativePath($m[3])) {
             return null;
         }
-        return ['decision_id'=>$m[1], 'upstream_path'=>$m[2], 'local_path'=>$m[3], 'source_commit'=>$m[4], 'approved_on'=>$m[5], 'reason'=>$m[6]];
+        return ['decision_id' => $m[1], 'upstream_path' => $m[2], 'local_path' => $m[3], 'source_commit' => $m[4], 'approved_on' => $m[5], 'reason' => $m[6]];
     }
 
     /** Mechanical checks only; decision meaning remains subject to review. */
@@ -1530,7 +1545,7 @@ final class GovernanceContextHelper
         $found = [];
         $inMetadata = false;
         $reservedFields = array_keys($expected);
-        $reservedPattern = implode('|', array_map(static fn (string $field): string => preg_quote($field, '/'), $reservedFields));
+        $reservedPattern = implode('|', array_map(static fn(string $field): string => preg_quote($field, '/'), $reservedFields));
         foreach (explode("\n", $body) as $lineNumber => $line) {
             if ($lineNumber === 0 && preg_match('/^#\s+.+/', trim($line))) {
                 $inMetadata = true;
@@ -1608,7 +1623,7 @@ final class GovernanceContextHelper
         }
 
         $bodyLines = array_slice($lines, $start, $end - $start);
-        $nonEmptyBodyLines = array_values(array_filter($bodyLines, static fn (string $line): bool => $line !== ''));
+        $nonEmptyBodyLines = array_values(array_filter($bodyLines, static fn(string $line): bool => $line !== ''));
         if (preg_match('/^```(?:text)?\nNone\n```$/iD', implode("\n", $nonEmptyBodyLines))
             || $nonEmptyBodyLines === ['None'] || $nonEmptyBodyLines === ['`None`']
         ) {
@@ -1653,7 +1668,7 @@ final class GovernanceContextHelper
                 'format_error' => $formatError,
             ];
         }
-        usort($exceptions, static fn (array $a, array $b): int => strcmp($a['display_line'], $b['display_line']));
+        usort($exceptions, static fn(array $a, array $b): int => strcmp($a['display_line'], $b['display_line']));
         return $exceptions;
     }
 
@@ -1682,8 +1697,8 @@ final class GovernanceContextHelper
                         return !in_array($current->getFilename(), $excludeDirs, true);
                     }
                     return true;
-                }
-            )
+                },
+            ),
         );
 
         foreach ($iterator as $fileInfo) {
