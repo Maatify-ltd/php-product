@@ -174,9 +174,9 @@ no method or a method that does not exist.
   - Image Roles and Assignments (identity, target integrity, the scope key shared with the Ordering API,
     atomic default replacement, no promotion, `restoreAsDefault()`), and a Role status
     change, deletion, or restore that leaves every assignment column unchanged.
-  - Timestamps: `created_at` and `deleted_at` are the Host Clock's instant stored verbatim as
-    `Y-m-d H:i:s`, and DTO timestamps are hydrated in the reading Clock's timezone (`Asia/Tokyo`
-    and `America/New_York` in the test) with no normalization (`ClockTimestampTest`).
+  - Timestamps use UTC `DATETIME(6)` for storage and the reading Clock's timezone in DTOs.
+    `ClockTimestampTest` covers microseconds, chronological ordering across the repeated hour in
+    `America/New_York`, and a MySQL session timezone different from the Host Clock's.
   - Transactions: rollback of a failed operation the package started; inside a caller-owned
     transaction, savepoint rollback of an operation that fails after its own writes (Product creation
     after both rows, `HostTransactionAtomicityTest`; `reconfigure()` after its status writes and the

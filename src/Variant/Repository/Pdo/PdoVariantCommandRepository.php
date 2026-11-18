@@ -14,6 +14,7 @@ use Maatify\Product\Common\Repository\Pdo\DigitString;
 use Maatify\Product\Common\Repository\Pdo\DuplicateKey;
 use Maatify\Product\Common\Repository\Pdo\OwnerIdentityLookup;
 use Maatify\Product\Common\Repository\Pdo\RowHydrator;
+use Maatify\Product\Common\Repository\Pdo\StorageTimestamp;
 use Maatify\Product\Variant\DTO\VariantLifecycleStateDTO;
 use Maatify\Product\Variant\Enum\VariantStatusEnum;
 use Maatify\Product\Variant\Exception\VariantBarcodeAlreadyExistsException;
@@ -70,7 +71,7 @@ final readonly class PdoVariantCommandRepository implements VariantCommandReposi
             . 'VALUES (:product_id, :fingerprint, NULL, NULL, :status, :display_order, '
             . ':created_at, :updated_at, NULL)',
         );
-        $timestamp = $occurredAt->format('Y-m-d H:i:s');
+        $timestamp = StorageTimestamp::format($occurredAt);
         $statement->execute([
             'product_id' => $productId,
             'fingerprint' => CompositionFingerprint::forEmptyComposition()->value,
@@ -136,7 +137,7 @@ final readonly class PdoVariantCommandRepository implements VariantCommandReposi
         );
         $statement->execute([
             'status' => $status->value,
-            'updated_at' => $occurredAt->format('Y-m-d H:i:s'),
+            'updated_at' => StorageTimestamp::format($occurredAt),
             'id' => $variantId,
         ]);
 
@@ -150,7 +151,7 @@ final readonly class PdoVariantCommandRepository implements VariantCommandReposi
             . '`id` = :id AND `deleted_at` IS NULL',
         );
         try {
-            $statement->execute(['sku' => $sku, 'barcode' => $barcode, 'updated_at' => $occurredAt->format('Y-m-d H:i:s'), 'id' => $variantId]);
+            $statement->execute(['sku' => $sku, 'barcode' => $barcode, 'updated_at' => StorageTimestamp::format($occurredAt), 'id' => $variantId]);
         } catch (PDOException $exception) {
             $key = DuplicateKey::keyName($exception);
             if ($sku !== null && $key === 'uq_maa_product_variants_sku') {
@@ -172,7 +173,7 @@ final readonly class PdoVariantCommandRepository implements VariantCommandReposi
             'UPDATE `' . self::VARIANT_TABLE . '` SET `deleted_at` = :deleted_at, `updated_at` = :updated_at WHERE '
             . '`id` = :id AND `deleted_at` IS NULL',
         );
-        $timestamp = $occurredAt->format('Y-m-d H:i:s');
+        $timestamp = StorageTimestamp::format($occurredAt);
         $statement->execute(['deleted_at' => $timestamp, 'updated_at' => $timestamp, 'id' => $variantId]);
 
         return $statement->rowCount() > 0;
@@ -186,7 +187,7 @@ final readonly class PdoVariantCommandRepository implements VariantCommandReposi
         );
         $statement->execute([
             'display_order' => $this->orderingManager->getNextPositionForUpdate($this->pdo, self::orderingConfig(), $productId),
-            'updated_at' => $occurredAt->format('Y-m-d H:i:s'),
+            'updated_at' => StorageTimestamp::format($occurredAt),
             'id' => $variantId,
         ]);
 
@@ -195,7 +196,7 @@ final readonly class PdoVariantCommandRepository implements VariantCommandReposi
 
     public function updateDisplayOrder(int $variantId, int $productId, int $displayOrder, DateTimeImmutable $occurredAt): bool
     {
-        return $this->orderingManager->moveWithinScope($this->pdo, self::orderingConfig(), $productId, $variantId, $displayOrder, $occurredAt->format('Y-m-d H:i:s'));
+        return $this->orderingManager->moveWithinScope($this->pdo, self::orderingConfig(), $productId, $variantId, $displayOrder, StorageTimestamp::format($occurredAt));
     }
 
     /**

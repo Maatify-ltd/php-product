@@ -13,6 +13,7 @@ use Maatify\Product\Common\Repository\Pdo\DigitString;
 use Maatify\Product\Common\Repository\Pdo\DuplicateKey;
 use Maatify\Product\Common\Repository\Pdo\OwnerIdentityLookup;
 use Maatify\Product\Common\Repository\Pdo\RowHydrator;
+use Maatify\Product\Common\Repository\Pdo\StorageTimestamp;
 use Maatify\Product\ImageAssignment\DTO\ImageAssignmentIdentityDTO;
 use Maatify\Product\ImageAssignment\DTO\ImageAssignmentStateDTO;
 use Maatify\Product\ImageAssignment\Exception\ImageAssignmentAlreadyExistsException;
@@ -65,7 +66,7 @@ final readonly class PdoImageAssignmentCommandRepository implements ImageAssignm
             self::orderingConfig(),
             $scope,
         );
-        $timestamp = $occurredAt->format('Y-m-d H:i:s');
+        $timestamp = StorageTimestamp::format($occurredAt);
         $statement = $this->pdo->prepare(
             'INSERT INTO `' . self::TABLE . '` (`product_id`, `variant_id`, `media_asset_id`, `role_id`, `language_code`, `platform`, '
             . '`is_default`, `display_order`, `created_at`, `updated_at`, `deleted_at`) '
@@ -168,7 +169,7 @@ final readonly class PdoImageAssignmentCommandRepository implements ImageAssignm
 
     public function setDefault(int $assignmentId, int $productId, string $scope, DateTimeImmutable $occurredAt): bool
     {
-        $timestamp = $occurredAt->format('Y-m-d H:i:s');
+        $timestamp = StorageTimestamp::format($occurredAt);
         $previous = $this->lockLiveDefault($productId, $scope);
         if ($previous !== null && $previous !== $assignmentId) {
             $clear = $this->pdo->prepare(
@@ -192,7 +193,7 @@ final readonly class PdoImageAssignmentCommandRepository implements ImageAssignm
             'UPDATE `' . self::TABLE . '` SET `is_default` = 0, `updated_at` = :updated_at WHERE '
             . '`id` = :id AND `deleted_at` IS NULL AND `is_default` = 1',
         );
-        $statement->execute(['updated_at' => $occurredAt->format('Y-m-d H:i:s'), 'id' => $assignmentId]);
+        $statement->execute(['updated_at' => StorageTimestamp::format($occurredAt), 'id' => $assignmentId]);
 
         return $statement->rowCount() > 0;
     }
@@ -203,7 +204,7 @@ final readonly class PdoImageAssignmentCommandRepository implements ImageAssignm
             'UPDATE `' . self::TABLE . '` SET `is_default` = 0, `deleted_at` = :deleted_at, `updated_at` = :updated_at WHERE '
             . '`id` = :id AND `deleted_at` IS NULL',
         );
-        $timestamp = $occurredAt->format('Y-m-d H:i:s');
+        $timestamp = StorageTimestamp::format($occurredAt);
         $statement->execute(['deleted_at' => $timestamp, 'updated_at' => $timestamp, 'id' => $assignmentId]);
 
         return $statement->rowCount() > 0;
@@ -217,7 +218,7 @@ final readonly class PdoImageAssignmentCommandRepository implements ImageAssignm
         );
         $statement->execute([
             'display_order' => $this->orderingManager->getNextPositionForUpdate($this->pdo, self::orderingConfig(), $scope),
-            'updated_at' => $occurredAt->format('Y-m-d H:i:s'),
+            'updated_at' => StorageTimestamp::format($occurredAt),
             'id' => $assignmentId,
         ]);
 
@@ -247,7 +248,7 @@ final readonly class PdoImageAssignmentCommandRepository implements ImageAssignm
         try {
             $statement->execute([
                 'display_order' => $this->orderingManager->getNextPositionForUpdate($this->pdo, self::orderingConfig(), $scope),
-                'updated_at' => $occurredAt->format('Y-m-d H:i:s'),
+                'updated_at' => StorageTimestamp::format($occurredAt),
                 'id' => $assignmentId,
             ]);
         } catch (PDOException $exception) {
@@ -263,7 +264,7 @@ final readonly class PdoImageAssignmentCommandRepository implements ImageAssignm
 
     public function updateDisplayOrder(int $assignmentId, string $scope, int $displayOrder, DateTimeImmutable $occurredAt): bool
     {
-        return $this->orderingManager->moveWithinScope($this->pdo, self::orderingConfig(), $scope, $assignmentId, $displayOrder, $occurredAt->format('Y-m-d H:i:s'));
+        return $this->orderingManager->moveWithinScope($this->pdo, self::orderingConfig(), $scope, $assignmentId, $displayOrder, StorageTimestamp::format($occurredAt));
     }
 
     /**

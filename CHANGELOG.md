@@ -13,8 +13,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
-- Distinguish NULL and collated text in Content and Image Assignment identities. Existing RC.1 installations need the [schema upgrade](schema/README.md#upgrade-from-the-published-rc1-schema).
-- Preserve typed duplicate conflicts with localized MySQL diagnostics and reject malformed stored timestamps.
+- Distinguish NULL and collated text in Content and Image Assignment identities.
+- Preserve clock instants during repeated local hours using UTC `DATETIME(6)`, and reject malformed stored timestamps. Use the [fresh schema](schema/README.md#install) that ships with this release candidate.
+- Preserve typed duplicate conflicts with localized MySQL diagnostics.
 - Keep page counts and row selection consistent on autocommit connections, and bound concurrency-test worker waits.
 
 ## [1.0.0-rc.1] - 2026-11-14

@@ -11,6 +11,7 @@ use Maatify\Product\Common\Repository\Pdo\DigitString;
 use Maatify\Product\Common\Repository\Pdo\DuplicateKey;
 use Maatify\Product\Common\Repository\Pdo\OwnerIdentityLookup;
 use Maatify\Product\Common\Repository\Pdo\RowHydrator;
+use Maatify\Product\Common\Repository\Pdo\StorageTimestamp;
 use Maatify\Product\Content\DTO\ContentFieldsDTO;
 use Maatify\Product\Content\DTO\ContentIdentityDTO;
 use Maatify\Product\Content\DTO\ContentStateDTO;
@@ -76,7 +77,7 @@ final readonly class PdoContentCommandRepository implements ContentCommandReposi
 
     public function create(int $ownerId, ?string $languageCode, ContentFieldsDTO $fields, DateTimeImmutable $occurredAt): int
     {
-        $timestamp = $occurredAt->format('Y-m-d H:i:s');
+        $timestamp = StorageTimestamp::format($occurredAt);
         $columns = '`' . $this->owner->ownerColumn() . '`, `language_code`, `name`';
         $values = ':owner_id, :language_code, :name';
         $params = ['owner_id' => $ownerId, 'language_code' => $languageCode, 'name' => $fields->name];
@@ -148,7 +149,7 @@ final readonly class PdoContentCommandRepository implements ContentCommandReposi
 
     public function update(int $contentId, ContentFieldsDTO $fields, DateTimeImmutable $occurredAt): bool
     {
-        $params = ['name' => $fields->name, 'updated_at' => $occurredAt->format('Y-m-d H:i:s'), 'id' => $contentId];
+        $params = ['name' => $fields->name, 'updated_at' => StorageTimestamp::format($occurredAt), 'id' => $contentId];
         if ($this->owner->hasDescriptions()) {
             $statement = $this->pdo->prepare(
                 'UPDATE `' . $this->owner->table() . '` SET `name` = :name, `short_description` = :short_description, '
@@ -168,7 +169,7 @@ final readonly class PdoContentCommandRepository implements ContentCommandReposi
 
     public function softDelete(int $contentId, DateTimeImmutable $occurredAt): bool
     {
-        $timestamp = $occurredAt->format('Y-m-d H:i:s');
+        $timestamp = StorageTimestamp::format($occurredAt);
         $statement = $this->pdo->prepare(
             'UPDATE `' . $this->owner->table() . '` SET `deleted_at` = :deleted_at, `updated_at` = :updated_at WHERE '
             . '`id` = :id AND `deleted_at` IS NULL',
@@ -184,7 +185,7 @@ final readonly class PdoContentCommandRepository implements ContentCommandReposi
             'UPDATE `' . $this->owner->table() . '` SET `deleted_at` = NULL, `updated_at` = :updated_at WHERE '
             . '`id` = :id AND `deleted_at` IS NOT NULL',
         );
-        $statement->execute(['updated_at' => $occurredAt->format('Y-m-d H:i:s'), 'id' => $contentId]);
+        $statement->execute(['updated_at' => StorageTimestamp::format($occurredAt), 'id' => $contentId]);
 
         return $statement->rowCount() > 0;
     }

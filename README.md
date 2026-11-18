@@ -42,7 +42,7 @@ composer require maatify/php-product:1.0.0-rc.1 maatify/php-persistence:1.0.0-rc
 
 Keep `minimum-stability: stable` and permit these exact pre-release versions in the consumer root. The development checkout uses Persistence `1.0.0-rc.2` under the [trial plan](docs/verification/CI_GATES.md#persistence-rc-trial-plan). See [License](#license) for the free license required before use.
 
-Then install the schema once into your database:
+From the installed package, apply its schema to an empty database:
 
 ```bash
 mysql your_database < schema/product.sql

@@ -79,7 +79,7 @@ final class RowHydratorTest extends TestCase
     {
         $this->expectException(ProductPersistenceException::class);
 
-        self::hydrator()->timestamp(['created_at' => '0000-00-00 00:00:00'], 'created_at');
+        self::hydrator()->timestamp(['created_at' => '0000-00-00 00:00:00.000000'], 'created_at');
     }
 
     private static function hydrator(): RowHydrator

@@ -9,6 +9,7 @@ use Maatify\Product\Common\Exception\ProductStorageFailureFactory;
 use Maatify\Product\Common\Repository\Pdo\DigitString;
 use Maatify\Product\Common\Repository\Pdo\DuplicateKey;
 use Maatify\Product\Common\Repository\Pdo\RowHydrator;
+use Maatify\Product\Common\Repository\Pdo\StorageTimestamp;
 use Maatify\Product\Product\DTO\ProductLifecycleStateDTO;
 use Maatify\Product\Product\Enum\ProductStatusEnum;
 use Maatify\Product\Product\Exception\ProductCodeAlreadyExistsException;
@@ -40,7 +41,7 @@ final readonly class PdoProductCommandRepository implements ProductCommandReposi
             'INSERT INTO `' . self::TABLE . '` (`code`, `status`, `created_at`, `updated_at`, `deleted_at`) '
             . 'VALUES (:code, :status, :created_at, :updated_at, NULL)',
         );
-        $timestamp = $occurredAt->format('Y-m-d H:i:s');
+        $timestamp = StorageTimestamp::format($occurredAt);
 
         try {
             $statement->execute([
@@ -93,7 +94,7 @@ final readonly class PdoProductCommandRepository implements ProductCommandReposi
         );
         $statement->execute([
             'status' => $status->value,
-            'updated_at' => $occurredAt->format('Y-m-d H:i:s'),
+            'updated_at' => StorageTimestamp::format($occurredAt),
             'id' => $productId,
         ]);
 
@@ -106,7 +107,7 @@ final readonly class PdoProductCommandRepository implements ProductCommandReposi
             'UPDATE `' . self::TABLE . '` SET `deleted_at` = :deleted_at, `updated_at` = :updated_at WHERE '
             . '`id` = :id AND `deleted_at` IS NULL',
         );
-        $timestamp = $occurredAt->format('Y-m-d H:i:s');
+        $timestamp = StorageTimestamp::format($occurredAt);
         $statement->execute(['deleted_at' => $timestamp, 'updated_at' => $timestamp, 'id' => $productId]);
 
         return $statement->rowCount() > 0;
@@ -118,7 +119,7 @@ final readonly class PdoProductCommandRepository implements ProductCommandReposi
             'UPDATE `' . self::TABLE . '` SET `deleted_at` = NULL, `updated_at` = :updated_at WHERE '
             . '`id` = :id AND `deleted_at` IS NOT NULL',
         );
-        $statement->execute(['updated_at' => $occurredAt->format('Y-m-d H:i:s'), 'id' => $productId]);
+        $statement->execute(['updated_at' => StorageTimestamp::format($occurredAt), 'id' => $productId]);
 
         return $statement->rowCount() > 0;
     }

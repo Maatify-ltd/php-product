@@ -2,7 +2,7 @@
 
 This guide shows how a Host application consumes `maatify/php-product`. The technical contract (the complete Public Runtime API and its guarantees) is owned by the [Package Reference](../../PRODUCT_PACKAGE_REFERENCE.md); this guide does not redefine it. Runnable code is in [`examples/`](../../examples/).
 
-This guide applies to `maatify/php-product:1.0.0-rc.1`. See the [README installation section](../../README.md#installation) for the exact Composer install command. This guide covers every public capability: Product creation, lifecycle, and reconfiguration; Variant reads, composition resolution, identifiers, and lifecycle; Options and Option Values; Product, Option, and Option Value Content; Image Roles and Image Assignments; ordering; management lists, search, and pagination; and the consumer reads.
+This guide describes the development checkout. Use the Usage Guide and schema shipped with your installed Product release candidate. See the [README installation section](../../README.md#installation) for the published package. This guide covers every public capability: Product creation, lifecycle, and reconfiguration; Variant reads, composition resolution, identifiers, and lifecycle; Options and Option Values; Product, Option, and Option Value Content; Image Roles and Image Assignments; ordering; management lists, search, and pagination; and the consumer reads.
 
 ## Fit
 
@@ -76,7 +76,7 @@ $created = $products->create(new CreateProductCommand('SIMPLE-1'));
 
 - **Input:** a Product identity.
 - **Public call:** `ProductConsumerServiceInterface::getById(int $productId)` for consumers, or `ProductManagementServiceInterface::getByIdForManagement(int $productId, ProductDeletedStateEnum $deletedState = NON_DELETED)` for management.
-- **Result:** a `ProductDTO` (`id`, `code`, `status`, `createdAt`, `updatedAt`, `deletedAt`). Timestamps are `DateTimeImmutable` values in the Host Clock's timezone.
+- **Result:** a `ProductDTO` (`id`, `code`, `status`, `createdAt`, `updatedAt`, `deletedAt`). Timestamps are `DateTimeImmutable` values in the reading Host Clock's timezone, representing the same instants that the application wrote.
 - **Boundary:** `getById()` returns only an active, non-deleted Product; any other identity raises `ProductNotFoundException`. A newly created Product is inactive, so it is visible to `getByIdForManagement()` only. `getByIdForManagement()` ignores status and filters by soft-deletion state: `NON_DELETED` (default), `INCLUDE_DELETED`, or `DELETED_ONLY`.
 
 ```php
