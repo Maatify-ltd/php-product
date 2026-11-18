@@ -216,10 +216,11 @@ Entities with persistent ordering: Option (scope: Product), Option Value (scope:
 - **Every management list** has an unpaginated read bounded by `maxResults` (1 to 100, default 100, silently truncated) and a paginated twin through `PdoPaginator` (20 per page by default, 1 to 100, `id` ascending as the tie-breaker). Consumer lists remain bounded to 100. Variants, Options, Option Values, and exact-scope Image Assignments also offer paginated reads with the same visibility and order. Search exists for Products only (a literal substring of `code`). See *Management lists, search, and pagination* in Behavior and guarantees.
 - **Content.** The management Content list is bounded by `maxResults` (1 to 100, default 100). The paginated management Content read uses `PdoPaginator` with 20 records per page by default, 1 to 100, the sort whitelist `language_code` (default, ascending), `id`, `created_at`, `updated_at`, and `id` ascending as the tie-breaker; the total and filtered counts use the same filter as the data, and `maxResults` does not apply to it.
 
-A paginated count and row selection use one read-only repeatable-read snapshot when Product owns
-the transaction on an autocommit connection. Inside a Host-owned transaction, Product uses the
-Host's isolation and leaves the transaction open. A Host that needs one snapshot across the
-page's queries must use repeatable-read semantics for that transaction.
+A paginated count and row selection use one read-only repeatable-read snapshot when the
+MySQL session has autocommit enabled and no transaction is active. With an active transaction
+or session autocommit disabled, Product leaves transaction control and isolation with the Host.
+A Host that needs one snapshot across the page's queries must use repeatable-read semantics
+for its transaction.
 
 #### 1.6 Exact scope and `NULL`
 

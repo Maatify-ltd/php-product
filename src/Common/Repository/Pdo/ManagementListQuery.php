@@ -120,8 +120,23 @@ final class ManagementListQuery
             $mapper,
         );
 
-        if ($pdo->inTransaction() || !$pdo->getAttribute(PDO::ATTR_AUTOCOMMIT)) {
+        if ($pdo->inTransaction()) {
             return $read();
+        }
+
+        // PDO's autocommit attribute can be stale when the Host changes the session through SQL.
+        $session = $pdo->query('SELECT @@SESSION.autocommit');
+        if ($session === false) {
+            throw new ProductPersistenceException('Could not read the MySQL session autocommit state.');
+        }
+        $autocommit = $session->fetchColumn();
+        $session->closeCursor();
+
+        if ($autocommit === 0 || $autocommit === '0') {
+            return $read();
+        }
+        if ($autocommit !== 1 && $autocommit !== '1') {
+            throw new ProductPersistenceException('Could not read the MySQL session autocommit state.');
         }
 
         // SET TRANSACTION applies to the next transaction only; it does not change the session default.
