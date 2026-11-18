@@ -7,11 +7,16 @@ namespace Maatify\Product\Tests\Integration\Runtime;
 use Maatify\PhpPersistence\Ordering\Repository\ScopedOrderingManager;
 use Maatify\Product\Product\Repository\Pdo\PdoProductConfigurationRepository;
 use PDO;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 
 final class LargeConfigurationSnapshotTest extends RuntimeTestCase
 {
     private const int HISTORY_SIZE = 65536;
 
+    // Measure the memory budget in a fresh process, independent of the suite order and prior allocations.
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
     public function testSnapshotReadsHistoryBeyondTheNativePlaceholderLimit(): void
     {
         $created = $this->namedProduct('LARGE-HISTORY');
