@@ -35,6 +35,7 @@ final class BarrierProcessGroup
                     unlink($stderr);
                     throw new RuntimeException('Could not start a worker.');
                 }
+                /** @var array{0: resource, 1: resource} $pipes Pipes opened for descriptors 0 and 1. */
                 $workers[] = [$process, $pipes[0], $pipes[1], $stderr];
                 stream_set_blocking($pipes[1], false);
             }
